@@ -1052,15 +1052,15 @@ void LoadBIOSFiles(void)
     FILE *inFile1;
     FILE *inFile2;
     
-    inFile1 = fopen("/roms/bios/TI994aROM.bin", "rb");
-    inFile2 = fopen("/roms/bios/TI994aGROM.bin", "rb");
+    inFile1 = fopen("/roms/bios/994aROM.bin", "rb");
+    inFile2 = fopen("/roms/bios/994aGROM.bin", "rb");
     if (inFile1 && inFile2)
     {
         bTIBIOSFound = true;
     }
     else
     {
-        bTIBIOSFound = true;
+        bTIBIOSFound = false;
     }
     fclose(inFile1);
     fclose(inFile2);
@@ -1146,8 +1146,8 @@ int main(int argc, char **argv)
     {
         u8 idx = 6;
         AffChaine(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
-        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"TI99aROM.bin   BIOS FOUND"); }
-        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"TI99aGROM.bin  BIOS FOUND"); }
+        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
+        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  BIOS FOUND"); }
         idx++;
         AffChaine(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
         
