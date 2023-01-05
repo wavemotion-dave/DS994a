@@ -47,11 +47,10 @@ extern UINT32 debug[32];
 #define nullptr NULL
 static UINT16   parity[ 256 ];
 
-
 UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
-UINT8           MemFlags[0x10000];          // And the memory flags that tell what is what...
 UINT8           CartMem[0x10000];           // Cart C memory up to 64K
+UINT16          MemFlags[0x10000];          // Memory flags for each address
 
 UINT16          InterruptFlag       __attribute__((section(".dtcm")));
 UINT16          WorkspacePtr        __attribute__((section(".dtcm")));
@@ -63,8 +62,10 @@ UINT16          bankOffset          __attribute__((section(".dtcm"))) = 0x0000;
 UINT16          gromAddress         __attribute__((section(".dtcm"))) = 0x0000;
 UINT16          bankMask            __attribute__((section(".dtcm"))) = 0x0007;
 
-UINT8           m_GromWriteShift = 8;
-UINT8           m_GromReadShift = 8;
+UINT8           m_GromWriteShift    __attribute__((section(".dtcm")))  = 8;
+UINT8           m_GromReadShift     __attribute__((section(".dtcm")))  = 8;
+
+UINT16 *OpCodeSpeedup __attribute__((section(".dtcm")))  = (UINT16*)0x06860000;
 
 char tmpFilename[160];
 
@@ -99,7 +100,10 @@ void TMS9900_Reset(char *szGame)
     InitOpCodeLookup( );
 
     // Default all memory to 8-bit and then mark off the 16-bit regions directly below
-    memset( MemFlags, MEMFLG_8BIT, sizeof( MemFlags ));
+    for (unsigned i=0x0000; i<=0xFFFF; i++)
+    {
+        MemFlags[i] = MEMFLG_8BIT;
+    }
 
     // Mark off the memory regions that are 16-bit (for access cycle counting)
     for( unsigned i = 0x0000; i < 0x2000; i++ )
@@ -271,10 +275,6 @@ UINT32 GetClocks( )
     return ClockCycleCounter;
 }
 
-void AddClocks( int clocks )
-{
-    ClockCycleCounter += clocks;
-}
 
 void ResetClocks( )
 {
@@ -287,85 +287,85 @@ void ResetClocks( )
 // ==================================================================================================
 sOpCode OpCodes[ 70 ] __attribute__((section(".dtcm"))) =
 {
-    { "MOVB", 0xD000, 0xF000, 1, opcode_MOVB, 14-2 }, // 14
-    { "MOV",  0xC000, 0xF000, 1, opcode_MOV,  14-2 }, // 14
-    { "LI",   0x0200, 0xFFE0, 8, opcode_LI,   12-2 }, // 12
-    { "DEC",  0x0600, 0xFFC0, 6, opcode_DEC,  10-2 }, // 10
-    { "JGT",  0x1500, 0xFF00, 2, opcode_JGT,   8-2 }, // 10
-    { "JEQ",  0x1300, 0xFF00, 2, opcode_JEQ,   8-2 }, // 8/10
-    { "JNE",  0x1600, 0xFF00, 2, opcode_JNE,   8-2 }, // 10
-    { "CB",   0x9000, 0xF000, 1, opcode_CB,   14-2 }, // 14
-    { "A",    0xA000, 0xF000, 1, opcode_A,    14-2 }, // 14
-    { "AB",   0xB000, 0xF000, 1, opcode_AB,   14-2 }, // 14
-    { "ABS",  0x0740, 0xFFC0, 6, opcode_ABS,  12-2 }, // 12/14
-    { "AI",   0x0220, 0xFFE0, 8, opcode_AI,   14-2 }, // 14
-    { "ANDI", 0x0240, 0xFFE0, 8, opcode_ANDI, 14-2 }, // 14
-    { "B",    0x0440, 0xFFC0, 6, opcode_B,     8-2 }, // 8
-    { "BL",   0x0680, 0xFFC0, 6, opcode_BL,   12-2 }, // 12
-    { "BLWP", 0x0400, 0xFFC0, 6, opcode_BLWP, 26-2 }, // 26
-    { "C",    0x8000, 0xF000, 1, opcode_C,    14-2 }, // 14
-    { "CI",   0x0280, 0xFFE0, 8, opcode_CI,   14-2 }, // 14
-    { "CKOF", 0x03C0, 0xFFFF, 7, opcode_CKOF, 12-2 }, // 12
-    { "CKON", 0x03A0, 0xFFFF, 7, opcode_CKON, 12-2 }, // 12
-    { "CLR",  0x04C0, 0xFFC0, 6, opcode_CLR,  10-2 }, // 10
-    { "COC",  0x2000, 0xFC00, 3, opcode_COC,  14-2 }, // 14
-    { "CZC",  0x2400, 0xFC00, 3, opcode_CZC,  14-2 }, // 14
-    { "DECT", 0x0640, 0xFFC0, 6, opcode_DECT, 10-2 }, // 10
-    { "DIV",  0x3C00, 0xFC00, 9, opcode_DIV,  16-2 }, // 16/92-124
-    { "IDLE", 0x0340, 0xFFFF, 7, opcode_IDLE, 12-2 }, // 12
-    { "INC",  0x0580, 0xFFC0, 6, opcode_INC,  10-2 }, // 10
-    { "INCT", 0x05C0, 0xFFC0, 6, opcode_INCT, 10-2 }, // 10
-    { "INV",  0x0540, 0xFFC0, 6, opcode_INV,  10-2 }, // 10
-    { "JH",   0x1B00, 0xFF00, 2, opcode_JH,    8-2 }, // 10
-    { "JHE",  0x1400, 0xFF00, 2, opcode_JHE,   8-2 }, // 10
-    { "JL",   0x1A00, 0xFF00, 2, opcode_JL,    8-2 }, // 10
-    { "JLE",  0x1200, 0xFF00, 2, opcode_JLE,   8-2 }, // 10
-    { "JLT",  0x1100, 0xFF00, 2, opcode_JLT,   8-2 }, // 10
-    { "JMP",  0x1000, 0xFF00, 2, opcode_JMP,   8-2 }, // 10
-    { "JNC",  0x1700, 0xFF00, 2, opcode_JNC,   8-2 }, // 10
-    { "JNO",  0x1900, 0xFF00, 2, opcode_JNO,   8-2 }, // 10
-    { "JOC",  0x1800, 0xFF00, 2, opcode_JOC,   8-2 }, // 10
-    { "JOP",  0x1C00, 0xFF00, 2, opcode_JOP,   8-2 }, // 10
-    { "LDCR", 0x3000, 0xFC00, 4, opcode_LDCR, 20-2 }, // 20+2*bits
-    { "LIMI", 0x0300, 0xFFE0, 8, opcode_LIMI, 16-2 }, // 16
-    { "LREX", 0x03E0, 0xFFFF, 7, opcode_LREX, 12-2 }, // 12
-    { "LWPI", 0x02E0, 0xFFE0, 8, opcode_LWPI, 10-2 }, // 10
-    { "MPY",  0x3800, 0xFC00, 9, opcode_MPY,  52-2 }, // 52
-    { "NEG",  0x0500, 0xFFC0, 6, opcode_NEG,  12-2 }, // 12
-    { "ORI",  0x0260, 0xFFE0, 8, opcode_ORI,  14-2 }, // 14
-    { "RSET", 0x0360, 0xFFFF, 7, opcode_RSET, 12-2 }, // 12
-    { "RTWP", 0x0380, 0xFFFF, 7, opcode_RTWP, 14-2 }, // 14
-    { "S",    0x6000, 0xF000, 1, opcode_S,    14-2 }, // 14
-    { "SB",   0x7000, 0xF000, 1, opcode_SB,   14-2 }, // 14
-    { "SBO",  0x1D00, 0xFF00, 2, opcode_SBO,  12-2 }, // 12
-    { "SBZ",  0x1E00, 0xFF00, 2, opcode_SBZ,  12-2 }, // 12
-    { "SETO", 0x0700, 0xFFC0, 6, opcode_SETO, 10-2 }, // 10
-    { "SLA",  0x0A00, 0xFF00, 5, opcode_SLA,  12-2 }, // 12+2*disp/20+2*disp
-    { "SOC",  0xE000, 0xF000, 1, opcode_SOC,  14-2 }, // 14
-    { "SOCB", 0xF000, 0xF000, 1, opcode_SOCB, 14-2 }, // 14
-    { "SRA",  0x0800, 0xFF00, 5, opcode_SRA,  12-2 }, // 12+2*disp/20+2*disp
-    { "SRC",  0x0B00, 0xFF00, 5, opcode_SRC,  12-2 }, // 12+2*disp/20+2*disp
-    { "SRL",  0x0900, 0xFF00, 5, opcode_SRL,  12-2 }, // 12+2*disp/20+2*disp
-    { "STCR", 0x3400, 0xFC00, 4, opcode_STCR, 42-2 }, // 42/44/58/60
-    { "STST", 0x02C0, 0xFFE0, 8, opcode_STST,  8-2 }, // 8
-    { "STWP", 0x02A0, 0xFFE0, 8, opcode_STWP,  8-2 }, // 8
-    { "SWPB", 0x06C0, 0xFFC0, 6, opcode_SWPB, 10-2 }, // 10
-    { "SZC",  0x4000, 0xF000, 1, opcode_SZC,  14-2 }, // 14
-    { "SZCB", 0x5000, 0xF000, 1, opcode_SZCB, 14-2 }, // 14
-    { "TB",   0x1F00, 0xFF00, 2, opcode_TB,   12-2 }, // 12
-    { "X",    0x0480, 0xFFC0, 6, opcode_X,     8-2 }, // 8
-    { "XOP",  0x2C00, 0xFC00, 9, opcode_XOP,  36-2 }, // 36
-    { "XOR",  0x2800, 0xFC00, 3, opcode_XOR,  14-2 }, // 14
-    { "INVL", 0x0000, 0x0000, 0, InvalidOpcode,6-2 }    
+    { "MOVB", 0xD000, 0xF000, 1, opcode_MOVB, 14 }, // 14
+    { "MOV",  0xC000, 0xF000, 1, opcode_MOV,  14 }, // 14
+    { "LI",   0x0200, 0xFFE0, 8, opcode_LI,   12 }, // 12
+    { "DEC",  0x0600, 0xFFC0, 6, opcode_DEC,  10 }, // 10
+    { "JGT",  0x1500, 0xFF00, 2, opcode_JGT,   8 }, // 10
+    { "JEQ",  0x1300, 0xFF00, 2, opcode_JEQ,   8 }, // 8/10
+    { "JNE",  0x1600, 0xFF00, 2, opcode_JNE,   8 }, // 10
+    { "CB",   0x9000, 0xF000, 1, opcode_CB,   14 }, // 14
+    { "A",    0xA000, 0xF000, 1, opcode_A,    14 }, // 14
+    { "AB",   0xB000, 0xF000, 1, opcode_AB,   14 }, // 14
+    { "ABS",  0x0740, 0xFFC0, 6, opcode_ABS,  12 }, // 12/14
+    { "AI",   0x0220, 0xFFE0, 8, opcode_AI,   14 }, // 14
+    { "ANDI", 0x0240, 0xFFE0, 8, opcode_ANDI, 14 }, // 14
+    { "B",    0x0440, 0xFFC0, 6, opcode_B,     8 }, // 8
+    { "BL",   0x0680, 0xFFC0, 6, opcode_BL,   12 }, // 12
+    { "BLWP", 0x0400, 0xFFC0, 6, opcode_BLWP, 26 }, // 26
+    { "C",    0x8000, 0xF000, 1, opcode_C,    14 }, // 14
+    { "CI",   0x0280, 0xFFE0, 8, opcode_CI,   14 }, // 14
+    { "CKOF", 0x03C0, 0xFFFF, 7, opcode_CKOF, 12 }, // 12
+    { "CKON", 0x03A0, 0xFFFF, 7, opcode_CKON, 12 }, // 12
+    { "CLR",  0x04C0, 0xFFC0, 6, opcode_CLR,  10 }, // 10
+    { "COC",  0x2000, 0xFC00, 3, opcode_COC,  14 }, // 14
+    { "CZC",  0x2400, 0xFC00, 3, opcode_CZC,  14 }, // 14
+    { "DECT", 0x0640, 0xFFC0, 6, opcode_DECT, 10 }, // 10
+    { "DIV",  0x3C00, 0xFC00, 9, opcode_DIV,  16 }, // 16/92-124
+    { "IDLE", 0x0340, 0xFFFF, 7, opcode_IDLE, 12 }, // 12
+    { "INC",  0x0580, 0xFFC0, 6, opcode_INC,  10 }, // 10
+    { "INCT", 0x05C0, 0xFFC0, 6, opcode_INCT, 10 }, // 10
+    { "INV",  0x0540, 0xFFC0, 6, opcode_INV,  10 }, // 10
+    { "JH",   0x1B00, 0xFF00, 2, opcode_JH,    8 }, // 10
+    { "JHE",  0x1400, 0xFF00, 2, opcode_JHE,   8 }, // 10
+    { "JL",   0x1A00, 0xFF00, 2, opcode_JL,    8 }, // 10
+    { "JLE",  0x1200, 0xFF00, 2, opcode_JLE,   8 }, // 10
+    { "JLT",  0x1100, 0xFF00, 2, opcode_JLT,   8 }, // 10
+    { "JMP",  0x1000, 0xFF00, 2, opcode_JMP,   8 }, // 10
+    { "JNC",  0x1700, 0xFF00, 2, opcode_JNC,   8 }, // 10
+    { "JNO",  0x1900, 0xFF00, 2, opcode_JNO,   8 }, // 10
+    { "JOC",  0x1800, 0xFF00, 2, opcode_JOC,   8 }, // 10
+    { "JOP",  0x1C00, 0xFF00, 2, opcode_JOP,   8 }, // 10
+    { "LDCR", 0x3000, 0xFC00, 4, opcode_LDCR, 20 }, // 20+2*bits
+    { "LIMI", 0x0300, 0xFFE0, 8, opcode_LIMI, 16 }, // 16
+    { "LREX", 0x03E0, 0xFFFF, 7, opcode_LREX, 12 }, // 12
+    { "LWPI", 0x02E0, 0xFFE0, 8, opcode_LWPI, 10 }, // 10
+    { "MPY",  0x3800, 0xFC00, 9, opcode_MPY,  52 }, // 52
+    { "NEG",  0x0500, 0xFFC0, 6, opcode_NEG,  12 }, // 12
+    { "ORI",  0x0260, 0xFFE0, 8, opcode_ORI,  14 }, // 14
+    { "RSET", 0x0360, 0xFFFF, 7, opcode_RSET, 12 }, // 12
+    { "RTWP", 0x0380, 0xFFFF, 7, opcode_RTWP, 14 }, // 14
+    { "S",    0x6000, 0xF000, 1, opcode_S,    14 }, // 14
+    { "SB",   0x7000, 0xF000, 1, opcode_SB,   14 }, // 14
+    { "SBO",  0x1D00, 0xFF00, 2, opcode_SBO,  12 }, // 12
+    { "SBZ",  0x1E00, 0xFF00, 2, opcode_SBZ,  12 }, // 12
+    { "SETO", 0x0700, 0xFFC0, 6, opcode_SETO, 10 }, // 10
+    { "SLA",  0x0A00, 0xFF00, 5, opcode_SLA,  12 }, // 12+2*disp/20+2*disp
+    { "SOC",  0xE000, 0xF000, 1, opcode_SOC,  14 }, // 14
+    { "SOCB", 0xF000, 0xF000, 1, opcode_SOCB, 14 }, // 14
+    { "SRA",  0x0800, 0xFF00, 5, opcode_SRA,  12 }, // 12+2*disp/20+2*disp
+    { "SRC",  0x0B00, 0xFF00, 5, opcode_SRC,  12 }, // 12+2*disp/20+2*disp
+    { "SRL",  0x0900, 0xFF00, 5, opcode_SRL,  12 }, // 12+2*disp/20+2*disp
+    { "STCR", 0x3400, 0xFC00, 4, opcode_STCR, 42 }, // 42/44/58/60
+    { "STST", 0x02C0, 0xFFE0, 8, opcode_STST,  8 }, // 8
+    { "STWP", 0x02A0, 0xFFE0, 8, opcode_STWP,  8 }, // 8
+    { "SWPB", 0x06C0, 0xFFC0, 6, opcode_SWPB, 10 }, // 10
+    { "SZC",  0x4000, 0xF000, 1, opcode_SZC,  14 }, // 14
+    { "SZCB", 0x5000, 0xF000, 1, opcode_SZCB, 14 }, // 14
+    { "TB",   0x1F00, 0xFF00, 2, opcode_TB,   12 }, // 12
+    { "X",    0x0480, 0xFFC0, 6, opcode_X,     8 }, // 8
+    { "XOP",  0x2C00, 0xFC00, 9, opcode_XOP,  36 }, // 36
+    { "XOR",  0x2800, 0xFC00, 3, opcode_XOR,  14 }, // 14
+    { "INVL", 0x0000, 0x0000, 0, InvalidOpcode,6 }    
 };
 
 
 //#define GROM_INC(x) ((x&0xE000) | ((x+1)&0x1FFF))
 #define GROM_INC(x) (x+1)
 
-ITCM_CODE UINT8 ReadGROM(void)
+inline UINT8 ReadGROM(void)
 {
-    AddClocks( 19 );
+    ClockCycleCounter += 19;
     UINT8 retval = MemGROM[gromAddress];
     gromAddress = GROM_INC(gromAddress);
     return retval;
@@ -374,7 +374,7 @@ ITCM_CODE UINT8 ReadGROM(void)
 ITCM_CODE UINT8 ReadGROMAddress(void)
 {
     m_GromWriteShift = 8;    
-    AddClocks( 13 );    
+    ClockCycleCounter += 13;
     UINT8 data = ( UINT8 ) ((( gromAddress + 1 ) >> m_GromReadShift ) & 0x00FF );
     m_GromReadShift  = 8 - m_GromReadShift;
     return data;    
@@ -387,7 +387,7 @@ ITCM_CODE void WriteGROM(UINT8 data)
 
 ITCM_CODE void WriteGROMAddress(UINT8 data)
 {
-    AddClocks( m_GromWriteShift ? 15 : 21 );
+    ClockCycleCounter += ( m_GromWriteShift ? 15 : 21 );
     
     gromAddress &= ( ADDRESS ) ( 0xFF00 >> m_GromWriteShift );
     gromAddress |= ( ADDRESS ) ( data << m_GromWriteShift );
@@ -396,25 +396,29 @@ ITCM_CODE void WriteGROMAddress(UINT8 data)
 }
 
 
-ITCM_CODE static UINT16 ReadPCMemoryW( UINT16 address )
+inline UINT16 ReadPCMemoryW( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
-    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
-    if (flags & MEMFLG_BANKW)
+    if (flags)
     {
-        return (CartMem[bankOffset | (address&0x1FFF)] << 8) | (CartMem[bankOffset | ((address+1)&0x1FFF)]);
+        if (flags & MEMFLG_8BIT) ClockCycleCounter += 4; // Penalty for 8-bit access...
+        if (flags & MEMFLG_BANKW)
+        {
+            return (CartMem[bankOffset | (address&0x1FFF)] << 8) | (CartMem[bankOffset | ((address+1)&0x1FFF)]);
+        }
+        else return (Memory[address] << 8) | (Memory[address+1]);
     }
     else return (Memory[address] << 8) | (Memory[address+1]);
 }
     
-ITCM_CODE static UINT16 ReadMemoryW( UINT16 address )
+ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
 {
     UINT16 retVal;
     address &= 0xFFFE;
     UINT8 flags = MemFlags[ address ];
 
     // Add 4 clock cycles if we're accessing 8-bit memory
-    ClockCycleCounter += 2 + ( flags & MEMFLG_8BIT );
+    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
     
     if (flags)
     {
@@ -453,14 +457,14 @@ ITCM_CODE static UINT16 ReadMemoryW( UINT16 address )
     return retVal;
 }
 
-ITCM_CODE static UINT8 ReadMemoryB( UINT16 address )
+ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
 
     UINT8 retVal;
 
     // Add 4 clock cycles if we're accessing 8-bit memory
-    ClockCycleCounter += 2 + ( flags & MEMFLG_8BIT );
+    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
 
     if (flags & MEMFLG_VDPR)
     {
@@ -503,14 +507,14 @@ inline void WriteBank(UINT16 address)
 }
 
 extern void coleco_sound(UINT16 value);
-ITCM_CODE static void WriteMemoryW( UINT16 address, UINT16 value )
+ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
 {
     address &= 0xFFFE;
 
     UINT8 flags = MemFlags[ address ];
 
     // Add 4 clock cycles if we're accessing 8-bit memory
-    ClockCycleCounter += 2 + ( flags & MEMFLG_8BIT );
+    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
 
     if (flags)
     {
@@ -561,16 +565,16 @@ ITCM_CODE static void WriteMemoryW( UINT16 address, UINT16 value )
     else if ((address >= 0x2000 && address <= 0x4000) || (address >= 0xA000))
     {
         Memory[address] = (value >> 8);
-        Memory[address+1] = value;
+        Memory[address+1] = value & 0xFF;
     }
 }
 
-ITCM_CODE static void WriteMemoryB( UINT16 address, UINT8 value )
+ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
 {
     UINT8 flags = MemFlags[ address ];
 
     // Add 4 clock cycles if we're accessing 8-bit memory
-    ClockCycleCounter += 2 + ( flags & MEMFLG_8BIT );
+    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
 
     if (flags & 0xFB)
     {
@@ -617,13 +621,12 @@ ITCM_CODE static void WriteMemoryB( UINT16 address, UINT8 value )
     }
 }
 
-ITCM_CODE static UINT16 Fetch( )
+inline UINT16 Fetch( )
 {
+    ClockCycleCounter += 2; // For the memory fetch pre-compensated
     UINT16 retVal = ReadPCMemoryW( PC ); PC += 2;
     return retVal;
 }
-
-UINT16 *OpCodeSpeedup = (UINT16*)0x06880000;
 
 void LookupOpCode( UINT16 opcode )
 {
@@ -660,16 +663,11 @@ void InitOpCodeLookup(void)
 }
 
 
-inline void _ExecuteOpCode( sOpCode *op )
-{
-    ClockCycleCounter += op->clocks;
-    ((void (*)( ))op->function )( );
-}
-
 inline void _ExecuteInstruction( UINT16 opCode )
 {
     sOpCode *op = &OpCodes[OpCodeSpeedup[opCode]];
-    _ExecuteOpCode( op );
+    ClockCycleCounter += (op->clocks-2);
+    ((void (*)( ))op->function )( );
 }
 
 
@@ -682,7 +680,7 @@ inline void _ExecuteInstruction( UINT16 opCode )
 // @>xxxx(Rx)  10   8   2          Indexed Memory
 //
 
-ITCM_CODE static UINT16 GetAddress( UINT16 opCode, size_t size )
+ITCM_CODE UINT16 GetAddress( UINT16 opCode, size_t size )
 {
     UINT16 address = 0x0000;
     int reg = opCode & 0x0F;
@@ -731,10 +729,13 @@ ITCM_CODE void ContextSwitch( UINT16 address )
     WriteMemoryW( WP + 2 * 15, ST    );
 }
 
-ITCM_CODE static bool CheckInterrupt( )
+ITCM_CODE bool CheckInterrupt( )
 {
     // Tell the PIC to update it's timer and turn off old interrupts
-    UpdateTimer( ClockCycleCounter );
+    if (m_ClockRegister)
+    {
+        UpdateTimer( ClockCycleCounter );
+    }
 
     // Look for pending unmasked interrupts
     UINT16 mask = ( UINT16 ) (( 2 << ( ST & 0x0F )) - 1 );
@@ -782,14 +783,6 @@ ITCM_CODE void TMS9900_Run()
     while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
 }
 
-void TMS9900_Stop( )
-{
-}
-
-bool IsRunning( )
-{
-    return true;
-}
 
 static void SetFlags_LAE( UINT16 val )
 {

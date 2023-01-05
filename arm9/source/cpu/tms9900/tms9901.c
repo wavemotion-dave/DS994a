@@ -25,6 +25,8 @@
 // Revision History:
 //
 //----------------------------------------------------------------------------
+#include <nds.h>
+
 #include <stdio.h>
 #include <string.h>
 #include "tms9901.h"
@@ -38,20 +40,20 @@ extern UINT32 debug[];
 
 #define SET_MASK        0xAA
 
-bool                m_TimerActive;
-int                 m_ReadRegister;
-int                 m_Decrementer;
-int                 m_ClockRegister;
-UINT8               m_PinState[ 32 ][ 2 ];
-int                 m_InterruptRequested;
-int                 m_ActiveInterrupts;
-int                 m_LastDelta;
-UINT32              m_DecrementClock;
-bool                m_CapsLock;
-int                 m_ColumnSelect;
-int                 m_HideShift;
-UINT8               m_StateTable[ VK_MAX ];
-sJoystickInfo       m_Joystick[ 2 ];
+bool                m_TimerActive   __attribute__((section(".dtcm")));
+int                 m_ReadRegister  __attribute__((section(".dtcm")));
+int                 m_Decrementer   __attribute__((section(".dtcm")));
+int                 m_ClockRegister __attribute__((section(".dtcm")));
+UINT8               m_PinState[ 32 ][ 2 ]   __attribute__((section(".dtcm")));
+int                 m_InterruptRequested    __attribute__((section(".dtcm")));
+int                 m_ActiveInterrupts __attribute__((section(".dtcm")));
+int                 m_LastDelta __attribute__((section(".dtcm")));
+UINT32              m_DecrementClock __attribute__((section(".dtcm")));
+bool                m_CapsLock __attribute__((section(".dtcm")));
+int                 m_ColumnSelect __attribute__((section(".dtcm")));
+int                 m_HideShift __attribute__((section(".dtcm")));
+UINT8               m_StateTable[ VK_MAX ] __attribute__((section(".dtcm")));
+sJoystickInfo       m_Joystick[ 2 ] __attribute__((section(".dtcm")));
 
 
 void TMS9901_Reset(void)
@@ -358,10 +360,8 @@ UINT16 ReadCRU( ADDRESS address, UINT8 count )
 // iTMS9901 methods
 //----------------------------------------------------------------------------
 
-void UpdateTimer( UINT32 clockCycles )
+ITCM_CODE void UpdateTimer( UINT32 clockCycles )
 {
-    FUNCTION_ENTRY( this, "UpdateTimer", false );
-
     // Update the timer if we're in I/O mode
     if( m_PinState[ 0 ][ 1 ] == 0 )
     {
@@ -408,17 +408,7 @@ void tms9901_SignalInterrupt( int level )
 
     if( m_PinState[ level ][ 0 ] != 0 )
     {
-        // This level is already signalled - nothing more to do here
-        if( level != 2 )
-        {
-            //DBG_STATUS( "Interrupt " << level << " already signalled" );
-        }
         return;
-    }
-
-    if( level != 2 )
-    {
-        //DBG_STATUS( "Interrupt " << level << " signalled" );
     }
 
     m_InterruptRequested++;

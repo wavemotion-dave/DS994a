@@ -76,7 +76,7 @@ u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
 // -----------------------------------------------------------------------------------------------
 // For the various BIOS files ... only the coleco.rom is required - everything else is optional.
 // -----------------------------------------------------------------------------------------------
-u8 bTIBIOSFound         = false;
+u8 bTIBIOSFound      = false;
 
 u8 soundEmuPause     __attribute__((section(".dtcm"))) = 1;       // Set to 1 to pause (mute) sound, 0 is sound unmuted (sound channels active)
 
@@ -532,7 +532,7 @@ u8 bLookForKeys = 1;
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the Z80, VDP and PSG 
 // ------------------------------------------------------------------------
-void colecoDS_main(void) 
+void ds99_main(void) 
 {
   u16 iTx,  iTy;
   u16 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
@@ -952,7 +952,6 @@ void colecoDSInit(void)
   vramSetBankA(VRAM_A_MAIN_BG);
   vramSetBankB(VRAM_B_MAIN_SPRITE);          // Once emulation of game starts, we steal this back for an additional 128K of VRAM at 0x6820000
   vramSetBankC(VRAM_C_SUB_BG);
-  //vramSetBankD(VRAM_D_SUB_SPRITE);
   vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 
   vramSetBankE(VRAM_E_LCD );                 // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000
   vramSetBankF(VRAM_F_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000
@@ -1182,7 +1181,7 @@ int main(int argc, char **argv)
 
       //  Run Machine
       colecoDSInitCPU();
-      colecoDS_main();
+      ds99_main();
     }
   }
   return(0);
