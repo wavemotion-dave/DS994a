@@ -609,8 +609,8 @@ void colecoDS_main(void)
             DisplayStatusLine(false);
             emuActFrames = 0;
             
-            siprintf(szChai, "%u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3]); 
-            AffChaine(5,0,6,szChai);
+            //siprintf(szChai, "%u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3]); 
+            //AffChaine(5,0,6,szChai);
           
             if (myConfig.isPAL) myConfig.vertSync=0;    // Force Sync OFF always in PAL mode            
         }
