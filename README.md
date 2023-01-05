@@ -34,6 +34,8 @@ for the menu graphical design.
 
 Thanks to Flubba for the SN76496 sound core.
 
+Hugest thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
+
 Known Issues :
 -----------------------
 * Stuff
