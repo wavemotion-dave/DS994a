@@ -1,0 +1,273 @@
+// =====================================================================================
+// Copyright (c) 2021-2002 Dave Bernazzani (wavemotion-dave)
+//
+// Copying and distribution of this emulator, it's source code and associated 
+// readme files, with or without modification, are permitted in any medium without 
+// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
+// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+//
+// The ColecoDS emulator is offered as-is, without any warranty.
+// =====================================================================================
+#include <nds.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <fat.h>
+
+#include "DS99.h"
+#include "CRC32.h"
+#include "cpu/tms9900/tms9901.h"
+#include "cpu/tms9900/tms9900.h"
+#include "DS99mngt.h"
+#include "DS99_utils.h"
+#define NORAM 0xFF
+
+// -------------------------------------
+// Some IO Port and Memory Map vars...
+// -------------------------------------
+u16 memotech_RAM_start  __attribute__((section(".dtcm"))) = 0x4000;
+u8 svi_RAM[2]           __attribute__((section(".dtcm"))) = {0,1};
+u8 IOBYTE               __attribute__((section(".dtcm"))) = 0x00;
+u8 MTX_KBD_DRIVE        __attribute__((section(".dtcm"))) = 0x00;
+u8 lastIOBYTE           __attribute__((section(".dtcm"))) = 99;
+u32 tape_pos            __attribute__((section(".dtcm"))) = 0;
+u32 tape_len            __attribute__((section(".dtcm"))) = 0;
+u8 key_shift_hold       __attribute__((section(".dtcm"))) = 0;
+u8 spinner_enabled      __attribute__((section(".dtcm"))) = 0;
+
+u8 adam_ram_lo          __attribute__((section(".dtcm"))) = false;
+u8 adam_ram_hi          __attribute__((section(".dtcm"))) = false;
+u8 adam_ram_lo_exp      __attribute__((section(".dtcm"))) = false;
+u8 adam_ram_hi_exp      __attribute__((section(".dtcm"))) = false;
+
+// --------------------------------------------------
+// Some special ports for the MSX machine emu
+// --------------------------------------------------
+u8 Port_PPI_A __attribute__((section(".dtcm"))) = 0x00;
+u8 Port_PPI_B __attribute__((section(".dtcm"))) = 0x00;
+u8 Port_PPI_C __attribute__((section(".dtcm"))) = 0x00;
+
+u8 bIsComplicatedRAM __attribute__((section(".dtcm"))) = 0;   // Set to 1 if we have hotspots or other RAM needs
+
+// --------------------------------------------------------------------------------------
+// Some sprite data arrays for the Mario character that walks around the upper screen..
+extern const unsigned short sprPause_Palette[16];
+extern const unsigned char sprPause_Bitmap[2560];
+
+// ----------------------------------------------------------------------------
+// Some vars for the Z80-CTC timer/counter chip which is only partially 
+// emulated - enough that we can do rough timing and generate VDP 
+// interrupts. This chip is only used on the Sord M5 (not the Colecovision
+// nor the SG-1000 which just ties interrupts directly between VDP and CPU).
+// ----------------------------------------------------------------------------
+u8 ctc_control[4]   __attribute__((section(".dtcm"))) = {0x02, 0x02, 0x02, 0x02};
+u8 ctc_time[4]      __attribute__((section(".dtcm"))) = {0};
+u32 ctc_timer[4]    __attribute__((section(".dtcm"))) = {0};
+u8 ctc_vector[4]    __attribute__((section(".dtcm"))) = {0};
+u8 ctc_latch[4]     __attribute__((section(".dtcm"))) = {0}; 
+
+u8 romBankMask    __attribute__((section(".dtcm"))) = 0x00;
+u8 sgm_enable     __attribute__((section(".dtcm"))) = false;
+u8 ay_reg_idx     __attribute__((section(".dtcm"))) = 0;
+u8 ay_reg[16]     __attribute__((section(".dtcm"))) = {0};
+u16 sgm_low_addr  __attribute__((section(".dtcm"))) = 0x2000;
+
+u8 Port53         __attribute__((section(".dtcm"))) = 0x00;
+u8 Port60         __attribute__((section(".dtcm"))) = 0x0F;
+u8 Port20         __attribute__((section(".dtcm"))) = 0x00;
+
+u8 bFirstSGMEnable __attribute__((section(".dtcm"))) = true;
+u8 AY_Enable       __attribute__((section(".dtcm"))) = false;
+u8 AY_NeverEnable  __attribute__((section(".dtcm"))) = false;
+u8 SGM_NeverEnable __attribute__((section(".dtcm"))) = false;
+u8 AY_EnvelopeOn   __attribute__((section(".dtcm"))) = false;
+u8 ctc_enabled     __attribute__((section(".dtcm"))) = false;
+
+u8  JoyMode        __attribute__((section(".dtcm"))) = 0;           // Joystick Mode (1=Keypad, 0=Joystick)
+u32 JoyState       __attribute__((section(".dtcm"))) = 0;           // Joystick State for P1 and P2
+
+u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game
+
+// -----------------------------------------------------------
+// The master sound chip for the TI99
+// -----------------------------------------------------------
+SN76496 sncol   __attribute__((section(".dtcm")));
+
+
+/*********************************************************************************
+ * Keybaord Key Buffering Engine...
+ ********************************************************************************/
+u8 BufferedKeys[32];
+u8 BufferedKeysWriteIdx=0;
+u8 BufferedKeysReadIdx=0;
+void BufferKey(u8 key)
+{
+    BufferedKeys[BufferedKeysWriteIdx] = key;
+    BufferedKeysWriteIdx = (BufferedKeysWriteIdx+1) % 32;
+}
+
+/*********************************************************************************
+ * Init coleco Engine for that game
+ ********************************************************************************/
+u8 colecoInit(char *szGame) 
+{
+  u8 uBcl;
+  u16 uVide;
+   
+  // -----------------------------------------------------------------
+  // Change graphic mode to initiate emulation.
+  // Here we can claim back 128K of VRAM which is otherwise unused
+  // but we can use it for fast memory swaps and look-up-tables.
+  // -----------------------------------------------------------------
+  videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
+  vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
+  vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x6820000 we can use
+  
+  InitOpCodeLookup();                           // Build the large Op Code table for the TMS9900 CPU
+    
+  REG_BG3CNT = BG_BMP8_256x256;
+  REG_BG3PA = (1<<8); 
+  REG_BG3PB = 0;
+  REG_BG3PC = 0;
+  REG_BG3PD = (1<<8);
+  REG_BG3X = 0;
+  REG_BG3Y = 0;
+
+  // Init the page flipping buffer...
+  for (uBcl=0;uBcl<192;uBcl++) 
+  {
+     uVide=(uBcl/12);
+     dmaFillWords(uVide | (uVide<<16),pVidFlipBuf+uBcl*128,256);
+  }
+    
+  // Now load the game... this is a bit complicated as the game is likely to be in several file parts as follows:
+  // xxxC.bin is a CPU ROM loaded at 6000h
+  // xxxD.bin is a banked CPU ROM for 6000h
+  // xxxG.bin is a GROM loaded into GROM memory space (also 6000h but in different GROM memory space)
+  TMS9900_Reset(szGame);
+    
+  // Perform a standard system RESET
+  ResetTI();
+    
+  // Return with result
+  return (0);
+}
+
+/*********************************************************************************
+ * Run the emul
+ ********************************************************************************/
+void colecoRun(void) 
+{
+  showMainMenu();                       // Show the game-related screen
+}
+
+/*********************************************************************************
+ * Set coleco Palette
+ ********************************************************************************/
+void colecoSetPal(void) 
+{
+  u8 uBcl,r,g,b;
+  
+  // -----------------------------------------------------------------------
+  // The Colecovision has a 16 color pallette... we set that up here.
+  // We always use the standard NTSC color palette which is fine for now
+  // but maybe in the future we add the PAL color palette for a bit more
+  // authenticity.
+  // -----------------------------------------------------------------------
+  for (uBcl=0;uBcl<16;uBcl++) {
+    r = (u8) ((float) TMS9918A_palette[uBcl*3+0]*0.121568f);
+    g = (u8) ((float) TMS9918A_palette[uBcl*3+1]*0.121568f);
+    b = (u8) ((float) TMS9918A_palette[uBcl*3+2]*0.121568f);
+
+    SPRITE_PALETTE[uBcl] = RGB15(r,g,b);
+    BG_PALETTE[uBcl] = RGB15(r,g,b);
+  }
+}
+
+
+/*********************************************************************************
+ * Update the screen for the current cycle. On the DSi this will generally
+ * be called right after swiWaitForVBlank() in TMS9918a.c which will help
+ * reduce visual tearing and other artifacts. It's not strictly necessary
+ * and that does slow down the loop a bit... but DSi can handle it.
+ ********************************************************************************/
+ITCM_CODE void colecoUpdateScreen(void) 
+{
+    extern u16 timingFrames;
+    // ------------------------------------------------------------   
+    // If we are in 'blendMode' we will OR the last two frames. 
+    // This helps on some games where things are just 1 pixel 
+    // wide and the non XL/LL DSi will just not hold onto the
+    // image long enough to render it properly for the eye to 
+    // pick up. This takes CPU speed.
+    // ------------------------------------------------------------   
+    if (myConfig.frameBlend)
+    {
+      if (XBuf == XBuf_A)
+      {
+          XBuf = XBuf_B;
+      }
+      else
+      {
+          XBuf = XBuf_A;
+      }
+      u32 *p1 = (u32*)XBuf_A;
+      u32 *p2 = (u32*)XBuf_B;
+      u32 *destP = (u32*)pVidFlipBuf;
+        
+      if (timingFrames & 1) // Only need to do this every other frame...
+      {
+          for (u16 i=0; i<(256*192)/4; i++)
+          {
+              *destP++ = (*p1++ | *p2++);       // Simple OR blending of 2 frames...
+          }
+      }
+    }
+    else
+    {
+        // -----------------------------------------------------------------
+        // Not blend mode... just blast it out via DMA as fast as we can...
+        // -----------------------------------------------------------------
+        dmaCopyWordsAsynch(2, (u32*)XBuf_A, (u32*)pVidFlipBuf, 256*192);
+    }
+}
+
+
+/*******************************************************************************
+ * Compute the file CRC - this will be our unique identifier for the game
+ * for saving HI SCORES and Configuration / Key Mapping data.
+ *******************************************************************************/
+void getfile_crc(const char *path)
+{
+    file_crc = getFileCrc(path);        // The CRC is used as a unique ID to save out High Scores and Configuration...
+}
+
+
+ITCM_CODE u32 LoopTMS9900() 
+{
+    //extern void TMS9900_Run(void);
+    TMS9900_Run();
+    
+    // Refresh VDP 
+    if(Loop9918()) 
+    {
+      tms9901_SignalInterrupt(2);
+    }
+    
+    // Drop out unless end of screen is reached 
+    if (CurLine == tms_end_line)
+    {
+      return 0;
+    }
+    return 1;
+}
+
+void coleco_sound(u16 value)
+{
+    sn76496W(value, &sncol);
+}
+
+// End of file
