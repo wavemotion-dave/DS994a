@@ -363,7 +363,7 @@ sOpCode OpCodes[ 70 ] __attribute__((section(".dtcm"))) =
 //#define GROM_INC(x) ((x&0xE000) | ((x+1)&0x1FFF))
 #define GROM_INC(x) (x+1)
 
-UINT8 ReadGROM(void)
+ITCM_CODE UINT8 ReadGROM(void)
 {
     AddClocks( 19 );
     UINT8 retval = MemGROM[gromAddress];
@@ -371,7 +371,7 @@ UINT8 ReadGROM(void)
     return retval;
 }
 
-UINT8 ReadGROMAddress(void)
+ITCM_CODE UINT8 ReadGROMAddress(void)
 {
     m_GromWriteShift = 8;    
     AddClocks( 13 );    
@@ -380,12 +380,12 @@ UINT8 ReadGROMAddress(void)
     return data;    
 }
 
-void WriteGROM(UINT8 data)
+ITCM_CODE void WriteGROM(UINT8 data)
 {
     // Does nothing...
 }
 
-void WriteGROMAddress(UINT8 data)
+ITCM_CODE void WriteGROMAddress(UINT8 data)
 {
     AddClocks( m_GromWriteShift ? 15 : 21 );
     
@@ -396,7 +396,7 @@ void WriteGROMAddress(UINT8 data)
 }
 
 
-static UINT16 ReadPCMemoryW( UINT16 address )
+ITCM_CODE static UINT16 ReadPCMemoryW( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
     ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
@@ -407,7 +407,7 @@ static UINT16 ReadPCMemoryW( UINT16 address )
     else return (Memory[address] << 8) | (Memory[address+1]);
 }
     
-static UINT16 ReadMemoryW( UINT16 address )
+ITCM_CODE static UINT16 ReadMemoryW( UINT16 address )
 {
     UINT16 retVal;
     address &= 0xFFFE;
@@ -453,7 +453,7 @@ static UINT16 ReadMemoryW( UINT16 address )
     return retVal;
 }
 
-static UINT8 ReadMemoryB( UINT16 address )
+ITCM_CODE static UINT8 ReadMemoryB( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
 
@@ -503,7 +503,7 @@ inline void WriteBank(UINT16 address)
 }
 
 extern void coleco_sound(UINT16 value);
-static void WriteMemoryW( UINT16 address, UINT16 value )
+ITCM_CODE static void WriteMemoryW( UINT16 address, UINT16 value )
 {
     address &= 0xFFFE;
 
@@ -565,7 +565,7 @@ static void WriteMemoryW( UINT16 address, UINT16 value )
     }
 }
 
-static void WriteMemoryB( UINT16 address, UINT8 value )
+ITCM_CODE static void WriteMemoryB( UINT16 address, UINT8 value )
 {
     UINT8 flags = MemFlags[ address ];
 
@@ -617,7 +617,7 @@ static void WriteMemoryB( UINT16 address, UINT8 value )
     }
 }
 
-static UINT16 Fetch( )
+ITCM_CODE static UINT16 Fetch( )
 {
     UINT16 retVal = ReadPCMemoryW( PC ); PC += 2;
     return retVal;
@@ -660,13 +660,13 @@ void InitOpCodeLookup(void)
 }
 
 
-static void _ExecuteOpCode( sOpCode *op )
+inline void _ExecuteOpCode( sOpCode *op )
 {
     ClockCycleCounter += op->clocks;
     ((void (*)( ))op->function )( );
 }
 
-static void _ExecuteInstruction( UINT16 opCode )
+inline void _ExecuteInstruction( UINT16 opCode )
 {
     sOpCode *op = &OpCodes[OpCodeSpeedup[opCode]];
     _ExecuteOpCode( op );
@@ -682,7 +682,7 @@ static void _ExecuteInstruction( UINT16 opCode )
 // @>xxxx(Rx)  10   8   2          Indexed Memory
 //
 
-static UINT16 GetAddress( UINT16 opCode, size_t size )
+ITCM_CODE static UINT16 GetAddress( UINT16 opCode, size_t size )
 {
     UINT16 address = 0x0000;
     int reg = opCode & 0x0F;
@@ -716,7 +716,7 @@ static UINT16 GetAddress( UINT16 opCode, size_t size )
     return address;
 }
 
-void ContextSwitch( UINT16 address )
+ITCM_CODE void ContextSwitch( UINT16 address )
 {
     UINT16 newWP = ReadMemoryW( address );
     UINT16 newPC = ReadMemoryW( address + 2 );
@@ -731,7 +731,7 @@ void ContextSwitch( UINT16 address )
     WriteMemoryW( WP + 2 * 15, ST    );
 }
 
-static bool CheckInterrupt( )
+ITCM_CODE static bool CheckInterrupt( )
 {
     // Tell the PIC to update it's timer and turn off old interrupts
     UpdateTimer( ClockCycleCounter );
