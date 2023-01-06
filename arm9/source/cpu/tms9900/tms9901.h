@@ -91,16 +91,6 @@ extern void HardwareReset( ) ;
 extern void SoftwareReset( ) ;
 extern void tms9901_SignalInterrupt( int ) ;
 extern void tms9901_ClearInterrupt( int ) ;
-extern void VKeyUp( int sym ) ;
-extern void VKeyDown( int sym, VIRTUAL_KEY_E vkey ) ;
-extern void VKeysDown(int sym, VIRTUAL_KEY_E vkey1, VIRTUAL_KEY_E vkey2) ;
-extern void HideShiftKey( ) ;
-extern void UnHideShiftKey( ) ;
-extern UINT8 GetKeyState( VIRTUAL_KEY_E ) ;
-extern void SetJoystickX( int, int ) ;
-extern void SetJoystickY( int, int ) ;
-extern void SetJoystickButton( int, bool ) ;
-
 
 extern void TMS9901_Reset(void);
 #endif

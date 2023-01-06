@@ -75,7 +75,7 @@ const char *GetName( )
     return "TMS9901";
 }
 
-void WriteCRU_Inner( ADDRESS address, UINT16 data )
+ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
 {
     FUNCTION_ENTRY( this, "WriteCRU", false );
 
@@ -155,7 +155,7 @@ void WriteCRU_Inner( ADDRESS address, UINT16 data )
     >1B  Cassette Tape In
  */
 
-UINT16 ReadCRU_Inner( ADDRESS address )
+ITCM_CODE UINT16 ReadCRU_Inner( ADDRESS address )
 {
     FUNCTION_ENTRY( this, "ReadCRU", false );
 
@@ -327,7 +327,7 @@ UINT16 ReadCRU_Inner( ADDRESS address )
 
 
 
-void WriteCRU( ADDRESS address, UINT8 count, UINT16 value )
+ITCM_CODE void WriteCRU( ADDRESS address, UINT8 count, UINT16 value )
 {
     FUNCTION_ENTRY( nullptr, "cTI994A::WriteCRU", false );
 
@@ -340,7 +340,7 @@ void WriteCRU( ADDRESS address, UINT8 count, UINT16 value )
     }
 }
 
-UINT16 ReadCRU( ADDRESS address, UINT8 count )
+ITCM_CODE UINT16 ReadCRU( ADDRESS address, UINT8 count )
 {
     FUNCTION_ENTRY( nullptr, "cTI994A::ReadCRU", false );
     
@@ -402,7 +402,7 @@ void SoftwareReset( )
     TMS9901_Reset();
 }
 
-void tms9901_SignalInterrupt( int level )
+ITCM_CODE void tms9901_SignalInterrupt( int level )
 {
     FUNCTION_ENTRY( this, "SignalInterrupt", false );
 
@@ -422,7 +422,7 @@ void tms9901_SignalInterrupt( int level )
     }
 }
 
-void tms9901_ClearInterrupt( int level )
+ITCM_CODE void tms9901_ClearInterrupt( int level )
 {
     FUNCTION_ENTRY( this, "ClearInterrupt", false );
 
@@ -444,66 +444,3 @@ void tms9901_ClearInterrupt( int level )
     }
 }
 
-void VKeyUp( int sym )
-{
-    FUNCTION_ENTRY( this, "VKeyUp", false );
-}
-
-void VKeyDown( int sym, VIRTUAL_KEY_E vkey )
-{
-    FUNCTION_ENTRY( this, "VKeyDown", false );
-}
-
-void VKeysDown( int sym, VIRTUAL_KEY_E vkey1, VIRTUAL_KEY_E vkey2 )
-{
-    FUNCTION_ENTRY( this, "VKeysDown", false );
-}
-
-void HideShiftKey( )
-{
-    FUNCTION_ENTRY( this, "HideShiftKey", false );
-
-    m_HideShift++;
-}
-
-void UnHideShiftKey( )
-{
-    FUNCTION_ENTRY( this, "UnHideShiftKey", false );
-
-    if( m_HideShift )
-    {
-        m_HideShift--;
-    }
-}
-
-UINT8 GetKeyState( VIRTUAL_KEY_E vkey )
-{
-    return m_StateTable[ vkey ];
-}
-
-void SetJoystickX( int index, int value )
-{
-    FUNCTION_ENTRY( this, "SetJoystickX", true );
-
-    DBG_ASSERT(( index >= 0 ) && ( index < 2 ));
-
-    m_Joystick[ index ].x_Axis = value;
-}
-
-void SetJoystickY( int index, int value )
-{
-    FUNCTION_ENTRY( this, "SetJoystickY", true );
-
-    DBG_ASSERT(( index >= 0 ) && ( index < 2 ));
-
-    m_Joystick[ index ].y_Axis = value;
-}
-
-void SetJoystickButton( int index, bool value )
-{
-    FUNCTION_ENTRY( this, "SetJoystickButton", true );
-
-    DBG_ASSERT(( index >= 0 ) && ( index < 2 ));
-
-    m_Joystick[ index ].isPressed = value;
-}

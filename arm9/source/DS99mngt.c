@@ -248,7 +248,6 @@ void getfile_crc(const char *path)
 
 ITCM_CODE u32 LoopTMS9900() 
 {
-    //extern void TMS9900_Run(void);
     TMS9900_Run();
     
     // Refresh VDP 

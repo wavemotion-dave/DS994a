@@ -7,8 +7,10 @@ See BIOS files further down for the ones you need.
 
 Features :
 -----------------------
-* 32K RAM Expansion 
-* Currently limited to 64K bankswitch
+* Cart loads up to 512K Banked
+* 32K RAM Expansion
+* Save and Load State
+* Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * No cassette or Disk support yet... look for the Tunnels of Doom SSS hack that works without cassette.
 * No Speech Synth yet
 
@@ -28,17 +30,19 @@ The DS99 emulator is offered as-is, without any warranty.
 
 Credits :
 -----------------------
-Thanks to Alekmaul who provided the 
-baseline code to work with and to lobo
-for the menu graphical design.
+Thanks to Alekmaul who provided the baseline code to work with and to lobo for the menu graphical design.
 
 Thanks to Flubba for the SN76496 sound core.
 
+Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
+
 Hugest thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
+
+
 
 Known Issues :
 -----------------------
-* Stuff
+* Stuff... will fill in later as Alpha progresses into Beta
 
 BIOS Files :
 -----------------------
@@ -73,5 +77,11 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.2: 6-Jan-2023 by wavemotion-dave
+* Increased bankswitch support to 512k
+* Fixed IDLE instruction so games like Slymoids works
+* Improved speed by 10-15% across the board... 
+* Other minor cleanups as time permitted
+
 V0.1: 5-Jan-2023 by wavemotion-dave
 * It works! Almost...

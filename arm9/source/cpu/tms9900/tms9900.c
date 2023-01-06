@@ -41,15 +41,17 @@ extern UINT8 WrCtrl9918(UINT8 value);
 extern UINT8 RdData9918(void);
 extern UINT8 RdCtrl9918(void);
 extern void WrData9918(UINT8 value);
+extern void coleco_sound(UINT16 value);
+
 
 extern UINT32 debug[32];
 
 #define nullptr NULL
-static UINT16   parity[ 256 ];
+static UINT16   parity[ 256 ] __attribute__((section(".dtcm")));
 
 UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
-UINT8           CartMem[0x10000];           // Cart C memory up to 64K
+UINT8           CartMem[1024*512];          // Cart C memory up to 512K
 UINT16          MemFlags[0x10000];          // Memory flags for each address
 
 UINT16          InterruptFlag       __attribute__((section(".dtcm")));
@@ -58,12 +60,14 @@ UINT16          Status              __attribute__((section(".dtcm")));
 UINT32          ClockCycleCounter   __attribute__((section(".dtcm")));
 UINT16          fetchPtr            __attribute__((section(".dtcm")));
 UINT16          curOpCode           __attribute__((section(".dtcm")));
-UINT16          bankOffset          __attribute__((section(".dtcm"))) = 0x0000;
+UINT32          bankOffset          __attribute__((section(".dtcm"))) = 0x00000000;
 UINT16          gromAddress         __attribute__((section(".dtcm"))) = 0x0000;
-UINT16          bankMask            __attribute__((section(".dtcm"))) = 0x0007;
+UINT16          bankMask            __attribute__((section(".dtcm"))) = 0x003F;
 
 UINT8           m_GromWriteShift    __attribute__((section(".dtcm")))  = 8;
 UINT8           m_GromReadShift     __attribute__((section(".dtcm")))  = 8;
+
+UINT8           bCPUIdleRequest     __attribute__((section(".dtcm")))  = 0;
 
 UINT16 *OpCodeSpeedup __attribute__((section(".dtcm")))  = (UINT16*)0x06860000;
 
@@ -153,7 +157,8 @@ void TMS9900_Reset(char *szGame)
         MemFlags[address] |= MEMFLG_BANKW;   // Bank Write Data
     }
     
-    bankOffset = 0x0000;
+    bankOffset = 0x00000000;
+    bCPUIdleRequest = 0;
     
     // ---------------------------------------------------------
     // Now setup for TI-Invaders as a sort of test program...
@@ -197,7 +202,7 @@ void TMS9900_Reset(char *szGame)
 
         tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
         infile = fopen(tmpFilename, "rb");
-        bankMask = 0x0007;
+        bankMask = 0x003F;
         if (infile != NULL)
         {
             bankMask = 0x0001;                          // If there is a 'D' file, it's always only 2 banks
@@ -218,10 +223,10 @@ void TMS9900_Reset(char *szGame)
     else // Full Load
     {
         infile = fopen(tmpFilename, "rb");
-        fread(CartMem, 0x10000, 1, infile);         // Whole cart memory up to 64K if needed...
+        fread(CartMem, 512*1024, 1, infile);        // Whole cart memory up to 512K if needed...
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
-        bankMask = 0x0007;                          // And set the bank mask to allow any of the 8K banks
+        bankMask = 0x003F;                          // And set the bank mask to allow any of the 8K banks
     }
     
     TI_Reset( );
@@ -506,7 +511,6 @@ inline void WriteBank(UINT16 address)
     bankOffset = (0x2000 * address);
 }
 
-extern void coleco_sound(UINT16 value);
 ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
 {
     address &= 0xFFFE;
@@ -544,9 +548,15 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         {
             WriteBank(address);
         }
+        
+        // Possible 8-bit expanded RAM write
+        if ((address >= 0x2000 && address <= 0x4000) || (address >= 0xA000))
+        {
+            Memory[address] = (value >> 8);
+            Memory[address+1] = value & 0xFF;
+        }
     }
-    
-    if (address >= 0x8000 && address < 0x8400)
+    else
     {
 #ifdef MIRRORS
         Memory[0x8000 | ((address+0)&0xFF)] = (value>>8)&0xFF;
@@ -561,11 +571,6 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         Memory[address] = (value >> 8);
         Memory[address+1] = value;
 #endif        
-    }
-    else if ((address >= 0x2000 && address <= 0x4000) || (address >= 0xA000))
-    {
-        Memory[address] = (value >> 8);
-        Memory[address+1] = value & 0xFF;
     }
 }
 
@@ -603,21 +608,23 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
             WriteBank(address);
         }
     }
-    
-    if (address >= 0x8000 && address < 0x8400)
+    else
     {
-#ifdef MIRRORS        
-        Memory[0x8000 | (address&0xFF)] = value;
-        Memory[0x8100 | (address&0xFF)] = value;
-        Memory[0x8200 | (address&0xFF)] = value;
-        Memory[0x8300 | (address&0xFF)] = value;
-#else
-        Memory[address] = value;
-#endif        
-    }
-    else if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
-    {
-        Memory[address] = value;
+        if (address >= 0x8000 && address < 0x8400)
+        {
+    #ifdef MIRRORS        
+            Memory[0x8000 | (address&0xFF)] = value;
+            Memory[0x8100 | (address&0xFF)] = value;
+            Memory[0x8200 | (address&0xFF)] = value;
+            Memory[0x8300 | (address&0xFF)] = value;
+    #else
+            Memory[address] = value;
+    #endif        
+        }
+        else if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
+        {
+            Memory[address] = value;
+        }
     }
 }
 
@@ -773,12 +780,19 @@ ITCM_CODE void TMS9900_Run()
 
     do
     {
-        CheckInterrupt( );
+        if (CheckInterrupt()) bCPUIdleRequest=0;
 
-        curOpCode = ReadPCMemoryW( PC ); PC+=2;
-        sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
-        ClockCycleCounter += op->clocks;
-        ((void (*)( ))op->function )( );
+        if (bCPUIdleRequest)
+        {
+            ClockCycleCounter += 4;
+        }
+        else
+        {
+            curOpCode = ReadPCMemoryW( PC ); PC+=2;
+            sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
+            ClockCycleCounter += op->clocks;
+            ((void (*)( ))op->function )( );
+        }
     }
     while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
 }
@@ -982,14 +996,7 @@ void opcode_LIMI( )
 //-----------------------------------------------------------------------------
 void opcode_IDLE( )
 {
-    for( EVER )
-    {
-        if( CheckInterrupt( ) == true )
-        {
-            return;
-        }
-        ClockCycleCounter += 4;
-    }
+    bCPUIdleRequest = true;
 }
 
 //-----------------------------------------------------------------------------

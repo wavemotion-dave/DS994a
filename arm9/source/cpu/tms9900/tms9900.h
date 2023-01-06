@@ -91,35 +91,29 @@ typedef struct _sOpCode
 // Functions required by opcodes.cpp
 
 extern void InvalidOpcode( );
-extern void (*TimerHook)( );
-extern UINT8 CallTrapB( bool read, ADDRESS address, UINT8 value );
-extern UINT16 CallTrapW( bool read, bool isFetch, ADDRESS address, UINT16 value );
 
 // Functions provided by opcodes.cpp
 
-extern void Run( );
-extern void Stop( );
-extern bool Step( );
 extern bool IsRunning( );
 extern void ContextSwitch( UINT16 address );
 extern void InitOpCodeLookup( );
 
 extern UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 extern UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
-extern UINT8           CartMem[0x10000];           // Cart C memory up to 64K
+extern UINT8           CartMem[];                  // Cart C memory 
 
-extern UINT16          InterruptFlag    ;
-extern UINT16          WorkspacePtr     ;
-extern UINT16          ProgramCounter   ;
-extern UINT16          Status           ;
+extern UINT16          InterruptFlag;
+extern UINT16          WorkspacePtr;
+extern UINT16          ProgramCounter;
+extern UINT16          Status;
 extern UINT32          ClockCycleCounter;
-extern UINT16          fetchPtr         ;
-extern UINT16          curOpCode        ;
-extern UINT16          bankOffset       ;
+extern UINT16          fetchPtr;
+extern UINT16          curOpCode;
+extern UINT32          bankOffset;
 extern UINT8           m_GromWriteShift;
 extern UINT8           m_GromReadShift;
 extern UINT16          gromAddress;
-
+extern UINT8           bCPUIdleRequest;
 
 void opcode_A   ( );
 void opcode_AB  ( );

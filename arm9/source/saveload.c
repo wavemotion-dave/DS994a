@@ -25,14 +25,14 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0001        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0002        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
  ********************************************************************************/
 u8  spare[512] = {0x00};    // We keep some spare bytes so we can use them in the future without changing the structure
-static char szFile[128];
-static char szCh1[32];
+static char szFile[160];
+static char szCh1[33];
 void colecoSaveState() 
 {
   u32 uNbO;
@@ -78,7 +78,8 @@ void colecoSaveState()
     uNbO = fwrite(&bankOffset,          sizeof(bankOffset),          1, handle);
     uNbO = fwrite(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);
     uNbO = fwrite(&m_GromReadShift,     sizeof(m_GromReadShift),     1, handle);
-    uNbO = fwrite(&gromAddress,         sizeof(gromAddress),            1, handle);
+    uNbO = fwrite(&gromAddress,         sizeof(gromAddress),         1, handle);
+    uNbO = fwrite(&bCPUIdleRequest,     sizeof(bCPUIdleRequest),     1, handle);
       
     uNbO = fwrite(&m_TimerActive,       sizeof(m_TimerActive),       1, handle);
     uNbO = fwrite(&m_ReadRegister,      sizeof(m_ReadRegister),      1, handle);
@@ -197,6 +198,7 @@ void colecoLoadState()
             if (uNbO) uNbO = fread(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);
             if (uNbO) uNbO = fread(&m_GromReadShift,     sizeof(m_GromReadShift),     1, handle);
             if (uNbO) uNbO = fread(&gromAddress,         sizeof(gromAddress),         1, handle);
+            if (uNbO) uNbO = fread(&bCPUIdleRequest,     sizeof(bCPUIdleRequest),     1, handle);
             
             if (uNbO) uNbO = fread(&m_TimerActive,       sizeof(m_TimerActive),       1, handle);
             if (uNbO) uNbO = fread(&m_ReadRegister,      sizeof(m_ReadRegister),      1, handle);
