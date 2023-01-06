@@ -40,14 +40,14 @@
 #define TMS_PARITY        0x0400
 #define TMS_XOP           0x0200
 
-#define MEMFLG_SPEECH        0x0001
-#define MEMFLG_BANKW         0x0002
-#define MEMFLG_8BIT          0x0004
-#define MEMFLG_VDPR          0x0008
-#define MEMFLG_VDPW          0x0010
-#define MEMFLG_GROMR         0x0020
-#define MEMFLG_GROMW         0x0040
-#define MEMFLG_SOUND         0x0080
+#define MEMFLG_SPEECH        0x01
+#define MEMFLG_CART         0x02
+#define MEMFLG_8BIT          0x04
+#define MEMFLG_VDPR          0x08
+#define MEMFLG_VDPW          0x10
+#define MEMFLG_GROMR         0x20
+#define MEMFLG_GROMW         0x40
+#define MEMFLG_SOUND         0x80
 
 extern void TMS9900_Reset(char *szGame);
 extern void SetPC( ADDRESS address ) ;
@@ -79,10 +79,9 @@ extern bool ClearBreakpoint( ADDRESS, UINT8 ) ;
 
 typedef struct _sOpCode
 {
-    char        mnemonic[ 5 ];
+    char        mnemonic[ 8 ];
     UINT16      opCode;
     UINT16      mask;
-    UINT16      format;
     void      (*function)( );
     UINT32      clocks;
 } sOpCode;
@@ -103,16 +102,15 @@ extern UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
 extern UINT8           CartMem[];                  // Cart C memory 
 
 extern UINT16          InterruptFlag;
-extern UINT16          WorkspacePtr;
-extern UINT16          ProgramCounter;
+extern UINT32          WorkspacePtr;
 extern UINT16          Status;
 extern UINT32          ClockCycleCounter;
-extern UINT16          fetchPtr;
+extern UINT32          fetchPtr;
 extern UINT16          curOpCode;
 extern UINT32          bankOffset;
 extern UINT8           m_GromWriteShift;
 extern UINT8           m_GromReadShift;
-extern UINT16          gromAddress;
+extern UINT32          gromAddress;
 extern UINT8           bCPUIdleRequest;
 
 void opcode_A   ( );

@@ -11,7 +11,7 @@ export TARGET		:=	DS994a
 export TOPDIR		:=	$(CURDIR)
 export VERSION		:=  0.2
 
-ICON 		:= -b $(CURDIR)/logo.bmp "DS994a $(VERSION);wavemotion-dave;https://github.com/wavemotion-dave/ColecoDS" 
+ICON 		:= -b $(CURDIR)/logo.bmp "DS994a $(VERSION);wavemotion-dave;https://github.com/wavemotion-dave/DS994a" 
 
 #---------------------------------------------------------------------------------
 # path to tools - this can be deleted if you set the path in windows

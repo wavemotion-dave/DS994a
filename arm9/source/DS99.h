@@ -8,13 +8,15 @@
 //
 // The ColecoDS emulator is offered as-is, without any warranty.
 // =====================================================================================
-#ifndef _COLECODS_H_
-#define _COLECODS_H_
+#ifndef _DS99_H_
+#define _DS99_H_
 
 #include <nds.h>
 #include <string.h>
 
 #define VERSIONDS99 "0.2"
+
+#define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
 enum
 {
@@ -84,31 +86,19 @@ extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;
 
-extern u8 spinX_left;
-extern u8 spinX_right;
-extern u8 spinY_left;
-extern u8 spinY_right;
-
 extern u16 nds_key;
 extern u8  kbd_key;
-
-extern u32 tape_pos, tape_len;
-
-#define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
-
-extern volatile u16 vusCptVBL;                   // Video Management
-
 extern u8 keyCoresp[MAX_KEY_OPTIONS];
 extern u16 NDS_keyMap[];
 
+extern volatile u16 vusCptVBL;                   // Video Management
+
 extern u8 soundEmuPause;
+extern u8  bShowDebug;
 
 extern int bg0, bg1, bg0b,bg1b;
 
 extern u16 *pVidFlipBuf;                         // Video flipping buffer
-
-extern u8 adam_ram_lo, adam_ram_hi;
-extern u8 io_show_status;
 
 extern void showMainMenu(void);
 extern void InitBottomScreen(void);
@@ -116,9 +106,7 @@ extern void PauseSound(void);
 extern void UnPauseSound(void);
 extern void ResetStatusFlags(void);
 extern void ReadFileCRCAndConfig(void);
-extern void SetupAdam(bool);
 extern void DisplayStatusLine(bool bForce);
-extern void colecoSaveEEPROM(void);    
-extern void colecoLoadEEPROM(void);    
 extern void ResetTI(void);
+
 #endif

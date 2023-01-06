@@ -72,6 +72,7 @@ extern SN76496 sncol;       // The SN sound chip is the main TI99/4a sound
 u16 emuFps          __attribute__((section(".dtcm"))) = 0;
 u16 emuActFrames    __attribute__((section(".dtcm"))) = 0;
 u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
+u8  bShowDebug      __attribute__((section(".dtcm"))) = 1;
 
 // -----------------------------------------------------------------------------------------------
 // For the various BIOS files ... only the coleco.rom is required - everything else is optional.
@@ -314,13 +315,6 @@ void dsInstallSoundEmuFIFO(void)
   bStartSoundEngine = true; // Volume will 'unpause' after 1 frame in the main loop.
 }
 
-//*****************************************************************************
-// Reset the Colecovision - mostly CPU, Super Game Module and memory...
-//*****************************************************************************
-static u8 last_sgm_mode = false;
-static u8 last_ay_mode = false;
-static u8 last_mc_mode = 0;
-
 // --------------------------------------------------------------
 // When we reset the machine, there are many small utility flags 
 // for various expansion peripherals that must be reset.
@@ -532,7 +526,7 @@ u8 bLookForKeys = 1;
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the Z80, VDP and PSG 
 // ------------------------------------------------------------------------
-void ds99_main(void) 
+ITCM_CODE void ds99_main(void) 
 {
   u16 iTx,  iTy;
   u16 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
@@ -542,10 +536,10 @@ void ds99_main(void)
   showMainMenu();
     
   // Get the Coleco Machine Emualtor ready
-  colecoInit(gpFic[ucGameAct].szName);
+  TI99Init(gpFic[ucGameAct].szName);
 
-  colecoSetPal();
-  colecoRun();
+  TI99SetPal();
+  TI99Run();
   
   // Frame-to-frame timing...
   TIMER1_CR = 0;
@@ -559,11 +553,6 @@ void ds99_main(void)
   timingFrames  = 0;
   emuFps=0;
     
-  // Default SGM statics back to init state
-  last_sgm_mode = false;
-  last_ay_mode  = false;
-  last_mc_mode  = 0;
-  
   // Force the sound engine to turn on when we start emulation
   bStartSoundEngine = true;
     
@@ -572,8 +561,6 @@ void ds99_main(void)
   // -------------------------------------------------------------------
   while(1)  
   {
-    myConfig.overlay=10;
-      
     // Take a tour of the TMS9900 and display the screen if necessary
     if (!LoopTMS9900()) 
     {   
@@ -609,10 +596,11 @@ void ds99_main(void)
             DisplayStatusLine(false);
             emuActFrames = 0;
             
-            //siprintf(szChai, "%u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3]); 
-            //AffChaine(5,0,6,szChai);
-          
-            if (myConfig.isPAL) myConfig.vertSync=0;    // Force Sync OFF always in PAL mode            
+            if (bShowDebug)
+            {
+                siprintf(szChai, "%u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3]); 
+                AffChaine(5,0,6,szChai);
+            }
         }
         emuActFrames++;
 
@@ -657,32 +645,8 @@ void ds99_main(void)
           
         if (bLookForKeys)
         {    
-            // Test if "Reset Game" selected
-            if  (((myConfig.overlay == 9) && ((iTx>=1) && (iTy>=28) && (iTx<= 35) && (iTy<51))) ||
-                (((myConfig.overlay < 9)) && ((iTx>=6) && (iTy>=40) && (iTx<=130) && (iTy<67))))
-            {
-              if  (!ResetNow) {
-                ResetNow = 1;
-                SoundPause();
-
-                // Ask for verification
-                if (showMessage("DO YOU REALLY WANT TO", "RESET THE CURRENT GAME ?") == ID_SHM_YES) 
-                { 
-                    ResetTI();
-                }
-
-                showMainMenu();
-                SoundUnPause();
-              }
-            }
-            else {
-              ResetNow  = 0;
-            }
-
             // Test if "End Game" selected
-            if  ((myConfig.overlay == 9  && ((iTx>=1) && (iTy>=51) && (iTx<= 35) && (iTy<75)))    ||
-                 (myConfig.overlay == 10 && ((iTx>=35) && (iTy>=169) && (iTx<= 78) && (iTy<192))) ||
-                ((myConfig.overlay < 9)  && ((iTx>=6) && (iTy>=67) && (iTx<=130) && (iTy<95))))
+            if  (((iTx>=35) && (iTy>=169) && (iTx<= 78) && (iTy<192)))
             {
               //  Stop sound
               SoundPause();
@@ -698,9 +662,9 @@ void ds99_main(void)
               SoundUnPause();
             }
 
+#if 0
             // Test if "High Score" selected
-            if  ((myConfig.overlay == 9 && ((iTx>=1) && (iTy>=75) && (iTx<= 35) && (iTy<99))) ||
-                ((myConfig.overlay < 9) && ((iTx>=6) && (iTy>=95) && (iTx<=130) && (iTy<125))))
+            if  (((iTx>=1) && (iTy>=75) && (iTx<= 35) && (iTy<99)))
             {
               //  Stop sound
               SoundPause();
@@ -708,11 +672,10 @@ void ds99_main(void)
               DisplayStatusLine(true);
               SoundUnPause();
             }
+#endif      
 
             // Test if "Save State" selected
-            if  ((myConfig.overlay == 9 && ((iTx>=1) && (iTy>=99) && (iTx<= 35) && (iTy<123))) ||
-                 (myConfig.overlay == 10 && ((iTx>=78) && (iTy>=169) && (iTx<= 122) && (iTy<192))) ||
-                 ((myConfig.overlay < 9) && ((iTx>=6) && (iTy>=125) && (iTx<=130) && (iTy<155))))
+            if  (((iTx>=78) && (iTy>=169) && (iTx<= 122) && (iTy<192)))
             {
               if  (!SaveNow) 
               {
@@ -723,13 +686,13 @@ void ds99_main(void)
                       if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
                       {                      
                         SaveNow = 1;
-                        colecoSaveState();
+                        TI99SaveState();
                       }
                   }
                   else
                   {
                         SaveNow = 1;
-                        colecoSaveState();
+                        TI99SaveState();
                   }
                   SoundUnPause();
               }
@@ -738,9 +701,7 @@ void ds99_main(void)
               SaveNow = 0;
 
             // Test if "Load State" selected
-            if  ((myConfig.overlay == 9 && ((iTx>=1) && (iTy>=123) && (iTx<= 35) && (iTy<146))) ||
-                 (myConfig.overlay == 10 && ((iTx>=123) && (iTy>=169) && (iTx<= 166) && (iTy<192))) ||
-                 ((myConfig.overlay < 9) && ((iTx>=6) && (iTy>=155) && (iTx<=130) && (iTy<184))))
+            if  (((iTx>=123) && (iTy>=169) && (iTx<= 166) && (iTy<192)))
             {
               if  (!LoadNow) 
               {
@@ -751,13 +712,13 @@ void ds99_main(void)
                       if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
                       {                      
                         LoadNow = 1;
-                        colecoLoadState();
+                        TI99LoadState();
                       }
                   }
                   else
                   {
                         LoadNow = 1;
-                        colecoLoadState();
+                        TI99LoadState();
                   }
                   SoundUnPause();
               }
@@ -769,70 +730,66 @@ void ds99_main(void)
             // --------------------------------------------------------------------------
             // Test the touchscreen rendering of the ADAM/MSX/SVI full keybaord
             // --------------------------------------------------------------------------
-
-            if (myConfig.overlay == 10) // Alpha Keyboard
+            if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
             {
-                if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
-                {
-                    if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_1]=1;
-                    else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_2]=1;
-                    else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_3]=1;
-                    else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_4]=1;
-                    else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_5]=1;
-                    else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_6]=1;
-                    else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_7]=1;
-                    else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_8]=1;
-                }
-                else if ((iTy >= 56) && (iTy < 84))   // Row 2
-                {
-                    if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_9]=1;
-                    else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_0]=1;
-                    else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_A]=1;
-                    else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_B]=1;
-                    else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_C]=1;
-                    else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_D]=1;
-                    else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_E]=1;
-                    else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_F]=1;
-                }
-                else if ((iTy >= 84) && (iTy < 112))  // Row 3
-                {
-                    if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_G]=1;
-                    else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_H]=1;
-                    else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_I]=1;
-                    else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_J]=1;
-                    else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_K]=1;
-                    else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_L]=1;
-                    else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_M]=1;
-                    else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_N]=1;
-                }
-                else if ((iTy >= 112) && (iTy < 140))  // Row 4
-                {
-                    if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_O]=1;
-                    else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_P]=1;
-                    else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Q]=1;
-                    else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_R]=1;
-                    else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_S]=1;
-                    else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_T]=1;
-                    else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_U]=1;
-                    else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_V]=1;
-                }
-                else if ((iTy >= 140) && (iTy < 169))  // Row 5
-                {
-                    if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_W]=1;
-                    else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_X]=1;
-                    else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Y]=1;
-                    else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_Z]=1;
-                    else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_PERIOD]=1;
-                    else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; m_StateTable[VK_FCTN]=1;} //PRO'C
-                    else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_8]=1; m_StateTable[VK_FCTN]=1;} //REDO
-                    else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_9]=1; m_StateTable[VK_FCTN]=1;} //BACK
-                }
-                else if ((iTy >= 169) && (iTy < 192))  // Row 6
-                {
-                    if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
-                    else if ((iTx >= 166) && (iTx < 211))  m_StateTable[VK_SPACE]=1;
-                    else if ((iTx >= 211) && (iTx < 256))  m_StateTable[VK_ENTER]=1;
-                }
+                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_1]=1;
+                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_2]=1;
+                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_3]=1;
+                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_4]=1;
+                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_5]=1;
+                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_6]=1;
+                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_7]=1;
+                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_8]=1;
+            }
+            else if ((iTy >= 56) && (iTy < 84))   // Row 2
+            {
+                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_9]=1;
+                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_0]=1;
+                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_A]=1;
+                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_B]=1;
+                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_C]=1;
+                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_D]=1;
+                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_E]=1;
+                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_F]=1;
+            }
+            else if ((iTy >= 84) && (iTy < 112))  // Row 3
+            {
+                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_G]=1;
+                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_H]=1;
+                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_I]=1;
+                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_J]=1;
+                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_K]=1;
+                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_L]=1;
+                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_M]=1;
+                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_N]=1;
+            }
+            else if ((iTy >= 112) && (iTy < 140))  // Row 4
+            {
+                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_O]=1;
+                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_P]=1;
+                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Q]=1;
+                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_R]=1;
+                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_S]=1;
+                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_T]=1;
+                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_U]=1;
+                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_V]=1;
+            }
+            else if ((iTy >= 140) && (iTy < 169))  // Row 5
+            {
+                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_W]=1;
+                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_X]=1;
+                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Y]=1;
+                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_Z]=1;
+                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_PERIOD]=1;
+                else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; m_StateTable[VK_FCTN]=1;} //PRO'C
+                else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_8]=1; m_StateTable[VK_FCTN]=1;} //REDO
+                else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_9]=1; m_StateTable[VK_FCTN]=1;} //BACK
+            }
+            else if ((iTy >= 169) && (iTy < 192))  // Row 6
+            {
+                if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
+                else if ((iTx >= 166) && (iTx < 211))  m_StateTable[VK_SPACE]=1;
+                else if ((iTx >= 211) && (iTx < 256))  m_StateTable[VK_ENTER]=1;
             }
 
             if (++dampenClick > 2)  // Make sure the key is pressed for an appreciable amount of time...
@@ -991,22 +948,11 @@ void colecoDSInit(void)
 // ---------------------------------------------------------------------------
 void InitBottomScreen(void)
 {
-    if (myConfig.overlay == 10)  //Alpha Keyboard
-    {
-          //  Init bottom screen
-          decompress(alphaTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-          decompress(alphaMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
-          dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-          dmaCopy((void*) alphaPal,(void*) BG_PALETTE_SUB,256*2);
-    }
-    else // Generic Overlay
-    {
-          //  Init bottom screen
-          decompress(ecranBasTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-          decompress(ecranBasMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
-          dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-          dmaCopy((void*) ecranBasPal,(void*) BG_PALETTE_SUB,256*2);
-    }
+    //  Init bottom screen
+    decompress(alphaTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+    decompress(alphaMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+    dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
+    dmaCopy((void*) alphaPal,(void*) BG_PALETTE_SUB,256*2);
     
     unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
     dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);

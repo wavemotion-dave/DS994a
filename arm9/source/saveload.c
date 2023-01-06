@@ -25,7 +25,7 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0002        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0003        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -33,7 +33,7 @@
 u8  spare[512] = {0x00};    // We keep some spare bytes so we can use them in the future without changing the structure
 static char szFile[160];
 static char szCh1[33];
-void colecoSaveState() 
+void TI99SaveState() 
 {
   u32 uNbO;
   long pSvg;
@@ -154,7 +154,7 @@ void colecoSaveState()
 /*********************************************************************************
  * Load the current state - read everything back from the .sav file.
  ********************************************************************************/
-void colecoLoadState() 
+void TI99LoadState() 
 {
     u32 uNbO;
     long pSvg;

@@ -1,11 +1,11 @@
-#ifndef _colecoDS_GENERIC_H_
-#define _colecoDS_GENERIC_H_
+#ifndef _DS99_UTILS_H_
+#define _DS99_UTILS_H_
 
 #define MAX_ROMS        512
 #define MAX_ROM_LENGTH  160
 
-#define MAX_CONFIGS      512
-#define CONFIG_VER       0x0001
+#define MAX_CONFIGS      700
+#define CONFIG_VER       0x0002
 
 #define COLROM        0x01
 #define DIRECT        0x02
@@ -37,30 +37,24 @@ struct __attribute__((__packed__)) Config_t
     u8  showFPS;
     u8  frameSkip;
     u8  frameBlend;
-    u8  msxMapper;
-    u8  autoFire1;
-    u8  isPAL;
-    u8  overlay;
     u8  maxSprites;
-    u8  vertSync;
-    u8  spinSpeed;
-    u8  touchPad;
-    u8  cpuCore;
-    u8  msxBios;
-    u8  msxKey5;
-    u8  dpad;
     u8  memWipe;
-    u8  clearInt;
-    u8  cvEESize;
-    u8  ayEnvelope;
-    u8  colecoRAM;
-    u8  msxBeeper;
-    u8  reservedA3;
-    u8  reservedB0;
-    u8  reservedB1;
-    u8  reservedB2;
-    u8  reservedB3;
-    u32 reservedC;
+    u8  isPAL;
+    u8  reservedA;
+    u8  reservedB;
+    u8  reservedC;
+    u8  reservedD;
+    u8  reservedE;
+    u8  reservedF;
+    u8  reservedG;
+    u8  reservedH;
+    u8  reservedI;
+    u8  reservedJ;
+    u8  reservedK;
+    u8  reservedL;
+    u8  reservedM;
+    u8  reservedN;
+    u32 reservedA32;
 };
  
 

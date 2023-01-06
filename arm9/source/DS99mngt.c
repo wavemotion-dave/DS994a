@@ -25,69 +25,6 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-// -------------------------------------
-// Some IO Port and Memory Map vars...
-// -------------------------------------
-u16 memotech_RAM_start  __attribute__((section(".dtcm"))) = 0x4000;
-u8 svi_RAM[2]           __attribute__((section(".dtcm"))) = {0,1};
-u8 IOBYTE               __attribute__((section(".dtcm"))) = 0x00;
-u8 MTX_KBD_DRIVE        __attribute__((section(".dtcm"))) = 0x00;
-u8 lastIOBYTE           __attribute__((section(".dtcm"))) = 99;
-u32 tape_pos            __attribute__((section(".dtcm"))) = 0;
-u32 tape_len            __attribute__((section(".dtcm"))) = 0;
-u8 key_shift_hold       __attribute__((section(".dtcm"))) = 0;
-u8 spinner_enabled      __attribute__((section(".dtcm"))) = 0;
-
-u8 adam_ram_lo          __attribute__((section(".dtcm"))) = false;
-u8 adam_ram_hi          __attribute__((section(".dtcm"))) = false;
-u8 adam_ram_lo_exp      __attribute__((section(".dtcm"))) = false;
-u8 adam_ram_hi_exp      __attribute__((section(".dtcm"))) = false;
-
-// --------------------------------------------------
-// Some special ports for the MSX machine emu
-// --------------------------------------------------
-u8 Port_PPI_A __attribute__((section(".dtcm"))) = 0x00;
-u8 Port_PPI_B __attribute__((section(".dtcm"))) = 0x00;
-u8 Port_PPI_C __attribute__((section(".dtcm"))) = 0x00;
-
-u8 bIsComplicatedRAM __attribute__((section(".dtcm"))) = 0;   // Set to 1 if we have hotspots or other RAM needs
-
-// --------------------------------------------------------------------------------------
-// Some sprite data arrays for the Mario character that walks around the upper screen..
-extern const unsigned short sprPause_Palette[16];
-extern const unsigned char sprPause_Bitmap[2560];
-
-// ----------------------------------------------------------------------------
-// Some vars for the Z80-CTC timer/counter chip which is only partially 
-// emulated - enough that we can do rough timing and generate VDP 
-// interrupts. This chip is only used on the Sord M5 (not the Colecovision
-// nor the SG-1000 which just ties interrupts directly between VDP and CPU).
-// ----------------------------------------------------------------------------
-u8 ctc_control[4]   __attribute__((section(".dtcm"))) = {0x02, 0x02, 0x02, 0x02};
-u8 ctc_time[4]      __attribute__((section(".dtcm"))) = {0};
-u32 ctc_timer[4]    __attribute__((section(".dtcm"))) = {0};
-u8 ctc_vector[4]    __attribute__((section(".dtcm"))) = {0};
-u8 ctc_latch[4]     __attribute__((section(".dtcm"))) = {0}; 
-
-u8 romBankMask    __attribute__((section(".dtcm"))) = 0x00;
-u8 sgm_enable     __attribute__((section(".dtcm"))) = false;
-u8 ay_reg_idx     __attribute__((section(".dtcm"))) = 0;
-u8 ay_reg[16]     __attribute__((section(".dtcm"))) = {0};
-u16 sgm_low_addr  __attribute__((section(".dtcm"))) = 0x2000;
-
-u8 Port53         __attribute__((section(".dtcm"))) = 0x00;
-u8 Port60         __attribute__((section(".dtcm"))) = 0x0F;
-u8 Port20         __attribute__((section(".dtcm"))) = 0x00;
-
-u8 bFirstSGMEnable __attribute__((section(".dtcm"))) = true;
-u8 AY_Enable       __attribute__((section(".dtcm"))) = false;
-u8 AY_NeverEnable  __attribute__((section(".dtcm"))) = false;
-u8 SGM_NeverEnable __attribute__((section(".dtcm"))) = false;
-u8 AY_EnvelopeOn   __attribute__((section(".dtcm"))) = false;
-u8 ctc_enabled     __attribute__((section(".dtcm"))) = false;
-
-u8  JoyMode        __attribute__((section(".dtcm"))) = 0;           // Joystick Mode (1=Keypad, 0=Joystick)
-u32 JoyState       __attribute__((section(".dtcm"))) = 0;           // Joystick State for P1 and P2
 
 u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game
 
@@ -98,21 +35,9 @@ SN76496 sncol   __attribute__((section(".dtcm")));
 
 
 /*********************************************************************************
- * Keybaord Key Buffering Engine...
- ********************************************************************************/
-u8 BufferedKeys[32];
-u8 BufferedKeysWriteIdx=0;
-u8 BufferedKeysReadIdx=0;
-void BufferKey(u8 key)
-{
-    BufferedKeys[BufferedKeysWriteIdx] = key;
-    BufferedKeysWriteIdx = (BufferedKeysWriteIdx+1) % 32;
-}
-
-/*********************************************************************************
  * Init coleco Engine for that game
  ********************************************************************************/
-u8 colecoInit(char *szGame) 
+u8 TI99Init(char *szGame) 
 {
   u8 uBcl;
   u16 uVide;
@@ -159,7 +84,7 @@ u8 colecoInit(char *szGame)
 /*********************************************************************************
  * Run the emul
  ********************************************************************************/
-void colecoRun(void) 
+void TI99Run(void) 
 {
   showMainMenu();                       // Show the game-related screen
 }
@@ -167,7 +92,7 @@ void colecoRun(void)
 /*********************************************************************************
  * Set coleco Palette
  ********************************************************************************/
-void colecoSetPal(void) 
+void TI99SetPal(void) 
 {
   u8 uBcl,r,g,b;
   
@@ -194,7 +119,7 @@ void colecoSetPal(void)
  * reduce visual tearing and other artifacts. It's not strictly necessary
  * and that does slow down the loop a bit... but DSi can handle it.
  ********************************************************************************/
-ITCM_CODE void colecoUpdateScreen(void) 
+ITCM_CODE void TI99UpdateScreen(void) 
 {
     extern u16 timingFrames;
     // ------------------------------------------------------------   

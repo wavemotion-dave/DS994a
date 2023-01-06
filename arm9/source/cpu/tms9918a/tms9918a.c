@@ -181,7 +181,8 @@ byte ITCM_CODE CheckSprites(void) {
 int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
 {
   register byte *AT;
-  register u8 L,K,C1,C2;
+  register u8 L,C1,C2;
+  register s16 K;
   register unsigned int M;
 
   /* No 5th sprite yet */
@@ -351,7 +352,7 @@ void ITCM_CODE RefreshSprites(register byte Y) {
 /** Refresh line Y (0..191) of SCREEN0, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void RefreshLine0(u8 Y) 
+ITCM_CODE void RefreshLine0(u8 Y) 
 {
   register byte *T,X,K,Offset;
   register byte *P,FC,BC;
@@ -385,7 +386,7 @@ void RefreshLine0(u8 Y)
 /** Refresh line Y (0..191) of SCREEN1, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine1(u8 uY) 
+ITCM_CODE void RefreshLine1(u8 uY) 
 {
   register byte X,K=0,Offset,FC,BC;
   register u8 *T;
@@ -430,7 +431,7 @@ void ITCM_CODE RefreshLine1(u8 uY)
 /** Refresh line Y (0..191) of SCREEN2, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine2(u8 uY) {
+ITCM_CODE void RefreshLine2(u8 uY) {
   u32 *P;
   register byte FC,BC;
   register byte X,K,*T;
@@ -477,7 +478,7 @@ void ITCM_CODE RefreshLine2(u8 uY) {
 /** Refresh line Y (0..191) of SCREEN3, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine3(u8 uY) {
+ITCM_CODE void RefreshLine3(u8 uY) {
   register byte X,K,Offset;
   register byte *P,*T;
   u8 lastT;
@@ -515,7 +516,7 @@ void ITCM_CODE RefreshLine3(u8 uY) {
 u8 VDP_RegisterMasks[] __attribute__((section(".dtcm"))) = { 0x03, 0xfb, 0x0f, 0xff, 0x07, 0x7f, 0x07, 0xff };
 byte SprHeights[4] __attribute__((section(".dtcm"))) = { 8,16,16,32 };
 
-byte Write9918(u8 iReg, u8 value) 
+ITCM_CODE byte Write9918(u8 iReg, u8 value) 
 { 
   int newMode;
   int VRAMMask;
@@ -629,12 +630,25 @@ ITCM_CODE byte RdData9918(void)
   byte data;
 
   data      = VDPDlatch;
-  VDPDlatch = pVDPVidMem[VAddr];
-  VAddr     = (VAddr+1)&0x3FFF;
+  VDPDlatch = pVDPVidMem[VAddr++];
+  //VAddr     = (VAddr+1)&0x3FFF;
   VDPCtrlLatch = 0;
 
   return(data);
 }
+
+
+/** WrData9918() *********************************************/
+/** Write a value V to the VDP Data Port.                   **/
+/*************************************************************/
+ITCM_CODE void WrData9918(byte value)
+{
+    VDPDlatch = pVDPVidMem[VAddr++] = value;
+    //VAddr     = (VAddr+1)&0x3FFF;
+    VDPCtrlLatch = 0;
+}
+
+
 
 
 /** WrCtrl9918() *********************************************/
@@ -696,9 +710,9 @@ u16 tms_start_line __attribute__((section(".dtcm"))) = TMS9918_START_LINE;
 u16 tms_end_line   __attribute__((section(".dtcm"))) = TMS9918_END_LINE;
 u16 tms_cpu_line   __attribute__((section(".dtcm"))) = TMS9918_LINE;
 
-byte Loop9918(void) 
+ITCM_CODE byte Loop9918(void) 
 {
-  extern void colecoUpdateScreen(void);
+  extern void TI99UpdateScreen(void);
   register byte bIRQ;
 
   /* No IRQ yet */
@@ -721,7 +735,7 @@ byte Loop9918(void)
       /* Refresh screen */
       if ((frameSkipIdx & frameSkip[myConfig.frameSkip]) != 0)
       {
-          colecoUpdateScreen();
+          TI99UpdateScreen();
       }
 
       frameSkipIdx++;
@@ -737,21 +751,9 @@ byte Loop9918(void)
         if(CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP;
   }
     
-  //if (einstein_mode) bIRQ = 0;  // The Tatung Einstein does not generate interrupts on VSYNC
-
   /* Done */
   return(bIRQ);
 }
-
-/** Loop6502() **********************************************/
-/** The 6502 version of the above... slimmer and trimmer.  **/
-/************************************************************/
-byte Loop6502(void)
-{
-return 0;
-}
-
-
 
 /** Reset9918() **********************************************/
 /** Reset the VDP. The user can provide a new screen buffer **/
@@ -792,8 +794,6 @@ void Reset9918(void)
     // Some machines only support a 16K VDP memory mode...
     vdp_16k_mode_only = 1;
     
-    my_config_clear_int = myConfig.clearInt;
-    
     // ---------------------------------------------------------------
     // Our background/foreground color table makes computations FAST!
     // ---------------------------------------------------------------
@@ -819,16 +819,6 @@ void Reset9918(void)
           lutTablehh[colfg][colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
         }
     }
-}
-
-/** WrData9918() *********************************************/
-/** Write a value V to the VDP Data Port.                   **/
-/*************************************************************/
-void WrData9918(byte V)
-{
-    VDPDlatch = pVDPVidMem[VAddr] = V;
-    VAddr     = (VAddr+1)&0x3FFF;
-    VDPCtrlLatch = 0;
 }
 
 

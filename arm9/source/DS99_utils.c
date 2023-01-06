@@ -517,6 +517,8 @@ u8 colecoDSLoadFile(void)
     // -------------------------------------------------------------------
     if (keysCurrent() & KEY_A || keysCurrent() & KEY_Y || keysCurrent() & KEY_X)
     {
+      if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
+          
       if (gpFic[ucGameAct].uType != DIRECT)
       {
         bDone=true;
@@ -684,31 +686,27 @@ void SetDefaultGameConfig(void)
     myConfig.showFPS     = 0;
     myConfig.frameSkip   = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
     myConfig.frameBlend  = 0;
-    myConfig.msxMapper   = GUESS;
-    myConfig.autoFire1   = 0;
     myConfig.isPAL       = 0;
-    myConfig.overlay     = 0;
     myConfig.maxSprites  = 0;
-    myConfig.vertSync    = (isDSiMode() ? 1:0);    // Default is Vertical Sync ON for DSi and OFF for DS-LITE
-    myConfig.spinSpeed   = 0;    
-    myConfig.touchPad    = 0;
-    myConfig.cpuCore     = 1;   // Default to CZ80 core
-    myConfig.msxKey5     = 0;   // Default key map
-    myConfig.dpad        = DPAD_NORMAL;   // Normal DPAD use - mapped to joystick
-    myConfig.memWipe     = 0;    
-    myConfig.clearInt    = CPU_CLEAR_INT_AUTOMATICALLY;
-    myConfig.ayEnvelope  = 0;
-    myConfig.colecoRAM   = COLECO_RAM_NORMAL_MIRROR;
-    myConfig.msxBeeper   = 0;    
-    myConfig.reservedA3  = 0;    
-    myConfig.reservedB0  = 0xA5;    // So it's easy to spot on an "upgrade"
-    myConfig.reservedB1  = 0xA5;    // So it's easy to spot on an "upgrade"
-    myConfig.reservedB2  = 0xA5;    // So it's easy to spot on an "upgrade"
-    myConfig.reservedB3  = 0;    
-    myConfig.reservedC   = 0;    
+    myConfig.memWipe     = 0;
+    myConfig.reservedA   = 0;
+    myConfig.reservedB   = 0;
+    myConfig.reservedC   = 0;
+    myConfig.reservedD   = 0;
+    myConfig.reservedE   = 0;
+    myConfig.reservedF   = 0;
+    myConfig.reservedG   = 0;
+    myConfig.reservedH   = 0;
+    myConfig.reservedI   = 0;
+    myConfig.reservedJ   = 0;
+    myConfig.reservedK   = 1;
+    myConfig.reservedL   = 1;
+    myConfig.reservedM   = 0xFF;
+    myConfig.reservedN   = 0xFF;
+    myConfig.reservedA32 = 0x00000000;
     
     // And a few games don't want more than 4 max sprites (they pull tricks that rely on it)
-    if (file_crc == 0xee530ad2) myConfig.maxSprites  = 1;  // QBiqs
+    //if (file_crc == 0xee530ad2) myConfig.maxSprites  = 1;  // QBiqs
 }
 
 // -------------------------------------------------------------------------
@@ -755,8 +753,6 @@ void FindAndLoadConfig(void)
         SetDefaultGameConfig();
         SaveConfig(FALSE);
     }
-    
-    myConfig.overlay=10; //zzz tbd
 }
 
 
@@ -782,14 +778,15 @@ const struct options_t Option_Table[2][20] =
         {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,  3},
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend, 2},
         {"MAX SPRITES",    {"32",  "4"},                                                                                                                                                        &myConfig.maxSprites, 2},
-        {"AUTO FIRE",      {"OFF", "B1 ONLY", "B2 ONLY", "BOTH"},                                                                                                                               &myConfig.autoFire1,  4},
-        {"JOYSTICK",       {"NORMAL", "DIAGONALS"},                                                                                                                                             &myConfig.dpad,       2},
+        {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,      2},        
+        //{"AUTO FIRE",      {"OFF", "B1 ONLY", "B2 ONLY", "BOTH"},                                                                                                                               &myConfig.autoFire1,  4},
+        //{"JOYSTICK",       {"NORMAL", "DIAGONALS"},                                                                                                                                             &myConfig.dpad,       2},
         {"RAM WIPE",       {"RANDOM", "CLEAR",},                                                                                                                                                &myConfig.memWipe,    5},
         {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
     },
     // Page 2
     {
-        {"CPU INT",        {"CLEAR ON VDP", "AUTO CLEAR"},                                                                                                                                      &myConfig.clearInt,   2},
+        {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
     }
 };              
 
@@ -910,8 +907,6 @@ void colecoDSGameOptions(void)
     {
         swiWaitForVBlank();
     }
-    
-    if (myConfig.isPAL) myConfig.vertSync = 0;
     
     return;
 }
@@ -1066,10 +1061,10 @@ void colecoDSChangeKeymap(void)
     // Swap Player 1 and Player 2 keymap
     if (keysCurrent() & KEY_X)
     {
-        if (myConfig.keymap[0] != 20)
+        if (myConfig.keymap[0] != JOY2_UP)
             MapPlayer2();
         else 
-            MapPlayer1();
+            MapPlayer1(); 
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
         while (keysCurrent() & KEY_X) 
