@@ -16,7 +16,7 @@ Features :
 
 Copyright :
 -----------------------
-TI99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+DS99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 
 As long as there is no commercial use (i.e. no profit is made),
 copying and distribution of this emulator, it's source code
