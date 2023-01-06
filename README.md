@@ -39,6 +39,13 @@ Thanks to the 99ers over on the AtariAge site for their help in grokking memory 
 Hugest thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
 
 
+Installation :
+-----------------------
+* You will need the two console BIOS files as described below. Place both .bin BIOS files into /roms/bios (you can just make the directory on your SD card).
+* You will also need the emulator itself. You can get this from the GitHub page - the only file you need here is DS994a.nds (the .nds is a Nintendo executable file).
+* You will need games to play... right now the emulator supports C/D/G files and '8' non-inverted files. Basically just try loading a file to see if it works... the ROMs should have a .bin extension. 
+* Recommend you put your games into /roms/ti99 as the emulator will default to that directory. That's where the cool kids keep them.
+
 
 Known Issues :
 -----------------------
