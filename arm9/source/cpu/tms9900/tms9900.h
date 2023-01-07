@@ -50,12 +50,6 @@
 #define MEMFLG_SOUND         0x80
 
 extern void TMS9900_Reset(char *szGame);
-extern void SetPC( ADDRESS address ) ;
-extern void SetWP( ADDRESS address ) ;
-extern void SetST( UINT16 address ) ;
-extern ADDRESS GetPC( ) ;
-extern ADDRESS GetWP( ) ;
-extern UINT16 GetST( ) ;
 extern void TMS9900_Run( ) ;
 extern void TMS9900_Stop( ) ;
 extern bool IsRunning( ) ;
@@ -67,15 +61,6 @@ extern void AddClocks( int ) ;
 extern void ResetClocks( ) ;
 extern UINT32 GetCounter( ) ;
 extern void ResetCounter( ) ;
-extern UINT8 RegisterTrapHandler( TRAP_FUNCTION, void *, int ) ;
-extern void DeRegisterTrapHandler( UINT8 ) ;
-extern UINT8 GetTrapIndex( TRAP_FUNCTION, int ) ;
-extern bool SetTrap( ADDRESS, UINT8, UINT8 ) ;
-extern void ClearTrap( UINT8, ADDRESS, int ) ;
-extern void RegisterDebugHandler( BREAKPOINT_FUNCTION, void * ) ;
-extern void DeRegisterDebugHandler( ) ;
-extern bool SetBreakpoint( ADDRESS, UINT8 ) ;
-extern bool ClearBreakpoint( ADDRESS, UINT8 ) ;
 
 typedef struct _sOpCode
 {

@@ -28,7 +28,7 @@
 
 extern u32 debug[];
 
-u8 MaxSprites[2] __attribute__((section(".dtcm"))) = {32, 4};     // Normally the CV only shows 4 sprites on a line... for emulation we bump this up if configured
+u8 MaxSprites[2] __attribute__((section(".dtcm"))) = {4, 32};     // Normally the TMS9918a only shows 4 sprites on a line... for emulation we bump this up if configured
 
 u16 *pVidFlipBuf __attribute__((section(".dtcm"))) = (u16*) (0x06000000);    // Video flipping buffer
 
@@ -186,7 +186,7 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
   register unsigned int M;
 
   /* No 5th sprite yet */
-  VDPStatus &= ~(TMS9918_STAT_5THNUM|TMS9918_STAT_5THSPR);
+  //VDPStatus &= ~(TMS9918_STAT_5THNUM);
 
   /* Must have MODE1+ and screen enabled */
   if(!ScrMode || !TMS9918_ScreenON)
@@ -195,6 +195,13 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
     return(-1);
   }
 
+  s16 b5OnLine=-1;
+  // check if b5OnLine is already latched, and set it if so.
+  if (VDPStatus & TMS9918_STAT_5THSPR) 
+  {
+    b5OnLine = VDPStatus & 0x1f;
+  }
+    
   AT = SprTab;
   C1 = MaxSprites[myConfig.maxSprites]+1;
   C2 = 5;
@@ -210,7 +217,7 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
     if((Y>K)&&(Y<=K+OH))
     {
       /* If we exceed four sprites per line, set 5th sprite flag */
-      if(!--C2) VDPStatus|=TMS9918_STAT_5THSPR|L;
+      if(!--C2) b5OnLine = L; //VDPStatus |= (TMS9918_STAT_5THSPR | L);
 
       /* If we exceed maximum number of sprites per line, stop here */
       if(!--C1) break;
@@ -221,9 +228,19 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
   }
 
   /* Set last checked sprite number (5th sprite, or Y=208, or sprite #31) */
-  if(C2>0) VDPStatus |= L<32? L:31;
+//  if(C2>0) VDPStatus |= L<32 ? L:31;
+    if (b5OnLine != -1)
+    {
+        VDPStatus &= 0xE0;
+        VDPStatus |= (TMS9918_STAT_5THSPR | b5OnLine);
+    }
+    else
+    {
+        VDPStatus &= 0xC0;
+        VDPStatus |= L<32 ? L:31;
+    }
 
-  /* Return first shown sprite and bit mask of shown sprites */
+  /* Return last shown sprite and bit mask of shown sprites */
   if(Mask) *Mask=M;
   return(L-1);
 }
@@ -688,10 +705,10 @@ ITCM_CODE byte RdCtrl9918(void)
   byte data;
 
   data = VDPStatus;
-  VDPStatus &= (TMS9918_STAT_5THNUM | TMS9918_STAT_5THSPR);
+  VDPStatus &= 0x1F; // Top bits are cleared on a read... 
   VDPCtrlLatch = 0;
     
-  tms9901_ClearInterrupt(2);
+  tms9901_ClearInterrupt(2);    // This is the VDP interrupt for the TMS9901/TMS9900
 
   return(data);
 }

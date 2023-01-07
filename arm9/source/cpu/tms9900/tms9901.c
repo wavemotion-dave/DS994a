@@ -138,6 +138,11 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
             {
                 m_CapsLock = ( data != 0 ) ? true : false;
             }
+            else if (address == 22) // Cassette motor for CS1
+            {
+                extern void setTapeMotor(bool);
+                setTapeMotor(( data != 0 ) ? true : false);
+            }
         }
     }
 }
@@ -206,7 +211,22 @@ ITCM_CODE UINT16 ReadCRU_Inner( ADDRESS address )
         {
             address = 38 - address;
         }
+        
+        if (address == 27) 
+        {
+            extern bool getTapeBit(void);
+            // tape input (the outputs can't be read back, technically)
+            if (getTapeBit()) 
+            {
+                return 0;   // inverted logic
+            } 
+            else 
+            {
+                return 1;   // this also preserves the Perfect Push 'tick' on audio gate
+            }
+        }        
 
+        // cassette support
         if( address == 0 )
         {
             // Mode
@@ -410,7 +430,7 @@ ITCM_CODE void tms9901_SignalInterrupt( int level )
     {
         return;
     }
-
+    
     m_InterruptRequested++;
     m_PinState[ level ][ 0 ] = -1;
 

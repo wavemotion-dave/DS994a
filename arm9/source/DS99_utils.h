@@ -4,7 +4,7 @@
 #define MAX_ROMS        512
 #define MAX_ROM_LENGTH  160
 
-#define MAX_CONFIGS      700
+#define MAX_CONFIGS      750
 #define CONFIG_VER       0x0002
 
 #define COLROM        0x01
@@ -54,6 +54,7 @@ struct __attribute__((__packed__)) Config_t
     u8  reservedL;
     u8  reservedM;
     u8  reservedN;
+    u8  reservedZ;
     u32 reservedA32;
 };
  

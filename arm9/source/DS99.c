@@ -152,6 +152,7 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_BACK,
     KBD_FNCT,
     KBD_CTRL,
+    KBD_SHIFT,
     KBD_PLUS,
     KBD_MINUS
 };
@@ -399,13 +400,6 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE CASSETTE    ");  cassete_menu_items++;
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SWAP CASSETTE    ");  cassete_menu_items++;
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " REWIND CASSETTE  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " CLOAD  RUN       ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " BLOAD 'CAS:',R   ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " RUN   'CAS:'     ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " LOAD  ''         ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " RUN              ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " RUN EINSTEIN .COM");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " RUN MEMOTECH .RUN");  cassete_menu_items++;
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT MENU        ");  cassete_menu_items++;
 
     DisplayFileName();
@@ -422,6 +416,9 @@ void CassetteMenu(void)
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
   CassetteMenuShow(true, menuSelection);
+    
+  //extern void LoadTape();
+  //LoadTape();
 
   while (true) 
   {
@@ -462,7 +459,7 @@ void CassetteMenu(void)
                     CassetteMenuShow(true, menuSelection);
                 }
             }
-            if (menuSelection == 2) // REWIND (ADAM = EXIT)
+            if (menuSelection == 2)
             {
             }
             if (menuSelection == 3)
@@ -598,7 +595,7 @@ ITCM_CODE void ds99_main(void)
             
             if (bShowDebug)
             {
-                siprintf(szChai, "%u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3]); 
+                siprintf(szChai, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
                 AffChaine(5,0,6,szChai);
             }
         }
@@ -810,6 +807,7 @@ ITCM_CODE void ds99_main(void)
       //  Test DS keypresses (ABXY, L/R) and map to corresponding TI99 keys
       // ------------------------------------------------------------------------
       nds_key  = keysCurrent();
+       
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X)) 
       {
             lcdSwap();
@@ -883,6 +881,7 @@ ITCM_CODE void ds99_main(void)
 
                       case KBD_FNCT:        m_StateTable[VK_FCTN]=1;      break;
                       case KBD_CTRL:        m_StateTable[VK_CTRL]=1;      break;
+                      case KBD_SHIFT:       m_StateTable[VK_SHIFT]=1;     break;
                           
                       case KBD_PLUS:        m_StateTable[VK_EQUALS]=1;  m_StateTable[VK_SHIFT]=1;   break;
                       case KBD_MINUS:       m_StateTable[VK_DIVIDE]=1;  m_StateTable[VK_SHIFT]=1;   break;

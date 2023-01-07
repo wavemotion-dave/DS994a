@@ -189,7 +189,7 @@ ITCM_CODE u32 LoopTMS9900()
     return 1;
 }
 
-void coleco_sound(u16 value)
+void ti_handle_sound(u16 value)
 {
     sn76496W(value, &sncol);
 }

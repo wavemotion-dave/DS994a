@@ -41,10 +41,9 @@
 extern UINT8 WrCtrl9918(UINT8 value);
 extern UINT8 RdData9918(void);
 extern UINT8 RdCtrl9918(void);
-extern void coleco_sound(UINT16 value);
+extern void  ti_handle_sound(UINT16 value);
 
-
-extern UINT32 debug[32];
+extern UINT32 debug[];
 
 #define nullptr NULL
 static UINT16   parity[ 256 ] __attribute__((section(".dtcm")));
@@ -71,16 +70,13 @@ UINT8           bCPUIdleRequest     __attribute__((section(".dtcm")))  = 0;
 
 UINT16 *OpCodeSpeedup __attribute__((section(".dtcm")))  = (UINT16*)0x06860000;
 
-char tmpFilename[160];
+char tmpFilename[256];
 
 #define WP  WorkspacePtr
 #define PC  fetchPtr
 #define ST  Status
 
-#define EVER    ;;
-
 #define FUNCTION_ENTRY(a,b,c)   // Nothing
-
 
 void InvalidOpcode( )
 {
@@ -89,9 +85,9 @@ void InvalidOpcode( )
 
 void TI_Reset( )
 {
-    SetPC( 0x0000 );
-    SetWP( 0x0000 );
-    SetST( 0x0000 );
+    PC           = 0x0000;
+    WorkspacePtr = 0x0000;
+    Status       = 0x0000;
 
     // Simulate a hardware powerup
     ContextSwitch( 0 );
@@ -140,6 +136,14 @@ void TMS9900_Reset(char *szGame)
         MemFlags[address+2] |= MEMFLG_VDPW;   // VDP Write Address
     }
 
+#if 0 // Not yet    
+    for (UINT16 address = 0x9000; address < 0x9800; address += 4)
+    {
+        MemFlags[address+0] |= MEMFLG_SOUND;   // Speech Synth Read
+        MemFlags[address+2] |= MEMFLG_SOUND;   // Speech Synth Write
+    }
+#endif
+    
     for (UINT16 address = 0x9800; address < 0x9C00; address += 4)
     {
         MemFlags[address+0] |= MEMFLG_GROMR;   // GROM Read Data
@@ -245,41 +249,10 @@ void ClearInterrupt( UINT8 level )
     InterruptFlag &= ~( 1 << level );
 }
 
-void SetPC( ADDRESS address )
-{
-    PC = address;
-}
-
-void SetWP( ADDRESS address )
-{
-    WorkspacePtr = address;
-}
-
-void SetST( UINT16 value )
-{
-    Status = value;
-}
-
-ADDRESS GetPC( )
-{
-    return PC;
-}
-
-ADDRESS GetWP( )
-{
-    return WorkspacePtr;
-}
-
-UINT16 GetST( )
-{
-    return Status;
-}
-
 UINT32 GetClocks( )
 {
     return ClockCycleCounter;
 }
-
 
 void ResetClocks( )
 {
@@ -410,7 +383,6 @@ inline UINT16 ReadPCMemoryW( UINT16 address )
         if (flags & MEMFLG_8BIT) ClockCycleCounter += 4; // Penalty for 8-bit access...
         if (flags & MEMFLG_CART)
         {
-            //return (CartMem[bankOffset | (address&0x1FFF)] << 8) | (CartMem[bankOffset | ((address+1)&0x1FFF)]);
             return __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
         }
         else return __builtin_bswap16(*(UINT16*) (&Memory[address]));
@@ -452,12 +424,10 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
         }
         else if (flags & MEMFLG_CART)
         {
-            //retVal = (CartMem[bankOffset | (address&0x1FFF)] << 8) | (CartMem[bankOffset | ((address+1)&0x1FFF)]);
             retVal = __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
         }
         else
         {
-            //retVal = (Memory[address] << 8) | (Memory[address+1]);
             return __builtin_bswap16(*(UINT16*) (&Memory[address]));
         }
     }
@@ -537,7 +507,7 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            coleco_sound(value);
+            ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {
@@ -598,7 +568,7 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            coleco_sound(value);
+            ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {
@@ -795,7 +765,9 @@ ITCM_CODE void TMS9900_Run()
 
     do
     {
+        //extern void updateTape(void);
         CheckInterrupt();
+        //updateTape();
 
         if (bCPUIdleRequest)
         {

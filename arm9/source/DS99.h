@@ -14,7 +14,7 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.2"
+#define VERSIONDS99 "0.3"
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
@@ -77,6 +77,7 @@ enum
     KBD_BACK,
     KBD_FNCT,
     KBD_CTRL,
+    KBD_SHIFT,
     KBD_PLUS,
     KBD_MINUS,
     MAX_KEY_OPTIONS

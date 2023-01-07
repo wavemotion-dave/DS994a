@@ -11,7 +11,7 @@ Features :
 * 32K RAM Expansion
 * Save and Load State
 * Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* No cassette or Disk support yet... look for the Tunnels of Doom SSS hack that works without cassette.
+* No cassette or Disk support yet... look for the Tunnels of Doom SSS hack on AtariAge that works without cassette.
 * No Speech Synth yet
 
 Copyright :
@@ -76,7 +76,7 @@ However! Using blend mode comes at at 15% CPU cost!! The DSi can handle it... th
 struggle a bit on more complicated games. 
 
 So my recommendation is as follows:
-* DSi non XL/LL - use Blend Mode for the games that benefit from it (Space Fury, Galaxian, etc).
+* DSi non XL/LL - use Blend Mode for the games that benefit from it (e.g. TI Invaders).
 * DSi XL/LL - don't bother... the XL/LL screen decay is slower and games look great as-is.
 * DS-LITE/PHAT - you can try it but the framerate might drop below 60 on some games.
 
@@ -84,6 +84,14 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.3: 7-Jan-2023 by wavemotion-dave
+* Improved speed 8% across the board
+* Fixed spirte cut-off at top of screen
+* Fixed X in control mapping so that it toggles P1 vs P2
+* Added PAL (along with default NTSC) support
+* New splash screen and logo
+* Other minor cleanups as time permitted
+
 V0.2: 6-Jan-2023 by wavemotion-dave
 * Increased bankswitch support to 512k
 * Fixed IDLE instruction so games like Slymoids works

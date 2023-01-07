@@ -100,6 +100,7 @@ const char szKeyName[MAX_KEY_OPTIONS][18] = {
   "KEYBOARD BACK",
   "KEYBOARD FCTN",
   "KEYBOARD CTRL",
+  "KEYBOARD SHIFT",
   "KEYBOARD PLUS",
   "KEYBOARD MINUS"
 };
@@ -701,8 +702,9 @@ void SetDefaultGameConfig(void)
     myConfig.reservedJ   = 0;
     myConfig.reservedK   = 1;
     myConfig.reservedL   = 1;
-    myConfig.reservedM   = 0xFF;
+    myConfig.reservedM   = 2;
     myConfig.reservedN   = 0xFF;
+    myConfig.reservedZ   = 0xFF;
     myConfig.reservedA32 = 0x00000000;
     
     // And a few games don't want more than 4 max sprites (they pull tricks that rely on it)
@@ -777,7 +779,7 @@ const struct options_t Option_Table[2][20] =
         {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                                                                                                                                       &myConfig.showFPS,    3},
         {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,  3},
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend, 2},
-        {"MAX SPRITES",    {"32",  "4"},                                                                                                                                                        &myConfig.maxSprites, 2},
+        {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites, 2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,      2},        
         //{"AUTO FIRE",      {"OFF", "B1 ONLY", "B2 ONLY", "BOTH"},                                                                                                                               &myConfig.autoFire1,  4},
         //{"JOYSTICK",       {"NORMAL", "DIAGONALS"},                                                                                                                                             &myConfig.dpad,       2},
