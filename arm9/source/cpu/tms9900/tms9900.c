@@ -76,6 +76,11 @@ char tmpFilename[256];
 #define PC  fetchPtr
 #define ST  Status
 
+#define TMS5220_TS	0x80	// Talk Status
+#define TMS5220_BL	0x40	// Buffer Low
+#define TMS5220_BE	0x20	// Buffer Empty
+
+
 #define FUNCTION_ENTRY(a,b,c)   // Nothing
 
 void InvalidOpcode( )
@@ -136,13 +141,11 @@ void TMS9900_Reset(char *szGame)
         MemFlags[address+2] |= MEMFLG_VDPW;   // VDP Write Address
     }
 
-#if 0 // Not yet    
     for (UINT16 address = 0x9000; address < 0x9800; address += 4)
     {
         MemFlags[address+0] |= MEMFLG_SOUND;   // Speech Synth Read
         MemFlags[address+2] |= MEMFLG_SOUND;   // Speech Synth Write
     }
-#endif
     
     for (UINT16 address = 0x9800; address < 0x9C00; address += 4)
     {
@@ -199,14 +202,26 @@ void TMS9900_Reset(char *szGame)
     
     if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
     {
+        bankMask = 0x003F;
         tmpFilename[strlen(tmpFilename)-5] = 'C';   // Try to find a 'C' file
         infile = fopen(tmpFilename, "rb");
-        fread(CartMem, 0x10000, 1, infile);         // Whole cart C memory up to 64K if needed...
-        fclose(infile);    
+        int numRead = fread(CartMem, 1, 0x10000, infile);         // Whole cart C memory up to 64K if needed...
+        fclose(infile);
+        debug[1] = numRead;
+        if (numRead <= 0x2000)   // If 8K... repeat
+        {
+            memcpy(CartMem+0x2000, CartMem, 0x2000);
+            memcpy(CartMem+0x4000, CartMem, 0x2000);
+            memcpy(CartMem+0x6000, CartMem, 0x2000);
+            memcpy(CartMem+0x8000, CartMem, 0x2000);
+            memcpy(CartMem+0xA000, CartMem, 0x2000);
+            memcpy(CartMem+0xC000, CartMem, 0x2000);
+            memcpy(CartMem+0xE000, CartMem, 0x2000);
+            bankMask = 0x0007;
+        }
 
         tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
         infile = fopen(tmpFilename, "rb");
-        bankMask = 0x003F;
         if (infile != NULL)
         {
             bankMask = 0x0001;                          // If there is a 'D' file, it's always only 2 banks
@@ -426,6 +441,13 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
         {
             retVal = __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
         }
+        else if (flags & MEMFLG_SOUND)
+        {
+            if (address & 0x1000)
+            {
+                return (TMS5220_BL | TMS5220_BE);
+            }
+        }
         else
         {
             return __builtin_bswap16(*(UINT16*) (&Memory[address]));
@@ -480,6 +502,13 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
     {
         retVal = (CartMem[bankOffset | (address&0x1FFF)]);
     }
+    else if (flags & MEMFLG_SOUND)
+    {
+        if (address & 0x1000)
+        {
+            return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
+        }
+    }
     else
     {
         retVal = Memory[address];
@@ -507,7 +536,10 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            ti_handle_sound(value);
+            if (address & 0x1000)
+            {
+            }
+            else ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {
@@ -568,7 +600,10 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            ti_handle_sound(value);
+            if (address & 0x1000)
+            {
+            }
+            else ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {

@@ -59,7 +59,7 @@ void TI99SaveState()
       szFile[len-1] = 'v';
   }
   strcpy(szCh1,"SAVING...");
-  AffChaine(6,0,0,szCh1);
+  AffChaine(10,0,0,szCh1);
   
   FILE *handle = fopen(szFile, "wb+");  
   if (handle != NULL) 
@@ -139,9 +139,9 @@ void TI99SaveState()
       strcpy(szCh1,"OK ");
     else
       strcpy(szCh1,"ERR");
-     AffChaine(15,0,0,szCh1);
+     AffChaine(19,0,0,szCh1);
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    AffChaine(6,0,0,"             "); 
+    AffChaine(10,0,0,"             "); 
     DisplayStatusLine(true);
   }
   else 
@@ -276,14 +276,14 @@ void TI99LoadState()
          AffChaine(15,0,0,szCh1);
         
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        AffChaine(6,0,0,"             ");  
+        AffChaine(10,0,0,"             ");  
         DisplayStatusLine(true);
       }
       else
       {
-        AffChaine(6,0,0,"NO SAVED GAME");
+        AffChaine(10,0,0,"NO SAVED GAME");
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        AffChaine(6,0,0,"             ");  
+        AffChaine(10,0,0,"             ");  
       }
 
     fclose(handle);

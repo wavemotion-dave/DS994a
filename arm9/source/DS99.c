@@ -87,6 +87,7 @@ u16 nds_key          __attribute__((section(".dtcm"))) = 0;       // 0 if no key
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
+u8 last_pal_mode = 99;
 
 // The DS/DSi has 12 keys that can be mapped
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
@@ -322,6 +323,7 @@ void dsInstallSoundEmuFIFO(void)
 // --------------------------------------------------------------
 void ResetStatusFlags(void)
 {
+    last_pal_mode = 99;
 }
 
 
@@ -358,7 +360,7 @@ void ResetTI(void)
     
   ResetStatusFlags();   // Some static status flags for the UI mostly
     
-  memset(debug, 0x00, sizeof(debug));
+  //memset(debug, 0x00, sizeof(debug));
 }
 
 // ------------------------------------------------------------
@@ -368,6 +370,12 @@ void ResetTI(void)
 // ------------------------------------------------------------
 void DisplayStatusLine(bool bForce)
 {
+    if (bForce) last_pal_mode = 98;
+    if (last_pal_mode != myConfig.isPAL)
+    {
+        last_pal_mode = myConfig.isPAL;
+        AffChaine(29,0,6, myConfig.isPAL ? "PAL":"   ");
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -518,7 +526,7 @@ void CassetteMenu(void)
 // Return 1 if we are showing full keyboard... otherwise 0
 // ------------------------------------------------------------------------
 inline u8 IsFullKeyboard(void) {return 1;}
-u8 bLookForKeys = 1;
+u8 bKeyClick = 0;
 
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the Z80, VDP and PSG 
@@ -526,8 +534,7 @@ u8 bLookForKeys = 1;
 ITCM_CODE void ds99_main(void) 
 {
   u16 iTx,  iTy;
-  u16 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
-  static u8 dampenClick = 0;
+  u8 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
 
   // Returns when  user has asked for a game to run...
   showMainMenu();
@@ -640,167 +647,161 @@ ITCM_CODE void ds99_main(void)
         iTx = touch.px;
         iTy = touch.py;
           
-        if (bLookForKeys)
-        {    
-            // Test if "End Game" selected
-            if  (((iTx>=35) && (iTy>=169) && (iTx<= 78) && (iTy<192)))
-            {
-              //  Stop sound
+        // Test if "End Game" selected
+        if  (((iTx>=35) && (iTy>=169) && (iTx<70) && (iTy<192)))
+        {
+          //  Stop sound
+          SoundPause();
+
+          //  Ask for verification
+          if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES) 
+          { 
+              memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
+              return;
+          }
+          showMainMenu();
+          DisplayStatusLine(true);            
+          SoundUnPause();
+        }
+
+        // Test if "High Score" selected
+        if  (((iTx>=70) && (iTy>=169) && (iTx< 104) && (iTy<192)))
+        {
+          //  Stop sound
+          SoundPause();
+          highscore_display(file_crc);
+          DisplayStatusLine(true);
+          SoundUnPause();
+        }
+
+        // Test if "Save State" selected
+        if  (((iTx>=104) && (iTy>=169) && (iTx< 139) && (iTy<192)))
+        {
+          if  (!SaveNow) 
+          {
+              // Stop sound
               SoundPause();
-
-              //  Ask for verification
-              if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES) 
-              { 
-                  memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
-                  return;
+              if (IsFullKeyboard())
+              {
+                  if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
+                  {                      
+                    SaveNow = 1;
+                    TI99SaveState();
+                  }
               }
-              showMainMenu();
-              DisplayStatusLine(true);            
+              else
+              {
+                    SaveNow = 1;
+                    TI99SaveState();
+              }
               SoundUnPause();
-            }
+          }
+        }
+        else
+          SaveNow = 0;
 
-#if 0
-            // Test if "High Score" selected
-            if  (((iTx>=1) && (iTy>=75) && (iTx<= 35) && (iTy<99)))
-            {
-              //  Stop sound
+        // Test if "Load State" selected
+        if  (((iTx>=139) && (iTy>=169) && (iTx<174) && (iTy<192)))
+        {
+          if  (!LoadNow) 
+          {
+              // Stop sound
               SoundPause();
-              highscore_display(file_crc);
-              DisplayStatusLine(true);
+              if (IsFullKeyboard())
+              {
+                  if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
+                  {                      
+                    LoadNow = 1;
+                    TI99LoadState();
+                  }
+              }
+              else
+              {
+                    LoadNow = 1;
+                    TI99LoadState();
+              }
               SoundUnPause();
-            }
-#endif      
-
-            // Test if "Save State" selected
-            if  (((iTx>=78) && (iTy>=169) && (iTx<= 122) && (iTy<192)))
-            {
-              if  (!SaveNow) 
-              {
-                  // Stop sound
-                  SoundPause();
-                  if (IsFullKeyboard())
-                  {
-                      if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
-                      {                      
-                        SaveNow = 1;
-                        TI99SaveState();
-                      }
-                  }
-                  else
-                  {
-                        SaveNow = 1;
-                        TI99SaveState();
-                  }
-                  SoundUnPause();
-              }
-            }
-            else
-              SaveNow = 0;
-
-            // Test if "Load State" selected
-            if  (((iTx>=123) && (iTy>=169) && (iTx<= 166) && (iTy<192)))
-            {
-              if  (!LoadNow) 
-              {
-                  // Stop sound
-                  SoundPause();
-                  if (IsFullKeyboard())
-                  {
-                      if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
-                      {                      
-                        LoadNow = 1;
-                        TI99LoadState();
-                      }
-                  }
-                  else
-                  {
-                        LoadNow = 1;
-                        TI99LoadState();
-                  }
-                  SoundUnPause();
-              }
-            }
-            else
-              LoadNow = 0;
+          }
+        }
+        else
+          LoadNow = 0;
 
 
-            // --------------------------------------------------------------------------
-            // Test the touchscreen rendering of the ADAM/MSX/SVI full keybaord
-            // --------------------------------------------------------------------------
-            if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
-            {
-                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_1]=1;
-                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_2]=1;
-                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_3]=1;
-                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_4]=1;
-                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_5]=1;
-                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_6]=1;
-                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_7]=1;
-                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_8]=1;
-            }
-            else if ((iTy >= 56) && (iTy < 84))   // Row 2
-            {
-                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_9]=1;
-                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_0]=1;
-                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_A]=1;
-                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_B]=1;
-                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_C]=1;
-                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_D]=1;
-                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_E]=1;
-                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_F]=1;
-            }
-            else if ((iTy >= 84) && (iTy < 112))  // Row 3
-            {
-                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_G]=1;
-                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_H]=1;
-                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_I]=1;
-                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_J]=1;
-                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_K]=1;
-                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_L]=1;
-                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_M]=1;
-                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_N]=1;
-            }
-            else if ((iTy >= 112) && (iTy < 140))  // Row 4
-            {
-                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_O]=1;
-                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_P]=1;
-                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Q]=1;
-                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_R]=1;
-                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_S]=1;
-                else if ((iTx >= 158) && (iTx < 189))  m_StateTable[VK_T]=1;
-                else if ((iTx >= 189) && (iTx < 220))  m_StateTable[VK_U]=1;
-                else if ((iTx >= 220) && (iTx < 255))  m_StateTable[VK_V]=1;
-            }
-            else if ((iTy >= 140) && (iTy < 169))  // Row 5
-            {
-                if      ((iTx >= 1)   && (iTx < 34))   m_StateTable[VK_W]=1;
-                else if ((iTx >= 34)  && (iTx < 65))   m_StateTable[VK_X]=1;
-                else if ((iTx >= 65)  && (iTx < 96))   m_StateTable[VK_Y]=1;
-                else if ((iTx >= 96)  && (iTx < 127))  m_StateTable[VK_Z]=1;
-                else if ((iTx >= 127) && (iTx < 158))  m_StateTable[VK_PERIOD]=1;
-                else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; m_StateTable[VK_FCTN]=1;} //PRO'C
-                else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_8]=1; m_StateTable[VK_FCTN]=1;} //REDO
-                else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_9]=1; m_StateTable[VK_FCTN]=1;} //BACK
-            }
-            else if ((iTy >= 169) && (iTy < 192))  // Row 6
-            {
-                if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
-                else if ((iTx >= 166) && (iTx < 211))  m_StateTable[VK_SPACE]=1;
-                else if ((iTx >= 211) && (iTx < 256))  m_StateTable[VK_ENTER]=1;
-            }
+        // --------------------------------------------------------------------------
+        // Test the touchscreen rendering of the ADAM/MSX/SVI full keybaord
+        // --------------------------------------------------------------------------
+        if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
+        {
+            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_1]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_2]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_3]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_4]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_5]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_7]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_8]=1; if (!bKeyClick) bKeyClick=1;}
+        }
+        else if ((iTy >= 56) && (iTy < 84))   // Row 2
+        {
+            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_9]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_0]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_A]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_B]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_C]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_D]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_E]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_F]=1; if (!bKeyClick) bKeyClick=1;}
+        }
+        else if ((iTy >= 84) && (iTy < 112))  // Row 3
+        {
+            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_G]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_H]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_I]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_J]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_K]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_L]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_M]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_N]=1; if (!bKeyClick) bKeyClick=1;}
+        }
+        else if ((iTy >= 112) && (iTy < 140))  // Row 4
+        {
+            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_O]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_P]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_Q]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_R]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_S]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_T]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_U]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_V]=1; if (!bKeyClick) bKeyClick=1;}
+        }
+        else if ((iTy >= 140) && (iTy < 169))  // Row 5
+        {
+            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_W]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_X]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_Y]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_Z]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
+            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_8]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //REDO
+            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_9]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //BACK
+        }
+        else if ((iTy >= 169) && (iTy < 192))  // Row 6
+        {
+            if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
+            else if ((iTx >= 174) && (iTx < 214))  {m_StateTable[VK_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 214) && (iTx < 256))  {m_StateTable[VK_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
+        }
 
-            if (++dampenClick > 2)  // Make sure the key is pressed for an appreciable amount of time...
-            {
-                mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
-                bLookForKeys=0;
-            }
+        if (bKeyClick == 1)
+        {
+            mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
+            bKeyClick = 2;
         }
       } // No Screen Touch...
       else  
       {
         ResetNow=SaveNow=LoadNow = 0;
-        dampenClick = 0;
-        bLookForKeys=1;
+        bKeyClick = 0;
       }
 
       // ------------------------------------------------------------------------
