@@ -85,6 +85,7 @@ extern void InitOpCodeLookup( );
 extern UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 extern UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
 extern UINT8           CartMem[];                  // Cart C memory 
+extern UINT8           DiskImage[];                // The .DSK image up to 180K
 
 extern UINT16          InterruptFlag;
 extern UINT32          WorkspacePtr;

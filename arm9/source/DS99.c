@@ -78,6 +78,7 @@ u8  bShowDebug      __attribute__((section(".dtcm"))) = 1;
 // For the various BIOS files ... only the coleco.rom is required - everything else is optional.
 // -----------------------------------------------------------------------------------------------
 u8 bTIBIOSFound      = false;
+u8 bTIDISKFound      = false;
 
 u8 soundEmuPause     __attribute__((section(".dtcm"))) = 1;       // Set to 1 to pause (mute) sound, 0 is sound unmuted (sound channels active)
 
@@ -424,9 +425,6 @@ void CassetteMenu(void)
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
   CassetteMenuShow(true, menuSelection);
-    
-  //extern void LoadTape();
-  //LoadTape();
 
   while (true) 
   {
@@ -1009,6 +1007,11 @@ void LoadBIOSFiles(void)
     }
     fclose(inFile1);
     fclose(inFile2);
+    
+    inFile1 = fopen("/roms/bios/994aDISK.bin", "rb");
+    if (inFile1) bTIDISKFound = true; else bTIDISKFound = false;
+    fclose(inFile1);
+    
 }
 
 /*********************************************************************************
@@ -1092,7 +1095,8 @@ int main(int argc, char **argv)
         u8 idx = 6;
         AffChaine(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
         if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
-        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  BIOS FOUND"); }
+        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  GROM FOUND"); }
+        if (bTIDISKFound)          {AffChaine(2,idx++,0,"994aDISK.bin  DSR  FOUND"); }
         idx++;
         AffChaine(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
         

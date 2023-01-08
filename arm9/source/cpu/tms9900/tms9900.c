@@ -34,6 +34,7 @@
 #include <fat.h>
 #include "tms9901.h"
 #include "tms9900.h"
+#include "../../disk.h"
 #include "../tms9918a/tms9918a.h"
 
 //#define MIRRORS   // Uncomment if RAM mirrors should be enabled (slows down emulation slightly)
@@ -52,6 +53,8 @@ UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
 UINT8           CartMem[1024*512];          // Cart C memory up to 512K
 UINT8           MemFlags[0x10000];          // Memory flags for each address
+UINT8           DiskDSR[0x2000];            // Memory for the DiskDSR
+UINT8           DiskImage[180*1024];        // The .DSK image up to 180K (Double Sided, Single Density)
 
 UINT16          InterruptFlag       __attribute__((section(".dtcm")));
 UINT32          WorkspacePtr        __attribute__((section(".dtcm")));
@@ -192,6 +195,32 @@ void TMS9900_Reset(char *szGame)
     infile = fopen("/roms/bios/994aGROM.bin", "rb");
     fread(&MemGROM[0x0000], 0x6000, 1, infile);
     fclose(infile);
+
+    // -------------------------------------------
+    // Read the TI Disk DSR into buffered memory
+    // -------------------------------------------
+    infile = fopen("/roms/bios/994aDISK.bin", "rb");
+    if (infile)
+    {
+        fread(DiskDSR, 0x2000, 1, infile);
+        fclose(infile);
+    }
+    else
+    {
+        memset(DiskDSR, 0xFF, 0x2000);
+    }
+    
+    infile = fopen("/roms/ti99/tunnels.dsk", "rb");
+    if (infile)
+    {
+        fread(DiskImage, (180*1024), 1, infile);
+        fclose(infile);
+    }
+    else
+    {
+        memset(DiskImage, 0xFF, (180*1024));
+    }
+    
     
     // -----------------------------------------------------------------------------
     // We're going to be manipulating the filename a bit so copy it into a buffer
@@ -207,7 +236,6 @@ void TMS9900_Reset(char *szGame)
         infile = fopen(tmpFilename, "rb");
         int numRead = fread(CartMem, 1, 0x10000, infile);         // Whole cart C memory up to 64K if needed...
         fclose(infile);
-        debug[1] = numRead;
         if (numRead <= 0x2000)   // If 8K... repeat
         {
             memcpy(CartMem+0x2000, CartMem, 0x2000);
@@ -419,6 +447,12 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
     
     if (flags)
     {
+        // TI Disk controller, if active
+        if ((address>=0x5ff0) && (address<=0x5fff))
+        {
+            return ReadTICCRegister(address);
+        }    
+        
         if (flags & MEMFLG_VDPR)
         {
             if (address & 2) retVal = (UINT16)RdCtrl9918()<<8;
@@ -475,6 +509,12 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 
     // Add 4 clock cycles if we're accessing 8-bit memory
     ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
+    
+    // TI Disk controller, if active
+    if ((address>=0x5ff0) && (address<=0x5fff))
+    {
+        return ReadTICCRegister(address);
+    }    
 
     if (flags & MEMFLG_VDPR)
     {
@@ -565,7 +605,7 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         }
         
         // Possible 8-bit expanded RAM write
-        if ((address >= 0x2000 && address <= 0x4000) || (address >= 0xA000))
+        if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
         {
             Memory[address] = (value >> 8);
             Memory[address+1] = value & 0xFF;
@@ -624,6 +664,10 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
         else if (flags & MEMFLG_CART)
         {
             WriteBank(address);
+        }
+        if ((address >= 0x5FF0) && (address <= 0x5FFF))
+        {
+            WriteTICCRegister(address, value);
         }
     }
     else
@@ -800,9 +844,7 @@ ITCM_CODE void TMS9900_Run()
 
     do
     {
-        //extern void updateTape(void);
         CheckInterrupt();
-        //updateTape();
 
         if (bCPUIdleRequest)
         {
@@ -810,6 +852,11 @@ ITCM_CODE void TMS9900_Run()
         }
         else
         {
+            if (PC == 0x40e8)
+            {
+                HandleTICCSector();
+			}
+            
             curOpCode = ReadPCMemoryW( PC ); PC+=2;
             sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
             ClockCycleCounter += op->clocks;

@@ -40,20 +40,20 @@ extern UINT32 debug[];
 
 #define SET_MASK        0xAA
 
-bool                m_TimerActive   __attribute__((section(".dtcm")));
-int                 m_ReadRegister  __attribute__((section(".dtcm")));
-int                 m_Decrementer   __attribute__((section(".dtcm")));
-int                 m_ClockRegister __attribute__((section(".dtcm")));
+bool                m_TimerActive           __attribute__((section(".dtcm")));
+int                 m_ReadRegister          __attribute__((section(".dtcm")));
+int                 m_Decrementer           __attribute__((section(".dtcm")));
+int                 m_ClockRegister         __attribute__((section(".dtcm")));
 UINT8               m_PinState[ 32 ][ 2 ]   __attribute__((section(".dtcm")));
 int                 m_InterruptRequested    __attribute__((section(".dtcm")));
-int                 m_ActiveInterrupts __attribute__((section(".dtcm")));
-int                 m_LastDelta __attribute__((section(".dtcm")));
-UINT32              m_DecrementClock __attribute__((section(".dtcm")));
-bool                m_CapsLock __attribute__((section(".dtcm")));
-int                 m_ColumnSelect __attribute__((section(".dtcm")));
-int                 m_HideShift __attribute__((section(".dtcm")));
-UINT8               m_StateTable[ VK_MAX ] __attribute__((section(".dtcm")));
-sJoystickInfo       m_Joystick[ 2 ] __attribute__((section(".dtcm")));
+int                 m_ActiveInterrupts      __attribute__((section(".dtcm")));
+int                 m_LastDelta             __attribute__((section(".dtcm")));
+UINT32              m_DecrementClock        __attribute__((section(".dtcm")));
+bool                m_CapsLock              __attribute__((section(".dtcm")));
+int                 m_ColumnSelect          __attribute__((section(".dtcm")));
+int                 m_HideShift             __attribute__((section(".dtcm")));
+UINT8               m_StateTable[ VK_MAX ]  __attribute__((section(".dtcm")));
+sJoystickInfo       m_Joystick[ 2 ]         __attribute__((section(".dtcm")));
 
 
 void TMS9901_Reset(void)
@@ -78,70 +78,83 @@ const char *GetName( )
 ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
 {
     FUNCTION_ENTRY( this, "WriteCRU", false );
-
-    // Address lines A4-A10 are not decoded - alias the address space
-    address &= 0x1F;
-
-    if( address == 0 )
+    
+    // ------------------------------------
+    // Enable or Disable the TI Disk DSR...
+    // ------------------------------------
+    if (address == 0x880) 
     {
-        UpdateTimer( GetClocks( ));
-        m_PinState[ 0 ][ 1 ] = data;
-        if( data == 1 )
+        extern UINT8 DiskDSR[];
+        extern UINT8 bDiskDeviceInstalled;
+        bDiskDeviceInstalled = data;
+        if (data)
         {
-            //DBG_STATUS( "Timer mode On" );
-            m_ReadRegister = m_Decrementer;
+            memcpy(&Memory[0x4000], DiskDSR, 0x2000);
         }
         else
         {
-            //DBG_STATUS( "I/O mode On" );
-            if( m_ClockRegister != 0 )
-            {
-                m_TimerActive = true;
-                //DBG_TRACE( "Timer: " << hex << ( UINT16 ) m_ClockRegister );
-            }
-            m_Decrementer    = m_ClockRegister;
-            m_DecrementClock = GetClocks( );
-            m_LastDelta      = 0;
+            memset(&Memory[0x4000], 0xFF, 0x2000);
         }
+        return;
     }
-    else
+    else if (address < 0x20)
     {
-        if( m_PinState[ 0 ][ 1 ] == 1 )
+        // Address lines A4-A10 are not decoded - alias the address space
+        address &= 0x1F;
+
+        if( address == 0 )
         {
-            // We're in timer mode
-            if(( address >= 1 ) && ( address <= 14 ))
+            UpdateTimer( GetClocks( ));
+            m_PinState[ 0 ][ 1 ] = data;
+            if( data == 1 )
             {
-                int shift = address - 1;
-                m_ClockRegister &= ~( 1 << shift );
-                m_ClockRegister |= data << shift;
-                m_Decrementer = m_ClockRegister;
+                //DBG_STATUS( "Timer mode On" );
+                m_ReadRegister = m_Decrementer;
+            }
+            else
+            {
+                //DBG_STATUS( "I/O mode On" );
+                if( m_ClockRegister != 0 )
+                {
+                    m_TimerActive = true;
+                }
+                m_Decrementer    = m_ClockRegister;
                 m_DecrementClock = GetClocks( );
                 m_LastDelta      = 0;
             }
-            else if( address == 15 )
-            {
-                SoftwareReset( );
-            }
         }
         else
         {
-            // We're in I/O mode
-            m_PinState[ address ][ 1 ] = ( char ) data;
+            if( m_PinState[ 0 ][ 1 ] == 1 )  // We're in timer mode
+            {            
+                if(( address >= 1 ) && ( address <= 14 ))
+                {
+                    int shift = address - 1;
+                    m_ClockRegister &= ~( 1 << shift );
+                    m_ClockRegister |= data << shift;
+                    m_Decrementer = m_ClockRegister;
+                    m_DecrementClock = GetClocks( );
+                    m_LastDelta      = 0;
+                }
+                else if( address == 15 )
+                {
+                    SoftwareReset( );
+                }
+            }
+            else  // We're in I/O mode
+            {
+                m_PinState[ address ][ 1 ] = ( char ) data;
 
-            if(( address >= 18 ) && ( address <= 20 ))
-            {
-                int shift = address - 18;
-                m_ColumnSelect &= ~( 1 << shift );
-                m_ColumnSelect |= data << shift;
-            }
-            else if( address == 21 )
-            {
-                m_CapsLock = ( data != 0 ) ? true : false;
-            }
-            else if (address == 22) // Cassette motor for CS1
-            {
-                extern void setTapeMotor(bool);
-                setTapeMotor(( data != 0 ) ? true : false);
+                if(( address >= 18 ) && ( address <= 20 ))
+                {
+                    int shift = address - 18;
+                    m_ColumnSelect &= ~( 1 << shift );
+                    m_ColumnSelect |= data << shift;
+                }
+                else if( address == 21 )
+                {
+                    m_CapsLock = ( data != 0 ) ? true : false;
+                }
             }
         }
     }
@@ -182,9 +195,8 @@ ITCM_CODE UINT16 ReadCRU_Inner( ADDRESS address )
     
     int retVal = 1;
 
-    if( m_PinState[ 0 ][ 1 ] == 1 )
-    {
-        // We're in timer mode
+    if( m_PinState[ 0 ][ 1 ] == 1 )  // We're in timer mode
+    {        
         if( address == 0 )
         {
             // Mode
@@ -202,31 +214,14 @@ ITCM_CODE UINT16 ReadCRU_Inner( ADDRESS address )
             retVal = ( m_InterruptRequested > 0 ) ? 1 : 0;
         }
     }
-    else
+    else  // We're in I/O mode
     {
-        // We're in I/O mode
-
         // Adjust for the aliased pins
         if(( address >= 23 ) && ( address <= 31 ))
         {
             address = 38 - address;
         }
         
-        if (address == 27) 
-        {
-            extern bool getTapeBit(void);
-            // tape input (the outputs can't be read back, technically)
-            if (getTapeBit()) 
-            {
-                return 0;   // inverted logic
-            } 
-            else 
-            {
-                return 1;   // this also preserves the Perfect Push 'tick' on audio gate
-            }
-        }        
-
-        // cassette support
         if( address == 0 )
         {
             // Mode

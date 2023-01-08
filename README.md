@@ -49,7 +49,10 @@ Installation :
 
 Known Issues :
 -----------------------
-* Stuff... will fill in later as Alpha progresses into Beta
+* Congo Bongo graphical glitches after 1st level
+* Skyway will not load/play
+* The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
+* Borzork has audio squealing during gameplay
 
 BIOS Files :
 -----------------------
@@ -84,6 +87,13 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.4: not yet released...
+* Added .DSK support for 90K and 180K disks
+* Added High Score support for 10 scores per game
+* Fixed loading of 8K "banked" games (Tuthankam, Mancala, etc)
+* Other minor cleanups as time permitted
+* Games that were hanging looking for Speech Synthesis module no longer freeze up (no voice yet but you can play them)
+
 V0.3: 7-Jan-2023 by wavemotion-dave
 * Improved speed 8% across the board
 * Fixed spirte cut-off at top of screen
