@@ -1133,7 +1133,7 @@ void opcode_LREX( )
 //-----------------------------------------------------------------------------
 //   BLWP   Format: VI  Op-code: 0x0400     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_BLWP( )
+ITCM_CODE void opcode_BLWP( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
     ContextSwitch( address );
@@ -1142,7 +1142,7 @@ void opcode_BLWP( )
 //-----------------------------------------------------------------------------
 //   B      Format: VI  Op-code: 0x0440     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_B( )
+ITCM_CODE void opcode_B( )
 {
     PC = GetAddress( curOpCode, 2 );
     PC &= 0xFFFE;
@@ -1151,7 +1151,7 @@ void opcode_B( )
 //-----------------------------------------------------------------------------
 //   X      Format: VI  Op-code: 0x0480     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_X( )
+ITCM_CODE void opcode_X( )
 {
     curOpCode = ReadMemoryW( GetAddress( curOpCode, 2 ));
     _ExecuteInstruction( curOpCode );
@@ -1275,7 +1275,7 @@ void opcode_DECT( )
 //-----------------------------------------------------------------------------
 //   BL     Format: VI  Op-code: 0x0680     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_BL( )
+ITCM_CODE void opcode_BL( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
 
@@ -1287,7 +1287,7 @@ void opcode_BL( )
 //-----------------------------------------------------------------------------
 //   SWPB   Format: VI  Op-code: 0x06C0     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_SWPB( )
+ITCM_CODE void opcode_SWPB( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
     UINT16 value = ReadMemoryW( address );
@@ -1335,7 +1335,7 @@ void opcode_ABS( )
 //-----------------------------------------------------------------------------
 //   SRA    Format: V   Op-code: 0x0800     Status: L A E C - - -
 //-----------------------------------------------------------------------------
-void opcode_SRA( )
+ITCM_CODE void opcode_SRA( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
@@ -1367,7 +1367,7 @@ void opcode_SRA( )
 //-----------------------------------------------------------------------------
 //   SRL    Format: V   Op-code: 0x0900     Status: L A E C - - -
 //-----------------------------------------------------------------------------
-void opcode_SRL( )
+ITCM_CODE void opcode_SRL( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
@@ -1401,7 +1401,7 @@ void opcode_SRL( )
 //
 // Comments: The overflow bit is set if the sign changes during the shift
 //-----------------------------------------------------------------------------
-void opcode_SLA( )
+ITCM_CODE void opcode_SLA( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
@@ -1440,7 +1440,7 @@ void opcode_SLA( )
 //-----------------------------------------------------------------------------
 //   SRC    Format: V   Op-code: 0x0B00     Status: L A E C - - -
 //-----------------------------------------------------------------------------
-void opcode_SRC( )
+ITCM_CODE void opcode_SRC( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
