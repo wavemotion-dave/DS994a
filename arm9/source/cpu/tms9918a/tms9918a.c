@@ -37,7 +37,7 @@ u8 XBuf_B[256*256] ALIGN(32) = {0}; // Really it's only 256x192 - Ping Pong Buff
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
 // Look up table for colors - pre-generated and in VRAM for maximum speed!
-u32 (*lutTablehh)[16][16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;
+u32 (*lutTablehh)[16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;
 
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
@@ -97,12 +97,12 @@ u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 /** This function is called from RefreshLine#() to refresh  **/
 /** the screen border.                                      **/
 /*************************************************************/
-ITCM_CODE void RefreshBorder(register byte Y)
+ITCM_CODE void RefreshBorder(byte Y)
 {
     if (ScrMode == 0)
     {
-      register byte *P;
-      register int J,N;
+      byte *P;
+      int J,N;
 
       /* Screen buffer */
       P=XBuf;
@@ -205,12 +205,12 @@ byte ITCM_CODE CheckSprites(void) {
 /** Returns the first sprite to show or -1 if none shown.   **/
 /** Also updates 5th sprite fields in the status register.  **/
 /*************************************************************/
-int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
+int ITCM_CODE ScanSprites(byte Y,unsigned int *Mask)
 {
-  register byte *AT;
-  register u8 L,C1,C2;
-  register s16 K;
-  register unsigned int M;
+  byte *AT;
+  u8 L,C1,C2;
+  s16 K;
+  unsigned int M;
 
   /* No 5th sprite yet */
   //VDPStatus &= ~(TMS9918_STAT_5THNUM);
@@ -218,7 +218,7 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
   /* Must have MODE1+ and screen enabled */
   if(!ScrMode || !TMS9918_ScreenON)
   {
-    if(Mask) *Mask=0;
+    *Mask=0;
     return(-1);
   }
 
@@ -268,7 +268,7 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
     }
 
   /* Return last shown sprite and bit mask of shown sprites */
-  if(Mask) *Mask=M;
+  *Mask=M;
   return(L-1);
 }
 
@@ -277,10 +277,10 @@ int ITCM_CODE ScanSprites(register byte Y,unsigned int *Mask)
 /** This function is called from RefreshLine#() to refresh  **/
 /** sprites.                                                **/
 /*************************************************************/
-void ITCM_CODE RefreshSprites(register byte Y) {
-  register byte *PT,*AT;
-  register byte *P,*T,C;
-  register int L,K,N;
+void ITCM_CODE RefreshSprites(byte Y) {
+  byte *PT,*AT;
+  byte *P,*T,C;
+  int L,K,N;
   unsigned int M;
 
   /* Find sprites to show, update 5th sprite status */
@@ -398,8 +398,8 @@ void ITCM_CODE RefreshSprites(register byte Y) {
 /*************************************************************/
 ITCM_CODE void RefreshLine0(u8 Y) 
 {
-  register byte *T,X,K,Offset;
-  register byte *P,FC,BC;
+  byte *T,X,K,Offset;
+  byte *P,FC,BC;
 
   P=XBuf+(Y<<8);
   BC = BGColor;
@@ -433,9 +433,9 @@ ITCM_CODE void RefreshLine0(u8 Y)
 /*************************************************************/
 ITCM_CODE void RefreshLine1(u8 uY) 
 {
-  register byte X,K=0,Offset,FC,BC;
-  register u8 *T;
-  register u32 *P;
+  byte X,K=0,Offset;
+  u8 *T;
+  u32 *P;
   u8 lastT;
   u32 *ptLut=0;
 
@@ -456,11 +456,8 @@ ITCM_CODE void RefreshLine1(u8 uY)
       if (lastT != *T)
       {
           lastT=*T;
-          BC=ColTab[lastT>>3];
           K=ChrGen[((int)lastT<<3)+Offset];
-          FC=BC>>4;
-          BC=BC&0x0F;
-          ptLut = (u32*) (lutTablehh[FC][BC]);
+          ptLut = (u32*) (lutTablehh[ColTab[lastT>>3]]);
           ptLow = *(ptLut + ((K>>4)));
           ptHigh= *(ptLut + ((K & 0xF)));
       }
@@ -478,8 +475,7 @@ ITCM_CODE void RefreshLine1(u8 uY)
 /*************************************************************/
 ITCM_CODE void RefreshLine2(u8 uY) {
   u32 *P;
-  register byte FC,BC;
-  register byte X,K,*T;
+  byte X,K,*T;
   u8 lastT;
   u16 J,I;
   u32 *ptLut;
@@ -490,7 +486,7 @@ ITCM_CODE void RefreshLine2(u8 uY) {
     memset(P,BGColor,256);
   else 
   {
-    u32 ptLow = 0; u32 ptHigh = 0;
+    u32 ptLow, ptHigh;
       
     J   = ((u16)((u16)uY&0xC0)<<5)+(uY&0x07);
     T   = ChrTab+((u16)((u16)uY&0xF8)<<2);
@@ -503,12 +499,10 @@ ITCM_CODE void RefreshLine2(u8 uY) {
           lastT = *T;
           I    = (u16)lastT<<3;
           K    = ColTab[(J+I)&ColTabM];
-          FC   = (K>>4);
-          BC   = K & 0x0F;
+          ptLut = (u32*)(lutTablehh[K]);
           K    = ChrGen[(J+I)&ChrGenM];
-          ptLut = (u32*)(lutTablehh[FC][BC]);
           ptLow = *(ptLut + ((K>>4)));
-          ptHigh = *(ptLut + ((K & 0xF)));
+          ptHigh = *(ptLut + ((K&0xF)));
       } 
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -524,8 +518,8 @@ ITCM_CODE void RefreshLine2(u8 uY) {
 /** in this line.                                           **/
 /*************************************************************/
 ITCM_CODE void RefreshLine3(u8 uY) {
-  register byte X,K,Offset;
-  register byte *P,*T;
+  byte X,K,Offset;
+  byte *P,*T;
   u8 lastT;
   P=XBuf+(uY<<8);
 
@@ -769,7 +763,10 @@ ITCM_CODE byte Loop9918(void)
   if ((CurLine >= tms_start_line) && (CurLine < tms_end_line))
   {
       if ((frameSkipIdx & frameSkip[myConfig.frameSkip]) == 0)
-          ScanSprites(CurLine - tms_start_line, 0);    // Skip rendering - but still scan sprites for collisions
+      {
+          unsigned int tmp;
+          ScanSprites(CurLine - tms_start_line, &tmp);    // Skip rendering - but still scan sprites for collisions
+      }
       else
           RefreshLine(CurLine - tms_start_line);
   }
@@ -841,23 +838,22 @@ void Reset9918(void)
     int colfg,colbg;
     for (colfg=0;colfg<16;colfg++) {
         for (colbg=0;colbg<16;colbg++) {
-          lutTablehh[colfg][colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
-          lutTablehh[colfg][colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
-          lutTablehh[colfg][colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
-          lutTablehh[colfg][colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
-          lutTablehh[colfg][colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
-          lutTablehh[colfg][colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
-          lutTablehh[colfg][colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
-          lutTablehh[colfg][colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
-
-          lutTablehh[colfg][colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
-          lutTablehh[colfg][colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
-          lutTablehh[colfg][colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
-          lutTablehh[colfg][colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
-          lutTablehh[colfg][colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
-          lutTablehh[colfg][colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
-          lutTablehh[colfg][colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
-          lutTablehh[colfg][colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
+          lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
+          lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
+          lutTablehh[(colfg<<4) | colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
+          lutTablehh[(colfg<<4) | colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
+          lutTablehh[(colfg<<4) | colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
+          lutTablehh[(colfg<<4) | colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
+          lutTablehh[(colfg<<4) | colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
+          lutTablehh[(colfg<<4) | colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
+          lutTablehh[(colfg<<4) | colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
+          lutTablehh[(colfg<<4) | colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
+          lutTablehh[(colfg<<4) | colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
+          lutTablehh[(colfg<<4) | colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
+          lutTablehh[(colfg<<4) | colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
+          lutTablehh[(colfg<<4) | colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
+          lutTablehh[(colfg<<4) | colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
+          lutTablehh[(colfg<<4) | colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
         }
     }
 }

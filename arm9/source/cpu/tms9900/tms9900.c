@@ -668,14 +668,17 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
     {
         if (address >= 0x8000 && address < 0x8400)
         {
-    #ifdef MIRRORS        
-            Memory[0x8000 | (address&0xFF)] = value;
-            Memory[0x8100 | (address&0xFF)] = value;
-            Memory[0x8200 | (address&0xFF)] = value;
-            Memory[0x8300 | (address&0xFF)] = value;
-    #else
-            Memory[address] = value;
-    #endif        
+            if (myConfig.RAMMirrors)
+            {
+                Memory[0x8000 | (address&0xFF)] = value;
+                Memory[0x8100 | (address&0xFF)] = value;
+                Memory[0x8200 | (address&0xFF)] = value;
+                Memory[0x8300 | (address&0xFF)] = value;
+            }
+            else
+            {                
+                Memory[address] = value;
+            }
         }
         else if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
         {
@@ -874,7 +877,7 @@ ITCM_CODE void TMS9900_Run()
 }
 
 
-static void SetFlags_LAE( UINT16 val )
+ITCM_CODE void SetFlags_LAE( UINT16 val )
 {
     if(( INT16 ) val > 0 )
     {
@@ -890,7 +893,7 @@ static void SetFlags_LAE( UINT16 val )
     }
 }
 
-static void SetFlags_LAE2( UINT16 val1, UINT16 val2 )
+ITCM_CODE void SetFlags_LAE2( UINT16 val1, UINT16 val2 )
 {
     if( val1 == val2 )
     {
@@ -909,7 +912,7 @@ static void SetFlags_LAE2( UINT16 val1, UINT16 val2 )
     }
 }
 
-static void SetFlags_difW( UINT16 val1, UINT16 val2, UINT32 res )
+ITCM_CODE void SetFlags_difW( UINT16 val1, UINT16 val2, UINT32 res )
 {
     if( !( res & 0x00010000 ))
     {
@@ -922,7 +925,7 @@ static void SetFlags_difW( UINT16 val1, UINT16 val2, UINT32 res )
     SetFlags_LAE(( UINT16 ) res );
 }
 
-static void SetFlags_difB( UINT8 val1, UINT8 val2, UINT32 res )
+ITCM_CODE void SetFlags_difB( UINT8 val1, UINT8 val2, UINT32 res )
 {
     if( !( res & 0x0100 ))
     {
@@ -936,7 +939,7 @@ static void SetFlags_difB( UINT8 val1, UINT8 val2, UINT32 res )
     ST |= parity[ ( UINT8 ) res ];
 }
 
-static void SetFlags_sumW( UINT16 val1, UINT16 val2, UINT32 res )
+ITCM_CODE void SetFlags_sumW( UINT16 val1, UINT16 val2, UINT32 res )
 {
     if( res & 0x00010000 )
     {
@@ -949,7 +952,7 @@ static void SetFlags_sumW( UINT16 val1, UINT16 val2, UINT32 res )
     SetFlags_LAE(( UINT16 ) res );
 }
 
-static void SetFlags_sumB( UINT8 val1, UINT8 val2, UINT32 res )
+ITCM_CODE void SetFlags_sumB( UINT8 val1, UINT8 val2, UINT32 res )
 {
     if( res & 0x0100 )
     {
@@ -966,7 +969,7 @@ static void SetFlags_sumB( UINT8 val1, UINT8 val2, UINT32 res )
 //-----------------------------------------------------------------------------
 //   LI     Format: VIII    Op-code: 0x0200     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_LI( )
+ITCM_CODE void opcode_LI( )
 {
     UINT16 value = Fetch( );
 
@@ -1157,7 +1160,7 @@ void opcode_X( )
 //-----------------------------------------------------------------------------
 //   CLR    Format: VI  Op-code: 0x04C0     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_CLR( )
+ITCM_CODE void opcode_CLR( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
 
@@ -1208,7 +1211,7 @@ void opcode_INV( )
 //-----------------------------------------------------------------------------
 //   INC    Format: VI  Op-code: 0x0580     Status: L A E C O - -
 //-----------------------------------------------------------------------------
-void opcode_INC( )
+ITCM_CODE void opcode_INC( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
     UINT32 src = ReadMemoryW( address );
@@ -1240,7 +1243,7 @@ void opcode_INCT( )
 //-----------------------------------------------------------------------------
 //   DEC    Format: VI  Op-code: 0x0600     Status: L A E C O - -
 //-----------------------------------------------------------------------------
-void opcode_DEC( )
+ITCM_CODE void opcode_DEC( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
     UINT32 src = ReadMemoryW( address );
@@ -1469,7 +1472,7 @@ void opcode_SRC( )
 //-----------------------------------------------------------------------------
 //   JMP    Format: II  Op-code: 0x1000     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JMP( )
+inline void opcode_JMP( )
 {
     ClockCycleCounter += 2;
     PC += 2 * ( INT8 ) curOpCode;
@@ -1478,7 +1481,7 @@ void opcode_JMP( )
 //-----------------------------------------------------------------------------
 //   JLT    Format: II  Op-code: 0x1100     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JLT( )
+ITCM_CODE void opcode_JLT( )
 {
     if( !( ST & ( TMS_ARITHMETIC | TMS_EQUAL )))
     {
@@ -1489,7 +1492,7 @@ void opcode_JLT( )
 //-----------------------------------------------------------------------------
 //   JLE    Format: II  Op-code: 0x1200     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JLE( )
+ITCM_CODE void opcode_JLE( )
 {
     if(( !( ST & TMS_LOGICAL )) | ( ST & TMS_EQUAL ))
     {
@@ -1500,7 +1503,7 @@ void opcode_JLE( )
 //-----------------------------------------------------------------------------
 //   JEQ    Format: II  Op-code: 0x1300     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JEQ( )
+ITCM_CODE void opcode_JEQ( )
 {
     if( ST & TMS_EQUAL )
     {
@@ -1511,7 +1514,7 @@ void opcode_JEQ( )
 //-----------------------------------------------------------------------------
 //   JHE    Format: II  Op-code: 0x1400     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JHE( )
+ITCM_CODE void opcode_JHE( )
 {
     if( ST & ( TMS_LOGICAL | TMS_EQUAL ))
     {
@@ -1522,7 +1525,7 @@ void opcode_JHE( )
 //-----------------------------------------------------------------------------
 //   JGT    Format: II  Op-code: 0x1500     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JGT( )
+ITCM_CODE void opcode_JGT( )
 {
     if( ST & TMS_ARITHMETIC )
     {
@@ -1533,7 +1536,7 @@ void opcode_JGT( )
 //-----------------------------------------------------------------------------
 //   JNE    Format: II  Op-code: 0x1600     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JNE( )
+ITCM_CODE void opcode_JNE( )
 {
     if( !( ST & TMS_EQUAL ))
     {
@@ -1544,7 +1547,7 @@ void opcode_JNE( )
 //-----------------------------------------------------------------------------
 //   JNC    Format: II  Op-code: 0x1700     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JNC( )
+ITCM_CODE void opcode_JNC( )
 {
     if( !( ST & TMS_CARRY ))
     {
@@ -1630,7 +1633,7 @@ void opcode_SBZ( )
 //-----------------------------------------------------------------------------
 //   TB     Format: II  Op-code: 0x1F00     Status: - - E - - - -
 //-----------------------------------------------------------------------------
-void opcode_TB( )
+ITCM_CODE void opcode_TB( )
 {
     int cru = ( ReadMemoryW( WP + 2 * 12 ) >> 1 ) + ( curOpCode & 0x00FF );
     ClockCycleCounter += 2;
@@ -1709,7 +1712,7 @@ void opcode_XOP( )
 //-----------------------------------------------------------------------------
 //   LDCR   Format: IV  Op-code: 0x3000     Status: L A E - - P -
 //-----------------------------------------------------------------------------
-void opcode_LDCR( )
+ITCM_CODE void opcode_LDCR( )
 {
     UINT16 value;
     int cru = ( ReadMemoryW( WP + 2 * 12 ) >> 1 ) & 0x0FFF;
@@ -1743,7 +1746,7 @@ void opcode_LDCR( )
 //-----------------------------------------------------------------------------
 //   STCR   Format: IV  Op-code: 0x3400     Status: L A E - - P -
 //-----------------------------------------------------------------------------
-void opcode_STCR( )
+ITCM_CODE void opcode_STCR( )
 {
     int cru = ( ReadMemoryW( WP + 2 * 12 ) >> 1 ) & 0x0FFF;
     unsigned int count = ( curOpCode >> 6 ) & 0x000F;
@@ -1960,7 +1963,7 @@ void opcode_AB( )
 //-----------------------------------------------------------------------------
 //   MOV    Format: I   Op-code: 0xC000     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_MOV( )
+ITCM_CODE ITCM_CODE void opcode_MOV( )
 {
     UINT16 srcAddress = GetAddress( curOpCode, 2 );
     UINT16 src = ReadMemoryW( srcAddress );
@@ -1978,7 +1981,7 @@ void opcode_MOV( )
 //-----------------------------------------------------------------------------
 //   MOVB   Format: I   Op-code: 0xD000     Status: L A E - - P -
 //-----------------------------------------------------------------------------
-void opcode_MOVB( )
+ITCM_CODE ITCM_CODE void opcode_MOVB( )
 {
     UINT16 srcAddress = GetAddress( curOpCode, 1 );
     UINT8 src = ReadMemoryB( srcAddress );
