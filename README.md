@@ -54,6 +54,7 @@ Known Issues :
 * Skyway will not load/play - cause unknown.
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay.
+* Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 
 BIOS Files :
 -----------------------
