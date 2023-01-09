@@ -43,11 +43,20 @@ Thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrow
 Installation :
 -----------------------
 * You will need the two console BIOS files as described below. Place both .bin BIOS files into /roms/bios (you can just make the directory on your SD card).
-* You will also need the emulator itself. You can get this from the GitHub page - the only file you need here is DS994a.nds (the .nds is a Nintendo executable file).
+* You will also need the emulator itself. You can get this from the GitHub page - the only file you need here is DS994a.nds (the .nds is a Nintendo executable file). You can put this anywhere - most people put the .nds file into the root of the SD card.
 * If you want to play disk based games (Adventure, Tunnels of Doom, etc) you will need 994adisk.bin (often just named disk.bin but you need to rename it and put it into /roms/bios).
 * You will need games to play... right now the emulator supports C/D/G files and '8' non-inverted files. Basically just try loading a file to see if it works... the ROMs should have a .bin extension. 
-* Recommend you put your games into /roms/ti99 as the emulator will default to that directory. That's where the cool kids keep them.
+* Recommend you put your game ROMs into /roms/ti99 as the emulator will default to that directory. That's where the cool kids keep them.
+* Recommend you put any disks needed (.dsk files) into the same directory as your ROMs until I can get a better file manager worked out.
 
+BIOS Files :
+-----------------------
+Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek these out if you want maximum compatibility. Place these into /roms/bios
+```
+* db8f33e5	994aROM.bin (8K)
+* af5c2449	994aGROM.bin (24K)
+* 8f7df93f	994aDISK.bin (8K) - this is needed only if you want .DSK support
+```
 
 Known Issues :
 -----------------------
@@ -55,15 +64,6 @@ Known Issues :
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
-
-BIOS Files :
------------------------
-Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek these out if you want maximum compatibility:
-```
-* db8f33e5	994aROM.bin (8K)
-* af5c2449	994aGROM.bin (24K)
-* 8f7df93f	994aDISK.bin (8K) - this is needed only if you want .DSK support
-```
 
 
 Blend Mode (DSi) :
