@@ -7,7 +7,7 @@ See BIOS files further down for the ones you need.
 
 Features :
 -----------------------
-* Cart loads up to 512K Banked
+* Cart loads up to 512K Banked (+40K of GROM unbanked)
 * 32K RAM Expansion
 * Save and Load State
 * High score saving for up to 10 scores per game
