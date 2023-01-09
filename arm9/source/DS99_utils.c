@@ -6,7 +6,7 @@
 // royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
 // Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
 //
-// The ColecoDS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -28,12 +28,17 @@
 
 typedef enum {FT_NONE,FT_FILE,FT_DIR} FILE_TYPE;
 
-int countCV=0;
+int countTI=0;
+int countDSK=0;
+int chosenDSK=0;
 int ucGameAct=0;
+int ucDskAct=0;
 int ucGameChoice = -1;
-FICcoleco gpFic[MAX_ROMS];  
+FIC_TI99 gpFic[MAX_ROMS];
+FIC_TI99 gpDsk[MAX_ROMS];
 char szName[256];
-u8 bForceMSXLoad = false;
+char szDiskName[256];
+char szFile[256];
 u32 file_size = 0;
 
 struct Config_t AllConfigs[MAX_CONFIGS];
@@ -216,7 +221,7 @@ u8 showMessage(char *szCh1, char *szCh2) {
   return uRet;
 }
 
-void colecoDSModeNormal(void) {
+void tiDSModeNormal(void) {
   REG_BG3CNT = BG_BMP8_256x256;
   REG_BG3PA = (1<<8); 
   REG_BG3PB = 0;
@@ -233,16 +238,8 @@ void colecoDSInitScreenUp(void) {
   videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
   vramSetBankB(VRAM_B_MAIN_SPRITE);
-  colecoDSModeNormal();
+  tiDSModeNormal();
 }
-
-// ----------------------------------------------------------------------------
-// This stuff handles the 'random' Mario sprite walk around the top screen...
-// ----------------------------------------------------------------------------
-u8 uFlp=0;
-signed char iDirAlex=2;
-signed short iXAlex=0;
-u8 uSprAlex=0,uYAlex=140;
 
 
 /*********************************************************************************
@@ -255,12 +252,12 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
   char szName2[80];
   
   AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
-  AffChaine(30,21,0,(NoDebGame+14<countCV ? ">" : " "));
-  siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countCV);
+  AffChaine(30,21,0,(NoDebGame+14<countTI ? ">" : " "));
+  siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countTI);
   AffChaine(2,6,0, szName);
   for (ucBcl=0;ucBcl<14; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
-    if (ucGame < countCV) 
+    if (ucGame < countTI) 
     {
       maxLen=strlen(gpFic[ucGame].szName);
       strcpy(szName,gpFic[ucGame].szName);
@@ -284,14 +281,53 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 }
 
 
+/*********************************************************************************
+ * Show The 14 DSKs on the list to allow the user to choose a new game.
+ ********************************************************************************/
+void dsDisplayDsks(u16 NoDebGame, u8 ucSel) 
+{
+  u16 ucBcl,ucGame;
+  u8 maxLen;
+  char szName2[80];
+  
+  AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
+  AffChaine(30,21,0,(NoDebGame+14<countDSK ? ">" : " "));
+  siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countDSK);
+  AffChaine(2,6,0, szName);
+  for (ucBcl=0;ucBcl<14; ucBcl++) {
+    ucGame= ucBcl+NoDebGame;
+    if (ucGame < countDSK) 
+    {
+      maxLen=strlen(gpDsk[ucGame].szName);
+      strcpy(szName,gpDsk[ucGame].szName);
+      if (maxLen>28) szName[28]='\0';
+      if (gpDsk[ucGame].uType == DIRECT) {
+        siprintf(szName2, " %s]",szName);
+        szName2[0]='[';
+        siprintf(szName,"%-28s",szName2);
+        AffChaine(1,8+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
+      }
+      else {
+        siprintf(szName,"%-28s",strupr(szName));
+        AffChaine(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
+      }
+    }
+    else
+    {
+        AffChaine(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
+    }
+  }
+}
+
+
 // -------------------------------------------------------------------------
-// Standard qsort routine for the coleco games - we sort all directory
+// Standard qsort routine for the TI games - we sort all directory
 // listings first and then a case-insenstive sort of all games.
 // -------------------------------------------------------------------------
-int colecoFilescmp (const void *c1, const void *c2) 
+int TI99Filescmp (const void *c1, const void *c2) 
 {
-  FICcoleco *p1 = (FICcoleco *) c1;
-  FICcoleco *p2 = (FICcoleco *) c2;
+  FIC_TI99 *p1 = (FIC_TI99 *) c1;
+  FIC_TI99 *p2 = (FIC_TI99 *) c2;
 
   if (p1->szName[0] == '.' && p2->szName[0] != '.')
       return -1;
@@ -305,17 +341,16 @@ int colecoFilescmp (const void *c1, const void *c2)
 }
 
 /*********************************************************************************
- * Find files (COL / ROM) available - sort them for display.
+ * Find files (.bin) available - sort them for display.
  ********************************************************************************/
-void colecoDSFindFiles(void) 
+void TI99FindFiles(void) 
 {
-  u32 uNbFile;
-  char szFile[256];
+  u16 uNbFile;
   DIR *dir;
   struct dirent *pent;
 
   uNbFile=0;
-  countCV=0;
+  countTI=0;
 
   dir = opendir(".");
   while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS)) 
@@ -329,7 +364,7 @@ void colecoDSFindFiles(void)
         strcpy(gpFic[uNbFile].szName,szFile);
         gpFic[uNbFile].uType = DIRECT;
         uNbFile++;
-        countCV++;
+        countTI++;
       }
     }
     else {
@@ -338,7 +373,7 @@ void colecoDSFindFiles(void)
           strcpy(gpFic[uNbFile].szName,szFile);
           gpFic[uNbFile].uType = COLROM;
           uNbFile++;
-          countCV++;
+          countTI++;
         }
       }
     }
@@ -348,17 +383,63 @@ void colecoDSFindFiles(void)
   // ----------------------------------------------
   // If we found any files, go sort the list...
   // ----------------------------------------------
-  if (countCV)
+  if (countTI)
   {
-    qsort (gpFic, countCV, sizeof(FICcoleco), colecoFilescmp);
+    qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
+  }    
+}
+
+/*********************************************************************************
+ * Find files (.bin) available - sort them for display.
+ ********************************************************************************/
+void TI99FindDskFiles(void) 
+{
+  u16 uNbFile;
+  DIR *dir;
+  struct dirent *pent;
+
+  uNbFile=0;  
+  countDSK=0;
+
+  dir = opendir(".");
+  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS)) 
+  {
+    strcpy(szFile,pent->d_name);
+      
+    if(pent->d_type == DT_DIR) 
+    {
+      if (!( (szFile[0] == '.') && (strlen(szFile) == 1))) 
+      {
+        strcpy(gpDsk[uNbFile].szName,szFile);
+        gpDsk[uNbFile].uType = DIRECT;
+        uNbFile++;
+        countDSK++;
+      }
+    }
+    else {
+      if ((strlen(szFile)>4) && (strlen(szFile)<(MAX_ROM_LENGTH-4)) ) {
+        if ( (strcasecmp(strrchr(szFile, '.'), ".dsk") == 0) )  {
+          strcpy(gpDsk[uNbFile].szName,szFile);
+          gpDsk[uNbFile].uType = COLROM;
+          uNbFile++;
+          countDSK++;
+        }
+      }
+    }
+  }
+  closedir(dir);
+    
+  // ----------------------------------------------
+  // If we found any files, go sort the list...
+  // ----------------------------------------------
+  if (countDSK)
+  {
+    qsort (gpDsk, countDSK, sizeof(FIC_TI99), TI99Filescmp);
   }    
 }
 
 
-// ----------------------------------------------------------------
-// Let the user select a new game (rom) file and load it up!
-// ----------------------------------------------------------------
-u8 colecoDSLoadFile(void) 
+char *TILoadDiskFile(void)
 {
   bool bDone=false;
   u32 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00,romSelected= 0, firstRomDisplay=0,nbRomPerPage, uNbRSPage;
@@ -370,17 +451,248 @@ u8 colecoDSLoadFile(void)
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
   AffChaine(7,5,0,"A=SELECT,  B=EXIT");
 
-  colecoDSFindFiles();
+  TI99FindDskFiles();
+  
+  chosenDSK = -1;
+
+  nbRomPerPage = (countDSK>=14 ? 14 : countDSK);
+  uNbRSPage = (countDSK>=5 ? 5 : countDSK);
+  
+  if (ucDskAct>countDSK-nbRomPerPage)
+  {
+    firstRomDisplay=countDSK-nbRomPerPage;
+    romSelected=ucDskAct-countDSK+nbRomPerPage;
+  }
+  else
+  {
+    firstRomDisplay=ucDskAct;
+    romSelected=0;
+  }
+  dsDisplayDsks(firstRomDisplay,romSelected);
+    
+  // -----------------------------------------------------
+  // Until the user selects a file or exits the menu...
+  // -----------------------------------------------------
+  while (!bDone)
+  {
+    if (keysCurrent() & KEY_UP)
+    {
+      if (!ucHaut)
+      {
+        ucDskAct = (ucDskAct>0 ? ucDskAct-1 : countDSK-1);
+        if (romSelected>uNbRSPage) { romSelected -= 1; }
+        else {
+          if (firstRomDisplay>0) { firstRomDisplay -= 1; }
+          else {
+            if (romSelected>0) { romSelected -= 1; }
+            else {
+              firstRomDisplay=countDSK-nbRomPerPage;
+              romSelected=nbRomPerPage-1;
+            }
+          }
+        }
+        ucHaut=0x01;
+        dsDisplayDsks(firstRomDisplay,romSelected);
+      }
+      else {
+
+        ucHaut++;
+        if (ucHaut>10) ucHaut=0;
+      }
+      uLenFic=0; ucFlip=-50; ucFlop=0;     
+    }
+    else
+    {
+      ucHaut = 0;
+    }
+    if (keysCurrent() & KEY_DOWN)
+    {
+      if (!ucBas) {
+        ucDskAct = (ucDskAct< countDSK-1 ? ucDskAct+1 : 0);
+        if (romSelected<uNbRSPage-1) { romSelected += 1; }
+        else {
+          if (firstRomDisplay<countDSK-nbRomPerPage) { firstRomDisplay += 1; }
+          else {
+            if (romSelected<nbRomPerPage-1) { romSelected += 1; }
+            else {
+              firstRomDisplay=0;
+              romSelected=0;
+            }
+          }
+        }
+        ucBas=0x01;
+        dsDisplayDsks(firstRomDisplay,romSelected);
+      }
+      else
+      {
+        ucBas++;
+        if (ucBas>10) ucBas=0;
+      }
+      uLenFic=0; ucFlip=-50; ucFlop=0;     
+    }
+    else {
+      ucBas = 0;
+    }
+      
+    // -------------------------------------------------------------
+    // Left and Right on the D-Pad will scroll 1 page at a time...
+    // -------------------------------------------------------------
+    if (keysCurrent() & KEY_RIGHT)
+    {
+      if (!ucSBas)
+      {
+        ucDskAct = (ucDskAct< countDSK-nbRomPerPage ? ucDskAct+nbRomPerPage : countDSK-nbRomPerPage);
+        if (firstRomDisplay<countDSK-nbRomPerPage) { firstRomDisplay += nbRomPerPage; }
+        else { firstRomDisplay = countDSK-nbRomPerPage; }
+        if (ucDskAct == countDSK-nbRomPerPage) romSelected = 0;
+        ucSBas=0x01;
+        dsDisplayDsks(firstRomDisplay,romSelected);
+      }
+      else
+      {
+        ucSBas++;
+        if (ucSBas>10) ucSBas=0;
+      }
+      uLenFic=0; ucFlip=-50; ucFlop=0;     
+    }
+    else {
+      ucSBas = 0;
+    }
+      
+    // -------------------------------------------------------------
+    // Left and Right on the D-Pad will scroll 1 page at a time...
+    // -------------------------------------------------------------
+    if (keysCurrent() & KEY_LEFT)
+    {
+      if (!ucSHaut)
+      {
+        ucDskAct = (ucDskAct> nbRomPerPage ? ucDskAct-nbRomPerPage : 0);
+        if (firstRomDisplay>nbRomPerPage) { firstRomDisplay -= nbRomPerPage; }
+        else { firstRomDisplay = 0; }
+        if (ucDskAct == 0) romSelected = 0;
+        if (romSelected > ucDskAct) romSelected = ucDskAct;          
+        ucSHaut=0x01;
+        dsDisplayDsks(firstRomDisplay,romSelected);
+      }
+      else
+      {
+        ucSHaut++;
+        if (ucSHaut>10) ucSHaut=0;
+      }
+      uLenFic=0; ucFlip=-50; ucFlop=0;     
+    }
+    else {
+      ucSHaut = 0;
+    }
+    
+    // -------------------------------------------------------------------------
+    // They B key will exit out of the ROM selection without picking a new game
+    // -------------------------------------------------------------------------
+    if ( keysCurrent() & KEY_B )
+    {
+      bDone=true;
+      while (keysCurrent() & KEY_B);
+    }
+      
+    // -------------------------------------------------------------------
+    // Any of these keys will pick the current ROM and try to load it...
+    // -------------------------------------------------------------------
+    if (keysCurrent() & KEY_A || keysCurrent() & KEY_Y || keysCurrent() & KEY_X)
+    {
+      if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
+          
+      if (gpDsk[ucDskAct].uType != DIRECT)
+      {
+        bDone=true;
+        chosenDSK = ucDskAct;
+        WAITVBL;
+      }
+      else
+      {
+        chdir(gpDsk[ucDskAct].szName);
+        TI99FindDskFiles();
+        ucDskAct = 0;
+        nbRomPerPage = (countDSK>=14 ? 14 : countDSK);
+        uNbRSPage = (countDSK>=5 ? 5 : countDSK);
+        if (ucDskAct>countDSK-nbRomPerPage) {
+          firstRomDisplay=countDSK-nbRomPerPage;
+          romSelected=ucDskAct-countDSK+nbRomPerPage;
+        }
+        else {
+          firstRomDisplay=ucDskAct;
+          romSelected=0;
+        }
+        dsDisplayDsks(firstRomDisplay,romSelected);
+        while (keysCurrent() & KEY_A);
+      }
+    }
+    
+    // --------------------------------------------
+    // If the filename is too long... scroll it.
+    // --------------------------------------------
+    if (strlen(gpDsk[ucDskAct].szName) > 29) 
+    {
+      ucFlip++;
+      if (ucFlip >= 25) 
+      {
+        ucFlip = 0;
+        uLenFic++;
+        if ((uLenFic+28)>strlen(gpDsk[ucDskAct].szName)) 
+        {
+          ucFlop++;
+          if (ucFlop >= 15) 
+          {
+            uLenFic=0;
+            ucFlop = 0;
+          }
+          else
+            uLenFic--;
+        }
+        strncpy(szName,gpDsk[ucDskAct].szName+uLenFic,28);
+        szName[28] = '\0';
+        AffChaine(1,8+romSelected,2,szName);
+      }
+    }
+    swiWaitForVBlank();
+  }
+    
+  // Remet l'ecran du haut en mode bitmap
+  while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
+  
+  return gpDsk[chosenDSK].szName;
+}
+
+// ----------------------------------------------------------------
+// Let the user select a new game (rom) file and load it up!
+// ----------------------------------------------------------------
+u8 tiDSLoadFile(void) 
+{
+  bool bDone=false;
+  u32 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00,romSelected= 0, firstRomDisplay=0,nbRomPerPage, uNbRSPage;
+  s32 uLenFic=0, ucFlip=0, ucFlop=0;
+
+  // Show the menu...
+  while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B))!=0);
+  unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
+  dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
+  AffChaine(7,5,0,"A=SELECT,  B=EXIT");
+
+  TI99FindFiles();
     
   ucGameChoice = -1;
 
-  nbRomPerPage = (countCV>=14 ? 14 : countCV);
-  uNbRSPage = (countCV>=5 ? 5 : countCV);
+  nbRomPerPage = (countTI>=14 ? 14 : countTI);
+  uNbRSPage = (countTI>=5 ? 5 : countTI);
   
-  if (ucGameAct>countCV-nbRomPerPage)
+  if (ucGameAct>countTI)
   {
-    firstRomDisplay=countCV-nbRomPerPage;
-    romSelected=ucGameAct-countCV+nbRomPerPage;
+    firstRomDisplay=ucGameAct=0;
+    romSelected=0;
+  }
+  else if (ucGameAct>countTI-nbRomPerPage)
+  {
+    firstRomDisplay=countTI-nbRomPerPage;
+    romSelected=ucGameAct-countTI+nbRomPerPage;
   }
   else
   {
@@ -398,14 +710,14 @@ u8 colecoDSLoadFile(void)
     {
       if (!ucHaut)
       {
-        ucGameAct = (ucGameAct>0 ? ucGameAct-1 : countCV-1);
+        ucGameAct = (ucGameAct>0 ? ucGameAct-1 : countTI-1);
         if (romSelected>uNbRSPage) { romSelected -= 1; }
         else {
           if (firstRomDisplay>0) { firstRomDisplay -= 1; }
           else {
             if (romSelected>0) { romSelected -= 1; }
             else {
-              firstRomDisplay=countCV-nbRomPerPage;
+              firstRomDisplay=countTI-nbRomPerPage;
               romSelected=nbRomPerPage-1;
             }
           }
@@ -427,10 +739,10 @@ u8 colecoDSLoadFile(void)
     if (keysCurrent() & KEY_DOWN)
     {
       if (!ucBas) {
-        ucGameAct = (ucGameAct< countCV-1 ? ucGameAct+1 : 0);
+        ucGameAct = (ucGameAct< countTI-1 ? ucGameAct+1 : 0);
         if (romSelected<uNbRSPage-1) { romSelected += 1; }
         else {
-          if (firstRomDisplay<countCV-nbRomPerPage) { firstRomDisplay += 1; }
+          if (firstRomDisplay<countTI-nbRomPerPage) { firstRomDisplay += 1; }
           else {
             if (romSelected<nbRomPerPage-1) { romSelected += 1; }
             else {
@@ -460,10 +772,10 @@ u8 colecoDSLoadFile(void)
     {
       if (!ucSBas)
       {
-        ucGameAct = (ucGameAct< countCV-nbRomPerPage ? ucGameAct+nbRomPerPage : countCV-nbRomPerPage);
-        if (firstRomDisplay<countCV-nbRomPerPage) { firstRomDisplay += nbRomPerPage; }
-        else { firstRomDisplay = countCV-nbRomPerPage; }
-        if (ucGameAct == countCV-nbRomPerPage) romSelected = 0;
+        ucGameAct = (ucGameAct< countTI-nbRomPerPage ? ucGameAct+nbRomPerPage : countTI-nbRomPerPage);
+        if (firstRomDisplay<countTI-nbRomPerPage) { firstRomDisplay += nbRomPerPage; }
+        else { firstRomDisplay = countTI-nbRomPerPage; }
+        if (ucGameAct == countTI-nbRomPerPage) romSelected = 0;
         ucSBas=0x01;
         dsDisplayFiles(firstRomDisplay,romSelected);
       }
@@ -524,20 +836,18 @@ u8 colecoDSLoadFile(void)
       {
         bDone=true;
         ucGameChoice = ucGameAct;
-        bForceMSXLoad = false;
-        if (keysCurrent() & KEY_X) bForceMSXLoad=true;
         WAITVBL;
       }
       else
       {
         chdir(gpFic[ucGameAct].szName);
-        colecoDSFindFiles();
+        TI99FindFiles();
         ucGameAct = 0;
-        nbRomPerPage = (countCV>=14 ? 14 : countCV);
-        uNbRSPage = (countCV>=5 ? 5 : countCV);
-        if (ucGameAct>countCV-nbRomPerPage) {
-          firstRomDisplay=countCV-nbRomPerPage;
-          romSelected=ucGameAct-countCV+nbRomPerPage;
+        nbRomPerPage = (countTI>=14 ? 14 : countTI);
+        uNbRSPage = (countTI>=5 ? 5 : countTI);
+        if (ucGameAct>countTI-nbRomPerPage) {
+          firstRomDisplay=countTI-nbRomPerPage;
+          romSelected=ucGameAct-countTI+nbRomPerPage;
         }
         else {
           firstRomDisplay=ucGameAct;
@@ -585,7 +895,7 @@ u8 colecoDSLoadFile(void)
 
 
 // ---------------------------------------------------------------------------
-// Write out the ColecoDS.DAT configuration file to capture the settings for
+// Write out the DS994a.DAT configuration file to capture the settings for
 // each game.  This one file contains global settings + 400 game settings.
 // ---------------------------------------------------------------------------
 void SaveConfig(bool bShow)
@@ -690,8 +1000,8 @@ void SetDefaultGameConfig(void)
     myConfig.isPAL       = 0;
     myConfig.maxSprites  = 0;
     myConfig.memWipe     = 0;
-    myConfig.reservedA   = 0;
-    myConfig.reservedB   = 0;
+    myConfig.capsLock    = 0;
+    myConfig.RAMMirrors  = 0;
     myConfig.reservedC   = 0;
     myConfig.reservedD   = 0;
     myConfig.reservedE   = 0;
@@ -712,7 +1022,7 @@ void SetDefaultGameConfig(void)
 }
 
 // -------------------------------------------------------------------------
-// Find the ColecoDS.DAT file and load it... if it doesn't exist, then
+// Find the DS994a.DAT file and load it... if it doesn't exist, then
 // default values will be used for the entire configuration database...
 // -------------------------------------------------------------------------
 void FindAndLoadConfig(void)
@@ -781,8 +1091,8 @@ const struct options_t Option_Table[2][20] =
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend, 2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites, 2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,      2},        
-        //{"AUTO FIRE",      {"OFF", "B1 ONLY", "B2 ONLY", "BOTH"},                                                                                                                               &myConfig.autoFire1,  4},
-        //{"JOYSTICK",       {"NORMAL", "DIAGONALS"},                                                                                                                                             &myConfig.dpad,       2},
+        {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,   2},
+        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors, 2},
         {"RAM WIPE",       {"RANDOM", "CLEAR",},                                                                                                                                                &myConfig.memWipe,    5},
         {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
     },
@@ -826,7 +1136,7 @@ u8 display_options_list(bool bFullDisplay)
 //*****************************************************************************
 // Change Game Options for the current game
 //*****************************************************************************
-void colecoDSGameOptions(void)
+void tiDSGameOptions(void)
 {
     u8 optionHighlighted;
     u8 idx;
@@ -950,7 +1260,7 @@ void DisplayKeymapName(u32 uY)
 // Allow the user to change the key map for the current game and give them
 // the option of writing that keymap out to a configuration file for the game.
 // ------------------------------------------------------------------------------
-void colecoDSChangeKeymap(void) 
+void tiDSChangeKeymap(void) 
 {
   u32 ucHaut=0x00, ucBas=0x00,ucL=0x00,ucR=0x00,ucY= 6, bOK=0, bIndTch=0;
 
@@ -1137,7 +1447,7 @@ void ReadFileCRCAndConfig(void)
 // --------------------------------------------------------------------
 // Let the user select new options for the currently loaded game...
 // --------------------------------------------------------------------
-void colecoDSChangeOptions(void) 
+void tiDSChangeOptions(void) 
 {
   u32 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 8, bOK=0;
   
@@ -1208,7 +1518,7 @@ void colecoDSChangeOptions(void)
         ucA = 0x01;
         switch (ucY) {
           case 8 :      // LOAD GAME
-            colecoDSLoadFile();
+            tiDSLoadFile();
             dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
             if (ucGameChoice != -1) 
             { 
@@ -1231,7 +1541,7 @@ void colecoDSChangeOptions(void)
           case 12 :     // REDEFINE KEYS
             if (ucGameChoice != -1) 
             { 
-                colecoDSChangeKeymap();
+                tiDSChangeKeymap();
                 dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
                 affInfoOptions(ucY);
                 DisplayFileName();
@@ -1244,7 +1554,7 @@ void colecoDSChangeOptions(void)
           case 14 :     // GAME OPTIONS
             if (ucGameChoice != -1) 
             { 
-                colecoDSGameOptions();
+                tiDSGameOptions();
                 dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
                 affInfoOptions(ucY);
                 DisplayFileName();

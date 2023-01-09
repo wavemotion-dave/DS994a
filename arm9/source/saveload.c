@@ -179,7 +179,7 @@ void TI99LoadState()
     if (handle != NULL) 
     {    
          strcpy(szCh1,"LOADING...");
-         AffChaine(6,0,0,szCh1);
+         AffChaine(10,0,0,szCh1);
        
         // Read Version
         u16 save_ver = 0xBEEF;
@@ -273,10 +273,10 @@ void TI99LoadState()
           strcpy(szCh1,"OK ");
         else
           strcpy(szCh1,"ERR");
-         AffChaine(15,0,0,szCh1);
+         AffChaine(19,0,0,szCh1);
         
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        AffChaine(10,0,0,"             ");  
+        AffChaine(10,0,0,"              ");  
         DisplayStatusLine(true);
       }
       else

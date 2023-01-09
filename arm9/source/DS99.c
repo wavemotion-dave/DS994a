@@ -26,6 +26,7 @@
 #include "cpu/tms9918a/tms9918a.h"
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
+#include "disk.h"
 #include "intro.h"
 #include "alpha.h"
 #include "ecranBas.h"
@@ -89,9 +90,12 @@ u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of r
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 u8 last_pal_mode = 99;
+UINT8 tmpBuf[40];
 
 // The DS/DSi has 12 keys that can be mapped
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
+
+char *myDskFile = NULL;
 
 // --------------------------------------------------------------------
 // The key map for the Colecovision... mapped into the NDS controller
@@ -361,7 +365,7 @@ void ResetTI(void)
     
   ResetStatusFlags();   // Some static status flags for the UI mostly
     
-  //memset(debug, 0x00, sizeof(debug));
+  memset(debug, 0x00, sizeof(debug));
 }
 
 // ------------------------------------------------------------
@@ -377,13 +381,45 @@ void DisplayStatusLine(bool bForce)
         last_pal_mode = myConfig.isPAL;
         AffChaine(29,0,6, myConfig.isPAL ? "PAL":"   ");
     }
+
+    if (driveWriteCounter)
+    {
+        if (--driveWriteCounter) AffChaine(12,0,6, "DISK WRITE");
+        else AffChaine(12,0,6, "          ");
+    }
+    else if (driveReadCounter)
+    {
+        if (--driveReadCounter) AffChaine(12,0,6, "DISK READ ");
+        else AffChaine(12,0,6, "          ");
+    }
 }
 
 // ------------------------------------------------------------------------
 // Swap in a new .cas Cassette/Tape - reset position counter to zero.
 // ------------------------------------------------------------------------
-void CassetteInsert(char *filename)
+void DiskMount(char *filename)
 {
+    FILE *infile = fopen(filename, "rb");
+    if (infile)
+    {
+        fread(DiskImage, (180*1024), 1, infile);
+        fclose(infile);
+        bDiskIsMounted = true;
+        AccurateEmulationFlags |= EMU_DISK;
+    }
+    else
+    {
+        memset(DiskImage, 0xFF, (180*1024));
+        bDiskIsMounted = false;
+        AccurateEmulationFlags &= ~EMU_DISK;
+    }
+}
+
+void DiskUnmount(void)
+{
+    memset(DiskImage, 0xFF, (180*1024));
+    bDiskIsMounted = false;
+    AccurateEmulationFlags &= ~EMU_DISK;
 }
 
 
@@ -405,13 +441,27 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
       swiWaitForVBlank();
     }
     
-    AffChaine(9,7,6,                    "CASSETTE MENU");
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE CASSETTE    ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SWAP CASSETTE    ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " REWIND CASSETTE  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT MENU        ");  cassete_menu_items++;
+    AffChaine(5,7,6,                                                 "    TI DISK MENU     ");
+    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK  FILE  ");  cassete_menu_items++;
+    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK  FILE  ");  cassete_menu_items++;
+    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE    DISK  FILE  ");  cassete_menu_items++;
+    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU        ");  cassete_menu_items++;
 
-    DisplayFileName();
+    if (bDiskIsMounted) AffChaine(5,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
+    else AffChaine(5,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS NOT MOUNTED");   
+    
+    if (bDiskIsMounted && (myDskFile != NULL))
+    {
+        UINT16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
+        siprintf(tmpBuf, " DISK IS: %s/%s %3dKB", (DiskImage[0x12] == 2 ? "DS":"SS"), (DiskImage[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
+        AffChaine(5,9+cassete_menu_items+3,(sel==cassete_menu_items)?2:0,tmpBuf);
+        
+        UINT8 col=0;
+        if (strlen(myDskFile) < 32) col=16-(strlen(myDskFile)/2);
+        if (strlen(myDskFile) & 1) col--;
+        AffChaine(col,9+cassete_menu_items+5,(sel==cassete_menu_items)?2:0,myDskFile);   
+        
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -420,7 +470,7 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
 void CassetteMenu(void)
 {
   u8 menuSelection = 0;
-
+    
   SoundPause();
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
@@ -443,30 +493,34 @@ void CassetteMenu(void)
         }
         if (nds_key & KEY_A)  
         {
-            if (menuSelection == 0) // SAVE CASSETTE
+            if (menuSelection == 0) // MOUNT .DSK FILE
             {
-                if  (showMessage("DO YOU REALLY WANT TO","WRITE CASSETTE DATA?") == ID_SHM_YES) 
+                myDskFile = TILoadDiskFile();
+                if (myDskFile != NULL)
                 {
-                    {
-                    }
-                }
-                CassetteMenuShow(true, menuSelection);
-            }
-            if (menuSelection == 1) // SWAP CASSETTE
-            {
-                colecoDSLoadFile();
-                if (ucGameChoice >= 0)
-                {
-                    CassetteInsert(gpFic[ucGameChoice].szName);
-                    break;
+                    DiskMount(myDskFile);
+                    CassetteMenuShow(true, menuSelection);
                 }
                 else
                 {
                     CassetteMenuShow(true, menuSelection);
                 }
             }
+            if (menuSelection == 1) // UNMOUNT CASSETTE
+            {
+                DiskUnmount();
+                CassetteMenuShow(true, menuSelection);
+            }
             if (menuSelection == 2)
             {
+                if  (showMessage("DO YOU REALLY WANT TO","WRITE .DSK DATA?") == ID_SHM_YES) 
+                {
+                    {
+                        showMessage("SORRY - .DSK WRITE IS","NOT YET SUPPORTED...");
+                    }
+                }
+                CassetteMenuShow(true, menuSelection);
+                
             }
             if (menuSelection == 3)
             {
@@ -637,6 +691,7 @@ ITCM_CODE void ds99_main(void)
       memset(m_Joystick, 0x00, sizeof(m_Joystick));
       memset(m_StateTable, 0x00, sizeof(m_StateTable));
         
+      m_StateTable[VK_CAPSLOCK] = myConfig.capsLock;        
         
       if  (keysCurrent() & KEY_TOUCH)
       {
@@ -938,7 +993,7 @@ void colecoDSInit(void)
   dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
     
   //  Find the files
-  colecoDSFindFiles();
+  TI99FindFiles();
 }
 
 // ---------------------------------------------------------------------------
@@ -1126,7 +1181,7 @@ int main(int argc, char **argv)
       }
       else  
       {
-          colecoDSChangeOptions();
+          tiDSChangeOptions();
       }
 
       //  Run Machine

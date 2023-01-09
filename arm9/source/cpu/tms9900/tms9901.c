@@ -31,6 +31,7 @@
 #include <string.h>
 #include "tms9901.h"
 #include "tms9900.h"
+#include "../../disk.h"
 
 #define FUNCTION_ENTRY(a,b,c)   // Nothing
 #define DEBUG_STATUS(x)         // Nothing
@@ -82,19 +83,9 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
     // ------------------------------------
     // Enable or Disable the TI Disk DSR...
     // ------------------------------------
-    if (address == 0x880) 
+    if (address >= 0x880 && address < 0x888) 
     {
-        extern UINT8 DiskDSR[];
-        extern UINT8 bDiskDeviceInstalled;
-        bDiskDeviceInstalled = data;
-        if (data)
-        {
-            memcpy(&Memory[0x4000], DiskDSR, 0x2000);
-        }
-        else
-        {
-            memset(&Memory[0x4000], 0xFF, 0x2000);
-        }
+        disk_cru_write(address, data);
         return;
     }
     else if (address < 0x20)

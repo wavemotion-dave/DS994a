@@ -27,7 +27,7 @@ typedef struct {
   char szName[MAX_ROM_LENGTH];
   u8 uType;
   u32 uCrc;
-} FICcoleco;
+} FIC_TI99;
 
 struct __attribute__((__packed__)) Config_t
 {
@@ -40,8 +40,8 @@ struct __attribute__((__packed__)) Config_t
     u8  maxSprites;
     u8  memWipe;
     u8  isPAL;
-    u8  reservedA;
-    u8  reservedB;
+    u8  capsLock;
+    u8  RAMMirrors;
     u8  reservedC;
     u8  reservedD;
     u8  reservedE;
@@ -63,7 +63,7 @@ extern struct Config_t myConfig;
 
 extern void FindAndLoadConfig(void);
 
-extern FICcoleco gpFic[MAX_ROMS];  
+extern FIC_TI99 gpFic[MAX_ROMS];  
 extern int uNbRoms;
 extern int ucGameAct;
 extern int ucGameChoice;
@@ -71,12 +71,14 @@ extern int ucGameChoice;
 extern u8 showMessage(char *szCh1, char *szCh2);
 extern void colecoDSModeNormal(void);
 extern void colecoDSInitScreenUp(void);
-extern void colecoDSFindFiles(void);
-extern void colecoDSChangeOptions(void);
+extern void TI99FindFiles(void);
+extern void tiDSChangeOptions(void);
 
 extern void AffChaine(int iX,int iY,int iScr,char *szMessage);
 extern void dsPrintValue(int iX,int iY,int iScr,char *szMessage);
 extern unsigned int crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
+
+extern char *TILoadDiskFile(void);
 
 extern void FadeToColor(unsigned char ucSens, unsigned short ucBG, unsigned char ucScr, unsigned char valEnd, unsigned char uWait);
 extern u8 colecoDSLoadFile(void);

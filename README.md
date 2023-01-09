@@ -36,7 +36,9 @@ Thanks to Flubba for the SN76496 sound core.
 
 Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
 
-Hugest thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
+Thanks to Mike Brent for Classic99 and letting me use some of the simplfied disk code (and help me hook it in!).
+
+Thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
 
 
 Installation :
@@ -53,6 +55,7 @@ Known Issues :
 * Skyway will not load/play
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay
+* Screen Borders on some games are not right (Adventure, etc)
 
 BIOS Files :
 -----------------------

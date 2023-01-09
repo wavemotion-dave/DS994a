@@ -40,14 +40,14 @@
 #define TMS_PARITY        0x0400
 #define TMS_XOP           0x0200
 
-#define MEMFLG_SPEECH        0x01
-#define MEMFLG_CART         0x02
-#define MEMFLG_8BIT          0x04
-#define MEMFLG_VDPR          0x08
-#define MEMFLG_VDPW          0x10
-#define MEMFLG_GROMR         0x20
-#define MEMFLG_GROMW         0x40
-#define MEMFLG_SOUND         0x80
+#define MEMFLG_SPEECH     0x0001
+#define MEMFLG_CART       0x0002
+#define MEMFLG_8BIT       0x0004
+#define MEMFLG_VDPR       0x0008
+#define MEMFLG_VDPW       0x0010
+#define MEMFLG_GROMR      0x0020
+#define MEMFLG_GROMW      0x0040
+#define MEMFLG_SOUND      0x0080
 
 extern void TMS9900_Reset(char *szGame);
 extern void TMS9900_Run( ) ;
@@ -98,6 +98,10 @@ extern UINT8           m_GromWriteShift;
 extern UINT8           m_GromReadShift;
 extern UINT32          gromAddress;
 extern UINT8           bCPUIdleRequest;
+extern UINT8           AccurateEmulationFlags;
+
+#define EMU_DISK       0x01
+#define EMU_IDLE       0x02
 
 void opcode_A   ( );
 void opcode_AB  ( );

@@ -39,12 +39,6 @@ u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 // Look up table for colors - pre-generated and in VRAM for maximum speed!
 u32 (*lutTablehh)[16][16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;
 
-// For 16K only VDP modes
-u8 vdp_16k_mode_only __attribute__((section(".dtcm"))) = 0;
-
-u16 my_config_clear_int  __attribute__((section(".dtcm"))) = 0;
-
-
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
 
@@ -97,6 +91,39 @@ u16 ChrTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 u16 ColTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 u16 ChrGenM     __attribute__((section(".dtcm"))) = 0x3FFF;
 u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
+
+
+/** RefreshBorder() ******************************************/
+/** This function is called from RefreshLine#() to refresh  **/
+/** the screen border.                                      **/
+/*************************************************************/
+ITCM_CODE void RefreshBorder(register byte Y)
+{
+    if (ScrMode == 0)
+    {
+      register byte *P;
+      register int J,N;
+
+      /* Screen buffer */
+      P=XBuf;
+      J=256*Y;
+
+      /* For the first line, refresh top border */
+      if(Y) P+=J;
+      else for(;J;J--) P++;
+
+      /* Calculate number of pixels */
+      N=16;
+
+      /* Refresh left border */
+      for(J=N;J;J--) P++;
+
+      /* Refresh right border */
+      P+=256-(N<<1);
+      for(J=N;J;J--) *P++=BGColor;
+    }
+}
+
 
 
 /** CheckSprites() *******************************************/
@@ -397,6 +424,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
       P+=6;T++;
     }
   }
+  RefreshBorder(Y);
 }
 
 /** RefreshLine1() *******************************************/
@@ -545,9 +573,8 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
   /* Enabling IRQs may cause an IRQ here */
   bIRQ  = (iReg==1) && ((VDP[1]^value)&value&TMS9918_REG1_IRQ) && (VDPStatus&TMS9918_STAT_VBLANK);
 
-  /* VRAM can either be 4kB or 16kB - this checks if the bit has changed on this call which will force the logic in case 1 below */
-  if (vdp_16k_mode_only) VRAMMask = 0x3FFF;    // For these machines, we only support 16K
-  else VRAMMask = (iReg==1) && ( (VDP[1]^value) & TMS9918_REG1_RAM16K ) ? 0 : TMS9918_VRAMMask;  
+  /* The TI99 is always 16K */
+  VRAMMask = 0x3FFF;    // For these machines, we only support 16K
 
   /* Store value into the register */
   VDP[iReg]=value;
@@ -807,9 +834,6 @@ void Reset9918(void)
     tms_num_lines  = (myConfig.isPAL ? TMS9929_LINES        :   TMS9918_LINES);
     
     tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
-    
-    // Some machines only support a 16K VDP memory mode...
-    vdp_16k_mode_only = 1;
     
     // ---------------------------------------------------------------
     // Our background/foreground color table makes computations FAST!

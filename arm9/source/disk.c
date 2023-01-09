@@ -56,11 +56,59 @@
 #include "cpu/tms9918a/tms9918a.h"
 #include "disk.h"
 
-UINT8 TICC_CRU[8];
-UINT8 TICC_REG[8];
+UINT8 TICC_CRU[8] = {0,0,0,0,0,0,1,0};
+UINT8 TICC_REG[8] = {0,0,0,0,0,0,0,0};
 UINT8 TICC_DIR=0;   // 0 means towards 0
 
-UINT8 bDiskDeviceInstalled = false;
+UINT8 bDiskDeviceInstalled  __attribute__((section(".dtcm"))) = false;
+UINT8 bDiskIsMounted        __attribute__((section(".dtcm"))) = false;
+UINT8 diskSideSelected      = 0;  // Side 0 or Side 1
+UINT8 driveSelected         = 1;  // We only support DSK1 currently
+UINT8 driveReadCounter      = 0;  // Set to some non-zero value to show 'DISK READ' briefly on screen
+UINT8 driveWriteCounter     = 0;  // Set to some non-zero value to show 'DISK WRITE' briefly on screen (takes priority over READ display)
+
+#define ERR_DEVICEERROR     6
+
+extern unsigned int debug[];
+
+void disk_cru_write(UINT16 address, UINT8 data)
+{
+    extern UINT8 DiskDSR[];
+    
+    switch (address & 0x07)
+    {
+        case 0:
+            bDiskDeviceInstalled = data;
+            if (data)
+            {
+                memcpy(&Memory[0x4000], DiskDSR, 0x2000);
+            }
+            else
+            {
+                memset(&Memory[0x4000], 0xFF, 0x2000);
+            }
+            break;
+            
+        case 4:     // select drive 1
+            driveSelected = 1;
+            break;
+
+        case 5:     // select drive 2
+            driveSelected = 2;
+            break;
+
+        case 6:     // select drive 3
+            driveSelected = 3;
+            break;
+            
+        case 7: 
+            diskSideSelected = data;
+            break;
+            
+        default:
+            break;
+    }    
+}
 
 UINT8 ReadTICCRegister(UINT16 address) 
 {
@@ -71,7 +119,8 @@ UINT8 ReadTICCRegister(UINT16 address)
     case 0x5ff0:
         // status register
         TICC_REG[0] = 0x20; // head loaded, ready, not busy, not track 0, no index pulse, etc
-        if (TICC_REG[1]==0) {
+        if (TICC_REG[1]==0) 
+        {
             TICC_REG[0]|=0x04;
         }
         TICC_REG[0]=~TICC_REG[0];
@@ -95,13 +144,14 @@ UINT8 ReadTICCRegister(UINT16 address)
 
 void WriteTICCRegister(UINT16 address, UINT8 val) 
 {
-     if ((address < 0x5ff8) || (address > 0x5fff)) {
-        return;
-    }
-    switch (address&0xfffe) {
+    if ((address < 0x5ff8) || (address > 0x5fff)) return;
+    
+    switch (address&0xfffe) 
+    {
     case 0x5ff8:
         // command register
-        switch (val & 0xe0) {
+        switch (val & 0xe0) 
+        {
         case 0x00:
             // restore or seek
             if (val&0x10) {
@@ -163,25 +213,43 @@ void HandleTICCSector(void)
     bool success = true;
     extern UINT8 pVDPVidMem[];
     
+    if (driveSelected != 1) // We only support DSK1
+    {
+        Memory[0x8350] = ERR_DEVICEERROR;  //tbd
+        PC = 0x42a0;       // error 31 (not found)        
+    }
+    
     // 834A = sector number
     // 834C = drive (1-3)
     // 834D = 0: write, anything else = read
     // 834E = VDP buffer address
+    UINT8  drive        = Memory[0x834C];
     UINT8  isRead       = Memory[0x834D];
     UINT16 sectorNumber = (Memory[0x834A]<<8) | Memory[0x834B];
     UINT16 destVDP      = (Memory[0x834E]<<8) | Memory[0x834F];
+    UINT32 index        = (sectorNumber * 256);
     
-    if (isRead)
+    if (drive == 1)
     {
-        // -----------------------------------------------------------------
-        // Move the 256 byte sector from the .DSK image to the VDP memory
-        // -----------------------------------------------------------------
-        memcpy(&pVDPVidMem[destVDP], &DiskImage[sectorNumber*256], 256);
-    } 
-    else success=false; // No write for now...
+        if (isRead)
+        {
+            // -----------------------------------------------------------------
+            // Move the 256 byte sector from the .DSK image to the VDP memory
+            // -----------------------------------------------------------------
+            memcpy(&pVDPVidMem[destVDP], &DiskImage[index], 256);
+            *((UINT16*)&Memory[0x834A]) = sectorNumber;     // fill in the return data
+            Memory[0x8350] = 0;                             // should still be 0 if no error occurred
+            driveReadCounter = 2;
+        } 
+        else  // Must be write
+        {
+            memcpy(&DiskImage[index], &pVDPVidMem[destVDP],256);
+            *((UINT16*)&Memory[0x834A]) = sectorNumber;     // fill in the return data
+            Memory[0x8350] = 0;                             // should still be 0 if no error occurred
+            driveWriteCounter = 2;
+        } 
+    } else success = false;
 
-    *((UINT16*)&Memory[0x834A]) = sectorNumber;     // fill in the return data
-    Memory[0x8350] = 0;                             // should still be 0 if no error occurred
     
     if (success)
     {
@@ -189,6 +257,7 @@ void HandleTICCSector(void)
     }
     else
     {
+        Memory[0x8350] = ERR_DEVICEERROR;  //tbd
         PC = 0x42a0;       // error 31 (not found)
     }
 }

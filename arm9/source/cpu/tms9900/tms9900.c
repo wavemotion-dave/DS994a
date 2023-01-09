@@ -35,9 +35,8 @@
 #include "tms9901.h"
 #include "tms9900.h"
 #include "../../disk.h"
+#include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
-
-//#define MIRRORS   // Uncomment if RAM mirrors should be enabled (slows down emulation slightly)
 
 extern UINT8 WrCtrl9918(UINT8 value);
 extern UINT8 RdData9918(void);
@@ -56,20 +55,21 @@ UINT8           MemFlags[0x10000];          // Memory flags for each address
 UINT8           DiskDSR[0x2000];            // Memory for the DiskDSR
 UINT8           DiskImage[180*1024];        // The .DSK image up to 180K (Double Sided, Single Density)
 
-UINT16          InterruptFlag       __attribute__((section(".dtcm")));
-UINT32          WorkspacePtr        __attribute__((section(".dtcm")));
-UINT16          Status              __attribute__((section(".dtcm")));
-UINT32          ClockCycleCounter   __attribute__((section(".dtcm")));
-UINT32          fetchPtr            __attribute__((section(".dtcm")));
-UINT16          curOpCode           __attribute__((section(".dtcm")));
-UINT32          bankOffset          __attribute__((section(".dtcm"))) = 0x00000000;
-UINT32          gromAddress         __attribute__((section(".dtcm"))) = 0x0000;
-UINT16          bankMask            __attribute__((section(".dtcm"))) = 0x003F;
-
-UINT8           m_GromWriteShift    __attribute__((section(".dtcm")))  = 8;
-UINT8           m_GromReadShift     __attribute__((section(".dtcm")))  = 8;
-
-UINT8           bCPUIdleRequest     __attribute__((section(".dtcm")))  = 0;
+UINT16          InterruptFlag           __attribute__((section(".dtcm")));
+UINT32          WorkspacePtr            __attribute__((section(".dtcm")));
+UINT16          Status                  __attribute__((section(".dtcm")));
+UINT32          ClockCycleCounter       __attribute__((section(".dtcm")));
+UINT32          fetchPtr                __attribute__((section(".dtcm")));
+UINT16          curOpCode               __attribute__((section(".dtcm")));
+UINT32          bankOffset              __attribute__((section(".dtcm"))) = 0x00000000;
+UINT32          gromAddress             __attribute__((section(".dtcm"))) = 0x0000;
+UINT16          bankMask                __attribute__((section(".dtcm"))) = 0x003F;
+    
+UINT8           m_GromWriteShift        __attribute__((section(".dtcm")))  = 8;
+UINT8           m_GromReadShift         __attribute__((section(".dtcm")))  = 8;
+    
+UINT8           bCPUIdleRequest         __attribute__((section(".dtcm")))  = 0;
+UINT8           AccurateEmulationFlags  __attribute__((section(".dtcm")))  = 0x00;
 
 UINT16 *OpCodeSpeedup __attribute__((section(".dtcm")))  = (UINT16*)0x06860000;
 
@@ -146,8 +146,8 @@ void TMS9900_Reset(char *szGame)
 
     for (UINT16 address = 0x9000; address < 0x9800; address += 4)
     {
-        MemFlags[address+0] |= MEMFLG_SOUND;   // Speech Synth Read
-        MemFlags[address+2] |= MEMFLG_SOUND;   // Speech Synth Write
+        MemFlags[address+0] |= MEMFLG_SPEECH;   // Speech Synth Read
+        MemFlags[address+2] |= MEMFLG_SPEECH;   // Speech Synth Write
     }
     
     for (UINT16 address = 0x9800; address < 0x9C00; address += 4)
@@ -210,17 +210,9 @@ void TMS9900_Reset(char *szGame)
         memset(DiskDSR, 0xFF, 0x2000);
     }
     
-    infile = fopen("/roms/ti99/tunnels.dsk", "rb");
-    if (infile)
-    {
-        fread(DiskImage, (180*1024), 1, infile);
-        fclose(infile);
-    }
-    else
-    {
-        memset(DiskImage, 0xFF, (180*1024));
-    }
-    
+    // Start with no disk mounted...
+    bDiskIsMounted = false;
+    memset(DiskImage, 0xFF, (180*1024));
     
     // -----------------------------------------------------------------------------
     // We're going to be manipulating the filename a bit so copy it into a buffer
@@ -275,6 +267,8 @@ void TMS9900_Reset(char *szGame)
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
         bankMask = 0x003F;                          // And set the bank mask to allow any of the 8K banks
     }
+    
+    AccurateEmulationFlags = 0x00;                  // Default to fast emulation... if we turn on DISK access or have an IDLE game, we will flip this
     
     TI_Reset( );
     TMS9901_Reset( );
@@ -475,12 +469,9 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
         {
             retVal = __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
         }
-        else if (flags & MEMFLG_SOUND)
+        else if (flags & MEMFLG_SPEECH)
         {
-            if (address & 0x1000)
-            {
-                return (TMS5220_BL | TMS5220_BE);
-            }
+            return (TMS5220_BL | TMS5220_BE);
         }
         else
         {
@@ -542,12 +533,9 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
     {
         retVal = (CartMem[bankOffset | (address&0x1FFF)]);
     }
-    else if (flags & MEMFLG_SOUND)
+    else if (flags & MEMFLG_SPEECH)
     {
-        if (address & 0x1000)
-        {
-            return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
-        }
+        return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
     }
     else
     {
@@ -576,10 +564,7 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            if (address & 0x1000)
-            {
-            }
-            else ti_handle_sound(value);
+             ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {
@@ -603,6 +588,10 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         {
             WriteBank(address);
         }
+        else if (flags & MEMFLG_SPEECH)
+        {
+            // Not yet...   
+        }        
         
         // Possible 8-bit expanded RAM write
         if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
@@ -613,19 +602,22 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
     }
     else
     {
-#ifdef MIRRORS
-        Memory[0x8000 | ((address+0)&0xFF)] = (value>>8)&0xFF;
-        Memory[0x8000 | ((address+1)&0xFF)] = (value>>0)&0xFF;
-        Memory[0x8100 | ((address+0)&0xFF)] = (value>>8)&0xFF;
-        Memory[0x8100 | ((address+1)&0xFF)] = (value>>0)&0xFF;
-        Memory[0x8200 | ((address+0)&0xFF)] = (value>>8)&0xFF;
-        Memory[0x8200 | ((address+1)&0xFF)] = (value>>0)&0xFF;
-        Memory[0x8300 | ((address+0)&0xFF)] = (value>>8)&0xFF;
-        Memory[0x8300 | ((address+1)&0xFF)] = (value>>0)&0xFF;
-#else
-        Memory[address] = (value >> 8);
-        Memory[address+1] = value;
-#endif        
+        if (myConfig.RAMMirrors)
+        {
+            Memory[0x8000 | ((address+0)&0xFF)] = (value>>8)&0xFF;
+            Memory[0x8000 | ((address+1)&0xFF)] = (value>>0)&0xFF;
+            Memory[0x8100 | ((address+0)&0xFF)] = (value>>8)&0xFF;
+            Memory[0x8100 | ((address+1)&0xFF)] = (value>>0)&0xFF;
+            Memory[0x8200 | ((address+0)&0xFF)] = (value>>8)&0xFF;
+            Memory[0x8200 | ((address+1)&0xFF)] = (value>>0)&0xFF;
+            Memory[0x8300 | ((address+0)&0xFF)] = (value>>8)&0xFF;
+            Memory[0x8300 | ((address+1)&0xFF)] = (value>>0)&0xFF;
+        }
+        else
+        {
+            Memory[address] = (value >> 8);
+            Memory[address+1] = value;
+        }
     }
 }
 
@@ -640,10 +632,7 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
     {
         if (flags & MEMFLG_SOUND)
         {
-            if (address & 0x1000)
-            {
-            }
-            else ti_handle_sound(value);
+             ti_handle_sound(value);
         }
         else if (flags & MEMFLG_VDPW)
         {
@@ -665,6 +654,11 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
         {
             WriteBank(address);
         }
+        else if (flags & MEMFLG_SPEECH)
+        {
+            // Not yet
+        }
+        
         if ((address >= 0x5FF0) && (address <= 0x5FFF))
         {
             WriteTICCRegister(address, value);
@@ -842,28 +836,41 @@ ITCM_CODE void TMS9900_Run()
 {
     UINT32 myCounter = ClockCycleCounter+228;
 
-    do
+    if (AccurateEmulationFlags)
     {
-        CheckInterrupt();
+        do
+        {
+            CheckInterrupt();
 
-        if (bCPUIdleRequest)
-        {
-            ClockCycleCounter += 4;
-        }
-        else
-        {
-            if (PC == 0x40e8)
+            if (bCPUIdleRequest)
             {
-                HandleTICCSector();
-			}
-            
+                ClockCycleCounter += 4;
+            }
+            else
+            {
+                if (PC == 0x40e8) HandleTICCSector();
+
+                curOpCode = ReadPCMemoryW( PC ); PC+=2;
+                sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
+                ClockCycleCounter += op->clocks;
+                ((void (*)( ))op->function )( );
+            }
+        }
+        while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
+    }
+    else
+    {
+        do
+        {
+            CheckInterrupt();
+
             curOpCode = ReadPCMemoryW( PC ); PC+=2;
             sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
             ClockCycleCounter += op->clocks;
             ((void (*)( ))op->function )( );
         }
+        while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
     }
-    while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
 }
 
 
@@ -1066,6 +1073,18 @@ void opcode_LIMI( )
 void opcode_IDLE( )
 {
     bCPUIdleRequest = true;
+    
+    // --------------------------------------------------------
+    // If we haven't set the IDLE flag, we turn it on
+    // and advance 228 clocks. Not accurate but will 
+    // break us out of the main loop and the next time
+    // we loop on the TMS9900 we will be in 'Accurate' mode
+    // --------------------------------------------------------
+    if (!(AccurateEmulationFlags & EMU_IDLE))
+    {
+        AccurateEmulationFlags |= EMU_IDLE;
+        ClockCycleCounter += 228;
+    } 
 }
 
 //-----------------------------------------------------------------------------
