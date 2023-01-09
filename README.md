@@ -96,6 +96,7 @@ V0.4: 9-Jan-2023 by wavemotion-dave
 * Fixed right-side border rendering for "TEXT MODE" games (Adventure, Zork, etc).
 * Added new option to mirror console RAM. This is more accurate but slows down the emualation. Congo Bongo needs this to render level 2+ properly.
 * Games that were hanging looking for Speech Synthesis module no longer freeze up (no voice yet but you can play them).
+* Keyboard is now more robust - presses are always properly 'clicked' and it's less glitchy. Key repeat now works.
 * Other minor cleanups as time permitted.
 
 V0.3: 7-Jan-2023 by wavemotion-dave
