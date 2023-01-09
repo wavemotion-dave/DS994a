@@ -113,42 +113,13 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     JOY2_FIRE,
     KBD_SPACE,
     KBD_ENTER,
-    KBD_1,
-    KBD_2,
-    KBD_3,
-    KBD_4,
-    KBD_5,
-    KBD_6,
-    KBD_7,
-    KBD_8,
-    KBD_9,
-    KBD_0,
-    KBD_A,
-    KBD_B,
-    KBD_C,
-    KBD_D,
-    KBD_E,
-    KBD_F,
-    KBD_G,
-    KBD_H,
-    KBD_I,
-    KBD_J,
-    KBD_K,
-    KBD_L,
-    KBD_M,
-    KBD_N,
-    KBD_O,
-    KBD_P,
-    KBD_Q,
-    KBD_R,
-    KBD_S,
-    KBD_T,
-    KBD_U,
-    KBD_V,
-    KBD_W,
-    KBD_X,
-    KBD_Y,
-    KBD_Z,
+    KBD_1, KBD_2, KBD_3, KBD_4, KBD_5,
+    KBD_6, KBD_7, KBD_8, KBD_9, KBD_0,
+    KBD_A, KBD_B, KBD_C, KBD_D, KBD_E,
+    KBD_F, KBD_G, KBD_H, KBD_I, KBD_J,
+    KBD_K, KBD_L, KBD_M, KBD_N, KBD_O,
+    KBD_P, KBD_Q, KBD_R, KBD_S, KBD_T,
+    KBD_U, KBD_V, KBD_W, KBD_X, KBD_Y, KBD_Z,
     KBD_UP_ARROW,
     KBD_DOWN_ARROW,
     KBD_LEFT_ARROW,
@@ -441,20 +412,20 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
       swiWaitForVBlank();
     }
     
-    AffChaine(5,7,6,                                                 "    TI DISK MENU     ");
-    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK  FILE  ");  cassete_menu_items++;
-    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK  FILE  ");  cassete_menu_items++;
-    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE    DISK  FILE  ");  cassete_menu_items++;
-    AffChaine(5,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU        ");  cassete_menu_items++;
+    AffChaine(8,7,6,                                                 " TI DISK MENU  ");
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK  ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK  ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE    DISK  ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU  ");  cassete_menu_items++;
 
-    if (bDiskIsMounted) AffChaine(5,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
-    else AffChaine(5,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS NOT MOUNTED");   
+    if (bDiskIsMounted) AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
+    else AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS NOT MOUNTED");   
     
     if (bDiskIsMounted && (myDskFile != NULL))
     {
         UINT16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
-        siprintf(tmpBuf, " DISK IS: %s/%s %3dKB", (DiskImage[0x12] == 2 ? "DS":"SS"), (DiskImage[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
-        AffChaine(5,9+cassete_menu_items+3,(sel==cassete_menu_items)?2:0,tmpBuf);
+        siprintf(tmpBuf, " DISK IS %s/%s %3dKB", (DiskImage[0x12] == 2 ? "DS":"SS"), (DiskImage[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
+        AffChaine(8,9+cassete_menu_items+3,(sel==cassete_menu_items)?2:0,tmpBuf);
         
         UINT8 col=0;
         if (strlen(myDskFile) < 32) col=16-(strlen(myDskFile)/2);
@@ -506,7 +477,7 @@ void CassetteMenu(void)
                     CassetteMenuShow(true, menuSelection);
                 }
             }
-            if (menuSelection == 1) // UNMOUNT CASSETTE
+            if (menuSelection == 1) // UNMOUNT .DSK FILE
             {
                 DiskUnmount();
                 CassetteMenuShow(true, menuSelection);

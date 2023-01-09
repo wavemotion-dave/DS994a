@@ -10,9 +10,10 @@ Features :
 * Cart loads up to 512K Banked
 * 32K RAM Expansion
 * Save and Load State
+* High score saving for up to 10 scores per game
 * Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* No cassette or Disk support yet... look for the Tunnels of Doom SSS hack on AtariAge that works without cassette.
-* No Speech Synth yet
+* Disk Support using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
 
 Copyright :
 -----------------------
@@ -20,11 +21,9 @@ DS99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 
 As long as there is no commercial use (i.e. no profit is made),
 copying and distribution of this emulator, it's source code
-and associated readme files, with or without modification, 
-are permitted in any medium without royalty provided this 
-copyright notice is used and wavemotion-dave (Phoenix-Edition),
-Alekmaul (original port) and Marat Fayzullin (ColEM core) are 
-thanked profusely.
+and associated readme files, with or without modification, are
+permitted in any medium without royalty provided this copyright
+ notice is used and wavemotion-dave is thanked profusely.
 
 The DS99 emulator is offered as-is, without any warranty.
 
@@ -51,11 +50,9 @@ Installation :
 
 Known Issues :
 -----------------------
-* Congo Bongo graphical glitches after 1st level
-* Skyway will not load/play
+* Skyway will not load/play - cause unknown.
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
-* Borzork has audio squealing during gameplay
-* Screen Borders on some games are not right (Adventure, etc)
+* Borzork has audio squealing during gameplay.
 
 BIOS Files :
 -----------------------
@@ -63,6 +60,7 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 ```
 * db8f33e5	994aROM.bin (8K)
 * af5c2449	994aGROM.bin (24K)
+* 8f7df93f	994aDISK.bin (8K) - this is needed only if you want .DSK support
 ```
 
 
@@ -90,12 +88,14 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
-V0.4: not yet released...
-* Added .DSK support for 90K and 180K disks
-* Added High Score support for 10 scores per game
-* Fixed loading of 8K "banked" games (Tuthankam, Mancala, etc)
-* Other minor cleanups as time permitted
-* Games that were hanging looking for Speech Synthesis module no longer freeze up (no voice yet but you can play them)
+V0.4: 9-Jan-2023 by wavemotion-dave
+* Added .DSK support for 90K and 180K disks (read and write both work but write doesn't yet persist back to SD card). Use the Cassette icon in the lower left of the keyboard to mount disks.
+* Added High Score support for 10 scores per game. Use the new 'HI' button on the main keyboard.
+* Fixed loading of 8K "banked" games (Tuthankam, Mancala, etc).
+* Fixed right-side border rendering for "TEXT MODE" games (Adventure, Zork, etc).
+* Added new option to mirror console RAM. This is more accurate but slows down the emualation. Congo Bongo needs this to render level 2+ properly.
+* Games that were hanging looking for Speech Synthesis module no longer freeze up (no voice yet but you can play them).
+* Other minor cleanups as time permitted.
 
 V0.3: 7-Jan-2023 by wavemotion-dave
 * Improved speed 8% across the board

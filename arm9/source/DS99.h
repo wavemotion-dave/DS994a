@@ -14,7 +14,7 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.3"
+#define VERSIONDS99 "0.4"
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
