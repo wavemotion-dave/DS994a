@@ -990,6 +990,24 @@ void MapPlayer1(void)
 
 }
 
+void MapESDX(void)
+{
+    myConfig.keymap[0]   = KBD_E;        // NDS D-Pad UP
+    myConfig.keymap[1]   = KBD_X;        // NDS D-Pad DOWN
+    myConfig.keymap[2]   = KBD_S;        // NDS D-Pad LEFT
+    myConfig.keymap[3]   = KBD_D;        // NDS D-Pad RIGHT
+    myConfig.keymap[4]   = KBD_Q;        // NDS A Button
+    myConfig.keymap[5]   = KBD_SPACE;    // NDS B Button
+    myConfig.keymap[6]   = KBD_Q;        // NDS X Button
+    myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
+    
+    myConfig.keymap[8]   = KBD_FNCT;     // NDS L
+    myConfig.keymap[9]   = KBD_CTRL;     // NDS R
+    myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
+    myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
+
+}
+
 void SetDefaultGameConfig(void)
 {
     MapPlayer1();
@@ -1275,7 +1293,7 @@ void tiDSChangeKeymap(void)
   // --------------------------------------------------
   AffChaine(1 ,19,0,("   D-PAD : CHANGE KEY MAP    "));
   AffChaine(1 ,20,0,("       B : RETURN MAIN MENU  "));
-  AffChaine(1 ,21,0,("       X : SWAP P1/P2 MAP    "));
+  AffChaine(1 ,21,0,("     X/Y : SWAP P1,P2 / ESDX "));
   AffChaine(1 ,22,0,("   START : SAVE KEYMAP       "));
   DisplayKeymapName(ucY);
   
@@ -1284,7 +1302,7 @@ void tiDSChangeKeymap(void)
   // NDS keys are not being pressed. This prevents the inadvertant A key
   // that enters this menu from also being acted on in the keymap...
   // -----------------------------------------------------------------------
-  while ((keysCurrent() & (KEY_TOUCH | KEY_B | KEY_A | KEY_X | KEY_UP | KEY_DOWN))!=0)
+  while ((keysCurrent() & (KEY_TOUCH | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_UP | KEY_DOWN))!=0)
       ;
   WAITVBL;
  
@@ -1380,6 +1398,19 @@ void tiDSChangeKeymap(void)
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
         while (keysCurrent() & KEY_X) 
+            ;
+        WAITVBL
+    }
+      
+    if (keysCurrent() & KEY_Y)
+    {
+        if (myConfig.keymap[0] == KBD_E)
+            MapPlayer1();
+        else 
+            MapESDX(); 
+        bIndTch = myConfig.keymap[ucY-6];
+        DisplayKeymapName(ucY);
+        while (keysCurrent() & KEY_Y) 
             ;
         WAITVBL
     }
