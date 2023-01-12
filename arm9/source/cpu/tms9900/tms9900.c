@@ -103,8 +103,6 @@ void TI_Reset( )
 
 void TMS9900_Reset(char *szGame)
 {
-    FUNCTION_ENTRY( this, "cTMS9900 ctor", true );
-
     InitOpCodeLookup( );
 
     // Default all memory to 8-bit and then mark off the 16-bit regions directly below
@@ -169,17 +167,21 @@ void TMS9900_Reset(char *szGame)
     
     bankOffset = 0x00000000;
     bCPUIdleRequest = 0;
+    gromAddress = 0;
+    m_GromWriteShift = 8;
+    m_GromReadShift = 8;
     
     // ---------------------------------------------------------
-    // Now setup for TI-Invaders as a sort of test program...
+    // Now setup for all the CART and Console roms ...
     // ---------------------------------------------------------
-    FILE *infile;
-    
     memset(CartMem,         0xFF, 0x10000);  // The cart is not inserted to start... 
     memset(Memory,          0xFF, 0x10000);  // Set all of memory to 0xFF (nothing mapped until proven otherwise)
+    memset(MemGROM,         0xFF, 0x10000);  // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
     memset(&Memory[0x8000], 0x00, 0x400);    // Mark off RAM area by clearing bytes (TODO: randomize?)
     memset(&Memory[0x2000], 0x00, 0x2000);   // 8K of Low Memory Expansion from 0x2000 to 0x3FFF
     memset(&Memory[0xA000], 0x00, 0x6000);   // 24K of High Memory Expansion from 0xA000 to 0xFFFF
+    
+    FILE *infile;
     
     // ------------------------------------------------------------------
     // Read in the main 16-bit console ROM and place into our Memory[]
@@ -191,7 +193,6 @@ void TMS9900_Reset(char *szGame)
     // ----------------------------------------------------------------------------
     // Read in the main console GROM and place into the 24K of GROM memory space    
     // ----------------------------------------------------------------------------
-    memset(MemGROM, 0xFF, 0x10000);
     infile = fopen("/roms/bios/994aGROM.bin", "rb");
     fread(&MemGROM[0x0000], 0x6000, 1, infile);
     fclose(infile);
@@ -239,6 +240,10 @@ void TMS9900_Reset(char *szGame)
             memcpy(CartMem+0xE000, CartMem, 0x2000);
             bankMask = 0x0007;
         }
+        else if (numRead > 0x2000)
+        {
+            bankMask = (numRead / 0x2000) - 1;
+        }
 
         tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
         infile = fopen(tmpFilename, "rb");
@@ -262,10 +267,10 @@ void TMS9900_Reset(char *szGame)
     else // Full Load
     {
         infile = fopen(tmpFilename, "rb");
-        fread(CartMem, 512*1024, 1, infile);        // Whole cart memory up to 512K if needed...
+        int numRead = fread(CartMem, 1, 512*1024, infile);        // Whole cart memory up to 512K if needed...
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
-        bankMask = 0x003F;                          // And set the bank mask to allow any of the 8K banks
+        bankMask = (numRead / 0x2000) - 1;
     }
     
     AccurateEmulationFlags = 0x00;                  // Default to fast emulation... if we turn on DISK access or have an IDLE game, we will flip this
@@ -284,11 +289,6 @@ void SignalInterrupt( UINT8 level )
 void ClearInterrupt( UINT8 level )
 {
     InterruptFlag &= ~( 1 << level );
-}
-
-UINT32 GetClocks( )
-{
-    return ClockCycleCounter;
 }
 
 void ResetClocks( )
@@ -441,12 +441,6 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
     
     if (flags)
     {
-        // TI Disk controller, if active
-        if ((address>=0x5ff0) && (address<=0x5fff))
-        {
-            return ReadTICCRegister(address);
-        }    
-        
         if (flags & MEMFLG_VDPR)
         {
             if (address & 2) retVal = (UINT16)RdCtrl9918()<<8;
@@ -473,6 +467,11 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
         {
             return (TMS5220_BL | TMS5220_BE);
         }
+        // TI Disk controller, if active
+        else if ((address>=0x5ff0) && (address<=0x5fff))
+        {
+            return ReadTICCRegister(address);
+        }    
         else
         {
             return __builtin_bswap16(*(UINT16*) (&Memory[address]));
@@ -501,12 +500,6 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
     // Add 4 clock cycles if we're accessing 8-bit memory
     ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
     
-    // TI Disk controller, if active
-    if ((address>=0x5ff0) && (address<=0x5fff))
-    {
-        return ReadTICCRegister(address);
-    }    
-
     if (flags & MEMFLG_VDPR)
     {
         if (address & 2)
@@ -537,6 +530,11 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
     {
         return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
     }
+    // TI Disk controller, if active
+    else if ((address>=0x5ff0) && (address<=0x5fff))
+    {
+        return ReadTICCRegister(address);
+    }    
     else
     {
         retVal = Memory[address];
@@ -546,6 +544,7 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 
 inline void WriteBank(UINT16 address)
 {
+    if (address & 1) return;    // Don't respond to writes at odd addresses
     address = (address >> 1);   // Divide by 2 as we are always looking at bit 1
     address &= bankMask;        // Support up to 8 banks of 8K (64K total)
     bankOffset = (0x2000 * address);
@@ -879,13 +878,13 @@ ITCM_CODE void TMS9900_Run()
 
 ITCM_CODE void SetFlags_LAE( UINT16 val )
 {
-    if(( INT16 ) val > 0 )
-    {
-        ST |= TMS_LOGICAL | TMS_ARITHMETIC;
-    }
-    else if(( INT16 ) val < 0 )
+    if(val & 0x8000)
     {
         ST |= TMS_LOGICAL;
+    }
+    else if (val)
+    {
+        ST |= TMS_LOGICAL | TMS_ARITHMETIC;
     }
     else
     {
@@ -999,7 +998,7 @@ void opcode_AI( )
 //-----------------------------------------------------------------------------
 //   ANDI   Format: VIII    Op-code: 0x0240     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_ANDI( )
+ITCM_CODE void opcode_ANDI( )
 {
     int reg = ( UINT16 ) ( curOpCode & 0x000F );
     UINT16 value = ReadMemoryW( WP + 2 * reg );
@@ -1014,7 +1013,7 @@ void opcode_ANDI( )
 //-----------------------------------------------------------------------------
 //   ORI    Format: VIII    Op-code: 0x0260     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_ORI( )
+ITCM_CODE void opcode_ORI( )
 {
     int reg = ( UINT16 ) ( curOpCode & 0x000F );
     UINT16 value = ReadMemoryW( WP + 2 * reg );
@@ -1029,7 +1028,7 @@ void opcode_ORI( )
 //-----------------------------------------------------------------------------
 //   CI     Format: VIII    Op-code: 0x0280     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_CI( )
+ITCM_CODE void opcode_CI( )
 {
     UINT16 src = ReadMemoryW( WP + 2 * ( curOpCode & 0x000F ));
     UINT16 dst = Fetch( );
@@ -1145,7 +1144,6 @@ ITCM_CODE void opcode_BLWP( )
 ITCM_CODE void opcode_B( )
 {
     PC = GetAddress( curOpCode, 2 );
-    PC &= 0xFFFE;
 }
 
 //-----------------------------------------------------------------------------
@@ -1335,7 +1333,7 @@ void opcode_ABS( )
 //-----------------------------------------------------------------------------
 //   SRA    Format: V   Op-code: 0x0800     Status: L A E C - - -
 //-----------------------------------------------------------------------------
-ITCM_CODE void opcode_SRA( )
+void opcode_SRA( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
@@ -1547,7 +1545,7 @@ ITCM_CODE void opcode_JNE( )
 //-----------------------------------------------------------------------------
 //   JNC    Format: II  Op-code: 0x1700     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-ITCM_CODE void opcode_JNC( )
+void opcode_JNC( )
 {
     if( !( ST & TMS_CARRY ))
     {
@@ -1684,7 +1682,7 @@ void opcode_CZC( )
 //-----------------------------------------------------------------------------
 //   XOR    Format: III Op-code: 0x2800     Status: L A E - - - -
 //-----------------------------------------------------------------------------
-void opcode_XOR( )
+ITCM_CODE void opcode_XOR( )
 {
     int reg = ( curOpCode >> 6 ) & 0x000F;
     UINT16 address = GetAddress( curOpCode, 2 );
@@ -1784,7 +1782,7 @@ ITCM_CODE void opcode_STCR( )
 //-----------------------------------------------------------------------------
 //   MPY    Format: IX  Op-code: 0x3800     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_MPY( )
+ITCM_CODE void opcode_MPY( )
 {
     UINT16 srcAddress = GetAddress( curOpCode, 2 );
     UINT32 src = ReadMemoryW( srcAddress );

@@ -65,16 +65,14 @@ void TMS9901_Reset(void)
         m_PinState[ i ][ 1 ] = -1;
     }
     memset(m_StateTable, 0x00, sizeof(m_StateTable));
+    memset(m_Joystick,   0x00, sizeof(m_Joystick));
+    
+    m_TimerActive          = 0;
+    m_ReadRegister         = 0;
+    m_ClockRegister        = 0;
+    m_LastDelta            = 0;
 }
 
-//----------------------------------------------------------------------------
-// iDevice methods
-//----------------------------------------------------------------------------
-
-const char *GetName( )
-{
-    return "TMS9901";
-}
 
 ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
 {
@@ -95,7 +93,7 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
 
         if( address == 0 )
         {
-            UpdateTimer( GetClocks( ));
+            UpdateTimer( ClockCycleCounter );
             m_PinState[ 0 ][ 1 ] = data;
             if( data == 1 )
             {
@@ -110,7 +108,7 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
                     m_TimerActive = true;
                 }
                 m_Decrementer    = m_ClockRegister;
-                m_DecrementClock = GetClocks( );
+                m_DecrementClock = ClockCycleCounter;
                 m_LastDelta      = 0;
             }
         }
@@ -124,7 +122,7 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
                     m_ClockRegister &= ~( 1 << shift );
                     m_ClockRegister |= data << shift;
                     m_Decrementer = m_ClockRegister;
-                    m_DecrementClock = GetClocks( );
+                    m_DecrementClock = ClockCycleCounter;
                     m_LastDelta      = 0;
                 }
                 else if( address == 15 )

@@ -90,6 +90,12 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.5: 12-Jan-2023 by wavemotion-dave
+* Streamlined save and load of save state so it's only 2 blocks of SD card (64K).  Old saves will not work with version 0.5 - so finish your games before you upgrade.
+* Fixed banking so that Skyway8.bin (and probably others) will load properly.
+* Improved CPU and memory reset so games are less glitchy when starting up after having just played another game.
+* Another frame of performance squeezed out of the CPU core.
+
 V0.4: 9-Jan-2023 by wavemotion-dave
 * Added .DSK support for 90K and 180K disks (read and write both work but write doesn't yet persist back to SD card). Use the Cassette icon in the lower left of the keyboard to mount disks.
 * Added High Score support for 10 scores per game. Use the new 'HI' button on the main keyboard.

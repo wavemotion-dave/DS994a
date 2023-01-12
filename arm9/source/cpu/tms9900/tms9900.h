@@ -56,7 +56,7 @@ extern bool IsRunning( ) ;
 extern void Reset( ) ;
 extern void SignalInterrupt( UINT8 ) ;
 extern void ClearInterrupt( UINT8 ) ;
-extern UINT32 GetClocks( ) ;
+
 extern void AddClocks( int ) ;
 extern void ResetClocks( ) ;
 extern UINT32 GetCounter( ) ;

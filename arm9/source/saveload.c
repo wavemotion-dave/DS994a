@@ -25,7 +25,7 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0003        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0004        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -94,8 +94,11 @@ void TI99SaveState()
     uNbO = fwrite(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
     uNbO = fwrite(&m_HideShift,         sizeof(m_HideShift),         1, handle);
      
-    // Save TI Memory (yes, all of it!)
-    if (uNbO) uNbO = fwrite(Memory, 0x10000,1, handle); 
+    // Save TI Memory that might possibly be volatile (RAM areas mostly)
+    if (uNbO) uNbO = fwrite(Memory+0x2000, 0x2000, 1, handle); 
+    if (uNbO) uNbO = fwrite(Memory+0x6000, 0x2000, 1, handle); 
+    if (uNbO) uNbO = fwrite(Memory+0x8000, 0x0400, 1, handle); 
+    if (uNbO) uNbO = fwrite(Memory+0xA000, 0x6000, 1, handle); 
       
     // A few frame counters
     if (uNbO) uNbO = fwrite(&emuActFrames, sizeof(emuActFrames), 1, handle); 
@@ -213,8 +216,11 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
             if (uNbO) uNbO = fread(&m_HideShift,         sizeof(m_HideShift),         1, handle);
             
-            // Load TI Memory (yes, all of it!)
-            if (uNbO) uNbO = fread(Memory, 0x10000,1, handle); 
+            // Restore TI Memory that might possibly be volatile (RAM areas mostly)
+            if (uNbO) uNbO = fread(Memory+0x2000, 0x2000, 1, handle); 
+            if (uNbO) uNbO = fread(Memory+0x6000, 0x2000, 1, handle); 
+            if (uNbO) uNbO = fread(Memory+0x8000, 0x0400, 1, handle); 
+            if (uNbO) uNbO = fread(Memory+0xA000, 0x6000, 1, handle); 
             
             // A few frame counters
             if (uNbO) uNbO = fread(&emuActFrames, sizeof(emuActFrames), 1, handle); 

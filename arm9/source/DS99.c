@@ -203,7 +203,6 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
 // -------------------------------------------------------------------------------------------
 void setupStream(void) 
 {
-    
   //----------------------------------------------------------------
   //  initialize maxmod with our small 3-effect soundbank
   //----------------------------------------------------------------
