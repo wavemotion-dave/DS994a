@@ -334,7 +334,7 @@ void ResetTI(void)
     
   ResetStatusFlags();   // Some static status flags for the UI mostly
     
-  //memset(debug, 0x00, sizeof(debug));
+  memset(debug, 0x00, sizeof(debug));
 }
 
 // ------------------------------------------------------------
@@ -752,7 +752,7 @@ ITCM_CODE void ds99_main(void)
 
 
         // --------------------------------------------------------------------------
-        // Test the touchscreen rendering of the ADAM/MSX/SVI full keybaord
+        // Test the touchscreen rendering of the keybaord
         // --------------------------------------------------------------------------
         if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
         {

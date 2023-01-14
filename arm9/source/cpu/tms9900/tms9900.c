@@ -288,7 +288,7 @@ void TMS9900_Reset(char *szGame)
         int numRead = fread(CartMem, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
-        UINT8 numBanks = (numRead / 0x2000) + (numRead % 0x2000) ? 1:0;
+        UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
         bankMask = numBanks - 1;
     }
     
@@ -523,51 +523,55 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
 
-    UINT8 retVal;
-
-    // Add 4 clock cycles if we're accessing 8-bit memory
-    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
+    ClockCycleCounter += 2;
     
-    if (flags & MEMFLG_VDPR)
+    if (flags)
     {
-        if (address & 2)
+        ClockCycleCounter += 4; // Any flag implies 8-bit access and add 4 cycle penalty
+        if (flags & MEMFLG_VDPR)
         {
-            retVal = (UINT8)RdCtrl9918();
+            if (address & 2)
+            {
+                return (UINT8)RdCtrl9918();
+            }
+            else 
+            {
+                return (UINT8)RdData9918();
+            }
         }
-        else 
+        else if (flags & MEMFLG_GROMR)
         {
-            retVal = (UINT8)RdData9918();
+            if (address & 2) 
+            {
+                return ReadGROMAddress();
+            }
+            else
+            {
+                return ReadGROM();
+            }
         }
-    }
-    else if (flags & MEMFLG_GROMR)
-    {
-        if (address & 2) 
+        else if (flags & MEMFLG_CART)
         {
-            retVal = ReadGROMAddress();
+            return (CartMem[bankOffset | (address&0x1FFF)]);
         }
+        else if (flags & MEMFLG_SPEECH)
+        {
+            return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
+        }
+        // TI Disk controller, if active
+        else if ((address>=0x5ff0) && (address<=0x5fff))
+        {
+            return ReadTICCRegister(address);
+        }    
         else
         {
-            retVal = ReadGROM();
+            return Memory[address];
         }
     }
-    else if (flags & MEMFLG_CART)
-    {
-        retVal = (CartMem[bankOffset | (address&0x1FFF)]);
-    }
-    else if (flags & MEMFLG_SPEECH)
-    {
-        return (TMS5220_BL | TMS5220_BE);   // For now just report we are empty... 
-    }
-    // TI Disk controller, if active
-    else if ((address>=0x5ff0) && (address<=0x5fff))
-    {
-        return ReadTICCRegister(address);
-    }    
     else
     {
-        retVal = Memory[address];
+        return Memory[address];
     }
-    return retVal;
 }
 
 inline void WriteBank(UINT16 address)
@@ -655,7 +659,7 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
     // Add 4 clock cycles if we're accessing 8-bit memory
     ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
 
-    if (flags & 0xFB)
+    if (flags)
     {
         if (flags & MEMFLG_SOUND)
         {
@@ -685,30 +689,26 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
         {
             // Not yet
         }
-        
-        if ((address >= 0x5FF0) && (address <= 0x5FFF))
+        else if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
         {
-            WriteTICCRegister(address, value);
+            Memory[address] = value;    // Expanded 32K RAM
+        }
+        else if ((address >= 0x5FF0) && (address <= 0x5FFF))
+        {
+            WriteTICCRegister(address, value);  // Disk Controller
         }
     }
     else
     {
-        if (address >= 0x8000 && address < 0x8400)
+        if (myConfig.RAMMirrors)
         {
-            if (myConfig.RAMMirrors)
-            {
-                Memory[0x8000 | (address&0xFF)] = value;
-                Memory[0x8100 | (address&0xFF)] = value;
-                Memory[0x8200 | (address&0xFF)] = value;
-                Memory[0x8300 | (address&0xFF)] = value;
-            }
-            else
-            {                
-                Memory[address] = value;
-            }
+            Memory[0x8000 | (address&0xFF)] = value;
+            Memory[0x8100 | (address&0xFF)] = value;
+            Memory[0x8200 | (address&0xFF)] = value;
+            Memory[0x8300 | (address&0xFF)] = value;
         }
-        else if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
-        {
+        else
+        {                
             Memory[address] = value;
         }
     }

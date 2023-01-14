@@ -13,7 +13,7 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.5a"
+#define VERSIONDS99 "0.5b"
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
