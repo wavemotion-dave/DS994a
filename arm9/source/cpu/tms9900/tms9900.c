@@ -88,9 +88,12 @@ UINT8           AccurateEmulationFlags  __attribute__((section(".dtcm")))  = 0x0
 
 sOpCode        **OpCodeSpeedup          __attribute__((section(".dtcm")))  = (sOpCode**)0x06860000;
 
-UINT32             InterruptOrTimerPossible __attribute__((section(".dtcm")))  = 0;
+UINT32         InterruptOrTimerPossible __attribute__((section(".dtcm")))  = 0;
 
 char tmpFilename[256];
+
+// Supporting banking up to the full 2MB (256 x 8KB = 2048KB)
+UINT8 BankMasks[256+1];
 
 #define WP  WorkspacePtr
 #define PC  ProgramCounter
@@ -121,6 +124,19 @@ void TI_Reset( )
 void TMS9900_Reset(char *szGame)
 {
     InitOpCodeLookup( );
+    
+    // Fill in the BankMasks[] for any number of possible banks
+    for (unsigned numBanks=0; numBanks<=256; numBanks++)
+    {
+        if      (numBanks <= 2)    BankMasks[numBanks] = 0x01;
+        else if (numBanks <= 4)    BankMasks[numBanks] = 0x03;
+        else if (numBanks <= 8)    BankMasks[numBanks] = 0x07;
+        else if (numBanks <= 16)   BankMasks[numBanks] = 0x0F;
+        else if (numBanks <= 32)   BankMasks[numBanks] = 0x1F;
+        else if (numBanks <= 64)   BankMasks[numBanks] = 0x3F;
+        else if (numBanks <= 128)  BankMasks[numBanks] = 0x7F;
+        else                       BankMasks[numBanks] = 0xFF;
+    }
 
     // Default all memory to 8-bit and then mark off the 16-bit regions directly below
     for (unsigned i=0x0000; i<=0xFFFF; i++)
@@ -260,7 +276,7 @@ void TMS9900_Reset(char *szGame)
         else if (numRead > 0x2000)
         {
             UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
-            bankMask = numBanks - 1;
+            bankMask = BankMasks[numBanks];
         }
         
         tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
@@ -289,7 +305,7 @@ void TMS9900_Reset(char *szGame)
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
         UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
-        bankMask = numBanks - 1;
+        bankMask = BankMasks[numBanks];
     }
     
     AccurateEmulationFlags = 0x00;                  // Default to fast emulation... if we turn on DISK access or have an IDLE game, we will flip this
