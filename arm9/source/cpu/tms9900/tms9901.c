@@ -1,3 +1,15 @@
+// --------------------------------------------------------------------------
+// The original version of this file came from TI-99/Sim from Marc Rousseau:
+//
+// https://www.mrousseau.org/programs/ti99sim/
+//
+// The code has been altered from its original to be streamlined, and heavily
+// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
+//
+// This modified code is released under the same GPL License as mentioned in
+// Marc's original copyright statement below.
+// --------------------------------------------------------------------------
+
 //----------------------------------------------------------------------------
 //
 // File:        tms9901.cpp
@@ -39,8 +51,6 @@
 
 extern UINT32 debug[];
 
-#define SET_MASK        0xAA
-
 bool                m_TimerActive           __attribute__((section(".dtcm")));
 int                 m_ReadRegister          __attribute__((section(".dtcm")));
 int                 m_Decrementer           __attribute__((section(".dtcm")));
@@ -56,7 +66,6 @@ int                 m_HideShift             __attribute__((section(".dtcm")));
 UINT8               m_StateTable[ VK_MAX ]  __attribute__((section(".dtcm")));
 sJoystickInfo       m_Joystick[ 2 ]         __attribute__((section(".dtcm")));
 
-
 void TMS9901_Reset(void)
 {
     // Mark pins P0-P16 as input/interrupt pins
@@ -71,6 +80,7 @@ void TMS9901_Reset(void)
     m_ReadRegister         = 0;
     m_ClockRegister        = 0;
     m_LastDelta            = 0;
+    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
 }
 
 
@@ -124,6 +134,7 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
                     m_Decrementer = m_ClockRegister;
                     m_DecrementClock = ClockCycleCounter;
                     m_LastDelta      = 0;
+                    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
                 }
                 else if( address == 15 )
                 {

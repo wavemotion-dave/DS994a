@@ -1,27 +1,30 @@
+// =====================================================================================
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+//
+// Copying and distribution of this emulator, it's source code and associated 
+// readme files, with or without modification, are permitted in any medium without 
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
+//
+// The TI99DS emulator is offered as-is, without any warranty.
+// =====================================================================================
 #ifndef _DS99_UTILS_H_
 #define _DS99_UTILS_H_
 
-#define MAX_ROMS        512
-#define MAX_ROM_LENGTH  160
+#define MAX_ROMS            512
+#define MAX_ROM_LENGTH      160
 
-#define MAX_CONFIGS      750
-#define CONFIG_VER       0x0002
+#define MAX_CONFIGS         750
+#define CONFIG_VER          0x0002
 
-#define COLROM        0x01
-#define DIRECT        0x02
+#define TI99ROM             0x01
+#define DIRECT              0x02
 
-#define ID_SHM_CANCEL 0x00
-#define ID_SHM_YES    0x01
-#define ID_SHM_NO     0x02
+#define ID_SHM_CANCEL       0x00
+#define ID_SHM_YES          0x01
+#define ID_SHM_NO           0x02
 
-#define DPAD_NORMAL     0
-#define DPAD_DIAGONALS  1
-
-#define CPU_CLEAR_INT_ON_VDP_READ   0
-#define CPU_CLEAR_INT_AUTOMATICALLY 1
-
-#define COLECO_RAM_NORMAL_MIRROR   0
-#define COLECO_RAM_NO_MIRROR       1
+#define DPAD_NORMAL         0
+#define DPAD_DIAGONALS      1
 
 typedef struct {
   char szName[MAX_ROM_LENGTH];
@@ -42,8 +45,8 @@ struct __attribute__((__packed__)) Config_t
     u8  isPAL;
     u8  capsLock;
     u8  RAMMirrors;
-    u8  reservedC;
-    u8  reservedD;
+    u8  keyboard;
+    u8  emuSpeed;
     u8  reservedE;
     u8  reservedF;
     u8  reservedG;
@@ -69,8 +72,6 @@ extern int ucGameAct;
 extern int ucGameChoice;
 
 extern u8 showMessage(char *szCh1, char *szCh2);
-extern void colecoDSModeNormal(void);
-extern void colecoDSInitScreenUp(void);
 extern void TI99FindFiles(void);
 extern void tiDSChangeOptions(void);
 
@@ -81,7 +82,6 @@ extern unsigned int crc32 (unsigned int crc, const unsigned char *buf, unsigned 
 extern char *TILoadDiskFile(void);
 
 extern void FadeToColor(unsigned char ucSens, unsigned short ucBG, unsigned char ucScr, unsigned char valEnd, unsigned char uWait);
-extern u8 colecoDSLoadFile(void);
 extern void DisplayFileName(void);
 
 #endif

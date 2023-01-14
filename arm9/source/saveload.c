@@ -1,12 +1,11 @@
 // =====================================================================================
-// Copyright (c) 2021 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The ColecoDS emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -73,7 +72,7 @@ void TI99SaveState()
     uNbO = fwrite(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
     uNbO = fwrite(&Status,              sizeof(Status),              1, handle);
     uNbO = fwrite(&ClockCycleCounter,   sizeof(ClockCycleCounter),   1, handle);
-    uNbO = fwrite(&fetchPtr,            sizeof(fetchPtr),            1, handle);
+    uNbO = fwrite(&ProgramCounter,      sizeof(ProgramCounter),      1, handle);
     uNbO = fwrite(&curOpCode,           sizeof(curOpCode),           1, handle);
     uNbO = fwrite(&bankOffset,          sizeof(bankOffset),          1, handle);
     uNbO = fwrite(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);
@@ -195,7 +194,7 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
             if (uNbO) uNbO = fread(&Status,              sizeof(Status),              1, handle);
             if (uNbO) uNbO = fread(&ClockCycleCounter,   sizeof(ClockCycleCounter),   1, handle);
-            if (uNbO) uNbO = fread(&fetchPtr,            sizeof(fetchPtr),            1, handle);
+            if (uNbO) uNbO = fread(&ProgramCounter,      sizeof(ProgramCounter),      1, handle);
             if (uNbO) uNbO = fread(&curOpCode,           sizeof(curOpCode),           1, handle);
             if (uNbO) uNbO = fread(&bankOffset,          sizeof(bankOffset),          1, handle);
             if (uNbO) uNbO = fread(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);

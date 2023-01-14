@@ -3,10 +3,9 @@
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The DS99 emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 #include <nds/fifomessages.h>
@@ -76,7 +75,7 @@ u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
 u8  bShowDebug      __attribute__((section(".dtcm"))) = 1;
 
 // -----------------------------------------------------------------------------------------------
-// For the various BIOS files ... only the coleco.rom is required - everything else is optional.
+// For the various BIOS files ... only the TI BIOS Roms are required - everything else is optional.
 // -----------------------------------------------------------------------------------------------
 u8 bTIBIOSFound      = false;
 u8 bTIDISKFound      = false;
@@ -98,7 +97,7 @@ u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LE
 char *myDskFile = NULL;
 
 // --------------------------------------------------------------------
-// The key map for the Colecovision... mapped into the NDS controller
+// The key map for the TI... mapped into the NDS controller
 // --------------------------------------------------------------------
 u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     JOY1_UP, 
@@ -199,7 +198,7 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
 
 // -------------------------------------------------------------------------------------------
 // Setup the maxmod audio stream - this will be a 16-bit Stereo PCM output at 55KHz which
-// sounds about right for the Colecovision.
+// sounds about right for the TI99.
 // -------------------------------------------------------------------------------------------
 void setupStream(void) 
 {
@@ -267,7 +266,7 @@ void dsInstallSoundEmuFIFO(void)
   sn76496Mixer(8, mixbuf1, &snmute);  // Do  an initial mix conversion to clear the output
       
   //  ------------------------------------------------------------------
-  //  The SN sound chip is for normal colecovision sound handling
+  //  The SN sound chip is for normal TI99 sound handling
   //  ------------------------------------------------------------------
   sn76496Reset(1, &sncol);         // Reset the SN sound chip
     
@@ -335,7 +334,7 @@ void ResetTI(void)
     
   ResetStatusFlags();   // Some static status flags for the UI mostly
     
-  memset(debug, 0x00, sizeof(debug));
+  //memset(debug, 0x00, sizeof(debug));
 }
 
 // ------------------------------------------------------------
@@ -550,6 +549,9 @@ void CassetteMenu(void)
 inline u8 IsFullKeyboard(void) {return 1;}
 u8 bKeyClick = 0;
 
+u16 PAL_Timing[] = {656, 596, 546, 504};
+u16 NTSC_Timing[] = {546, 496, 454, 420};
+
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the Z80, VDP and PSG 
 // ------------------------------------------------------------------------
@@ -561,7 +563,7 @@ ITCM_CODE void ds99_main(void)
   // Returns when  user has asked for a game to run...
   showMainMenu();
     
-  // Get the Coleco Machine Emualtor ready
+  // Get the TI99 Machine Emualtor ready
   TI99Init(gpFic[ucGameAct].szName);
 
   TI99SetPal();
@@ -583,7 +585,7 @@ ITCM_CODE void ds99_main(void)
   bStartSoundEngine = true;
     
   // -------------------------------------------------------------------
-  // Stay in this loop running the Coleco game until the user exits...
+  // Stay in this loop running the TI99 game until the user exits...
   // -------------------------------------------------------------------
   while(1)  
   {
@@ -631,8 +633,7 @@ ITCM_CODE void ds99_main(void)
         emuActFrames++;
 
         // -------------------------------------------------------------------
-        // We only support NTSC 60 frames... there are PAL colecovisions
-        // but the games really don't adjust well and so we stick to basics.
+        // Framing timing needs to handle both NTSC and PAL 
         // -------------------------------------------------------------------
         if (++timingFrames == (myConfig.isPAL ? 50:60))
         {
@@ -647,7 +648,7 @@ ITCM_CODE void ds99_main(void)
         // This is how we time frame-to frame
         // to keep the game running at 60FPS
         // --------------------------------------------
-        while(TIMER2_DATA < ((myConfig.isPAL ? 656:546)*(timingFrames+1)))
+        while(TIMER2_DATA < ((myConfig.isPAL ? PAL_Timing[myConfig.emuSpeed] : NTSC_Timing[myConfig.emuSpeed])*(timingFrames+1)))
         {
             if (myConfig.showFPS == 2) break;   // If Full Speed, break out...
         }
@@ -924,7 +925,7 @@ ITCM_CODE void ds99_main(void)
 /*********************************************************************************
  * Init DS Emulator - setup VRAM banks and background screen rendering banks
  ********************************************************************************/
-void colecoDSInit(void) 
+void TI99DSInit(void) 
 {
   //  Init graphic mode (bitmap mode)
   videoSetMode(MODE_0_2D  | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
@@ -986,7 +987,7 @@ void InitBottomScreen(void)
 /*********************************************************************************
  * Init CPU for the current game
  ********************************************************************************/
-void colecoDSInitCPU(void) 
+void TI99DSInitCPU(void) 
 { 
   //  -----------------------------------------
   //  Init Main Memory and VDP Video Memory
@@ -1009,13 +1010,12 @@ void irqVBlank(void)
 }
 
 // ----------------------------------------------------------------
-// Look for the coleco.rom bios in several possible locations...
+// Look for the TI99 BIOS ROMs in several possible locations...
 // ----------------------------------------------------------------
 void LoadBIOSFiles(void)
 {
     // --------------------------------------------------
-    // We will look for all 3 BIOS files here but only 
-    // the Colecovision coleco.rom is critical.
+    // We will look for the BIOS files here
     // --------------------------------------------------
     FILE *inFile1;
     FILE *inFile2;
@@ -1109,11 +1109,10 @@ int main(int argc, char **argv)
   //  ------------------------------------------------------------
   while(1)  
   {
-    colecoDSInit();
+    TI99DSInit();
 
     // ---------------------------------------------------------------
-    // Let the user know what BIOS files were found - the only BIOS 
-    // that must exist is coleco.rom or else the show is off...
+    // Let the user know what BIOS files were found
     // ---------------------------------------------------------------
     if (bTIBIOSFound)
     {
@@ -1134,7 +1133,7 @@ int main(int argc, char **argv)
         AffChaine(2,10,0,"ERROR: TI99 BIOS NOT FOUND");
         AffChaine(2,12,0,"ERROR: CANT RUN WITHOUT BIOS");
         AffChaine(3,12,0,"ERROR: SEE README FILE");
-        while(1) ;  // We're done... Need a coleco bios to run a CV emulator
+        while(1) ;  // We're done... Need a TI99 bios to run a CV emulator
     }
   
     while(1) 
@@ -1155,7 +1154,7 @@ int main(int argc, char **argv)
       }
 
       //  Run Machine
-      colecoDSInitCPU();
+      TI99DSInitCPU();
       ds99_main();
     }
   }

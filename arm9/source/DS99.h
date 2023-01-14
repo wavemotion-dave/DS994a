@@ -1,12 +1,11 @@
 // =====================================================================================
-// Copyright (c) 2021-2002 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The ColecoDS emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #ifndef _DS99_H_
 #define _DS99_H_
@@ -14,7 +13,7 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.5"
+#define VERSIONDS99 "0.5a"
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 

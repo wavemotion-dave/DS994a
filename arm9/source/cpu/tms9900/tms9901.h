@@ -1,3 +1,15 @@
+// --------------------------------------------------------------------------
+// The original version of this file came from TI-99/Sim from Marc Rousseau:
+//
+// https://www.mrousseau.org/programs/ti99sim/
+//
+// The code has been altered from its original to be streamlined, and heavily
+// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
+//
+// This modified code is released under the same GPL License as mentioned in
+// Marc's original copyright statement below.
+// --------------------------------------------------------------------------
+
 
 //----------------------------------------------------------------------------
 //

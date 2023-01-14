@@ -1,3 +1,14 @@
+// --------------------------------------------------------------------------
+// The original version of this file came from TI-99/Sim from Marc Rousseau:
+//
+// https://www.mrousseau.org/programs/ti99sim/
+//
+// The code has been altered from its original to be streamlined, and heavily
+// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
+//
+// This modified code is released under the same GPL License as mentioned in
+// Marc's original copyright statement below.
+// --------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------
 //
@@ -64,11 +75,11 @@ extern void ResetCounter( ) ;
 
 typedef struct _sOpCode
 {
-    char        mnemonic[ 8 ];
-    UINT16      opCode;
-    UINT16      mask;
     void      (*function)( );
     UINT32      clocks;
+    UINT16      opCode;
+    UINT16      mask;
+    char        mnemonic[ 8 ];
 } sOpCode;
 
 
@@ -91,7 +102,7 @@ extern UINT16          InterruptFlag;
 extern UINT32          WorkspacePtr;
 extern UINT16          Status;
 extern UINT32          ClockCycleCounter;
-extern UINT32          fetchPtr;
+extern UINT32          ProgramCounter;
 extern UINT16          curOpCode;
 extern UINT32          bankOffset;
 extern UINT8           m_GromWriteShift;
@@ -99,6 +110,7 @@ extern UINT8           m_GromReadShift;
 extern UINT32          gromAddress;
 extern UINT8           bCPUIdleRequest;
 extern UINT8           AccurateEmulationFlags;
+extern UINT32          InterruptOrTimerPossible;
 
 #define EMU_DISK       0x01
 #define EMU_IDLE       0x02

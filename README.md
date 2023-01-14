@@ -19,25 +19,33 @@ Copyright :
 -----------------------
 DS99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 
-As long as there is no commercial use (i.e. no profit is made),
-copying and distribution of this emulator, it's source code
-and associated readme files, with or without modification, are
-permitted in any medium without royalty provided this copyright
- notice is used and wavemotion-dave is thanked profusely.
+This program is made up of a number of constituent bits and pieces of code from
+other emulators plus a lot of original code to glue it all together and run it on the DS. 
+As such, the following copyrights apply:
+
+The TI9900 and TI9901 core code came from Marc Rousseau (TI-99/Sim) and
+retains the original GPL License that requires modified works to be distributed
+under the same licensing scheme. If you use that code, it must be released
+freely under the GPL.
+
+The TI9918A code came from Marat Fayzullin (ColEM) and retains Marat's original copyright
+statement.
+
+For the rest of the code: as long as there is no commercial use (i.e. no profit is made),
+copying and distribution of this emulator, it's source code and associated readme files, with 
+or without modification, are permitted in any medium without royalty provided this copyright
+notice is used and wavemotion-dave is thanked profusely.
 
 The DS99 emulator is offered as-is, without any warranty.
 
 Credits :
 -----------------------
-Thanks to Alekmaul who provided the baseline code to work with and to lobo for the menu graphical design.
-
-Thanks to Flubba for the SN76496 sound core.
-
-Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
-
-Thanks to Mike Brent for Classic99 and letting me use some of the simplfied disk code (and help me hook it in!).
-
-Thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
+* Thanks to Alekmaul who provided the baseline code to work with and to lobo for the menu graphical design.
+* Thanks to Flubba for the SN76496 sound core.
+* Thanks to Marat Fayzullin (ColEM) for the TI991A video driver.
+* Thanks to Mike Brent for Classic99 and letting me use some of the simplfied disk code (and help me hook it in!).
+* Thanks to Marc Rousseau for TI-99/Sim as the TMS9900 and TMS9901 core are borrowed from that project.
+* Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
 
 
 Installation :
@@ -60,7 +68,6 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 
 Known Issues :
 -----------------------
-* Skyway will not load/play - cause unknown.
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.

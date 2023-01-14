@@ -207,7 +207,7 @@ void WriteTICCRegister(UINT16 address, UINT8 val)
     }
 }
 
-#define PC fetchPtr
+#define PC ProgramCounter
 void HandleTICCSector(void)
 {
     bool success = true;

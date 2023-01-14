@@ -1,12 +1,11 @@
 // =====================================================================================
-// Copyright (c) 2021-2002 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The ColecoDS emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -35,7 +34,7 @@ SN76496 sncol   __attribute__((section(".dtcm")));
 
 
 /*********************************************************************************
- * Init coleco Engine for that game
+ * Init TI99 Engine for that game
  ********************************************************************************/
 u8 TI99Init(char *szGame) 
 {
@@ -88,14 +87,14 @@ void TI99Run(void)
 }
 
 /*********************************************************************************
- * Set coleco Palette
+ * Set TI99/4a Palette
  ********************************************************************************/
 void TI99SetPal(void) 
 {
   u8 uBcl,r,g,b;
   
   // -----------------------------------------------------------------------
-  // The Colecovision has a 16 color pallette... we set that up here.
+  // The TI99/4a has a 16 color pallette... we set that up here.
   // We always use the standard NTSC color palette which is fine for now
   // but maybe in the future we add the PAL color palette for a bit more
   // authenticity.

@@ -1,12 +1,11 @@
 // =====================================================================================
-// Copyright (c) 2021-2002 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The DS994a emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -234,7 +233,7 @@ void tiDSModeNormal(void) {
 //*****************************************************************************
 // Put the top screen in refocused bitmap mode
 //*****************************************************************************
-void colecoDSInitScreenUp(void) {
+void TI99DSInitScreenUp(void) {
   videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
   vramSetBankB(VRAM_B_MAIN_SPRITE);
@@ -371,7 +370,7 @@ void TI99FindFiles(void)
       if ((strlen(szFile)>4) && (strlen(szFile)<(MAX_ROM_LENGTH-4)) ) {
         if ( (strcasecmp(strrchr(szFile, '.'), ".bin") == 0) )  {
           strcpy(gpFic[uNbFile].szName,szFile);
-          gpFic[uNbFile].uType = COLROM;
+          gpFic[uNbFile].uType = TI99ROM;
           uNbFile++;
           countTI++;
         }
@@ -420,7 +419,7 @@ void TI99FindDskFiles(void)
       if ((strlen(szFile)>4) && (strlen(szFile)<(MAX_ROM_LENGTH-4)) ) {
         if ( (strcasecmp(strrchr(szFile, '.'), ".dsk") == 0) )  {
           strcpy(gpDsk[uNbFile].szName,szFile);
-          gpDsk[uNbFile].uType = COLROM;
+          gpDsk[uNbFile].uType = TI99ROM;
           uNbFile++;
           countDSK++;
         }
@@ -969,7 +968,6 @@ void MapPlayer2(void)
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
-
 }
 
 void MapPlayer1(void)
@@ -987,7 +985,6 @@ void MapPlayer1(void)
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
-
 }
 
 void MapESDX(void)
@@ -1005,7 +1002,6 @@ void MapESDX(void)
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
-
 }
 
 void SetDefaultGameConfig(void)
@@ -1020,8 +1016,8 @@ void SetDefaultGameConfig(void)
     myConfig.memWipe     = 0;
     myConfig.capsLock    = 0;
     myConfig.RAMMirrors  = 0;
-    myConfig.reservedC   = 0;
-    myConfig.reservedD   = 0;
+    myConfig.keyboard    = 0;
+    myConfig.emuSpeed    = 0;
     myConfig.reservedE   = 0;
     myConfig.reservedF   = 0;
     myConfig.reservedG   = 0;
@@ -1109,6 +1105,8 @@ const struct options_t Option_Table[2][20] =
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend, 2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites, 2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,      2},        
+        //{"KEYBOARD",       {"SIMPLIFIED", "TI99/4A"},                                                                                                                                           &myConfig.keyboard,   2},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,   4},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,   2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors, 2},
         {"RAM WIPE",       {"RANDOM", "CLEAR",},                                                                                                                                                &myConfig.memWipe,    5},
@@ -1439,7 +1437,7 @@ void DisplayFileName(void)
 }
 
 //*****************************************************************************
-// Display colecoDSlus screen and change options "main menu"
+// Display TI99 screen and change options "main menu"
 //*****************************************************************************
 void affInfoOptions(u32 uY) 
 {
@@ -1494,7 +1492,7 @@ void tiDSChangeOptions(void)
   dmaCopy((void*) ecranHautPal,(void*) BG_PALETTE,256*2);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0) + 51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1),32*24*2);
-  AffChaine(28,23,1,"V");AffChaine(29,23,1,VERSIONDS99);
+  AffChaine(31-strlen(VERSIONDS99),23,1,"V");AffChaine(31-strlen(VERSIONDS99)+1,23,1,VERSIONDS99);
 
   // Affiche le clavier en bas
   bg0b = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);

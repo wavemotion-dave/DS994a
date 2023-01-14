@@ -1,12 +1,11 @@
 // =====================================================================================
-// Copyright (c) 2021 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, it's source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave (Phoenix-Edition),
-// Alekmaul (original port) and Marat Fayzullin (ColEM core) are thanked profusely.
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The ColecoDS emulator is offered as-is, without any warranty.
+// The TI99DS emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 #include <stdio.h>
@@ -111,7 +110,7 @@ void highscore_init(void)
     strcpy(highscores.last_initials, "   ");
     
     // --------------------------------------------------------------
-    // See if the ColecoDS high score file exists... if so, read it!
+    // See if the TI99DS high score file exists... if so, read it!
     // --------------------------------------------------------------
     fp = fopen("/data/DS994a.hi", "rb");
     if (fp != NULL)

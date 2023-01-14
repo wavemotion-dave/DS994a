@@ -1,3 +1,16 @@
+// --------------------------------------------------------------------------
+// The original version of this file came from TI-99/Sim from Marc Rousseau:
+//
+// https://www.mrousseau.org/programs/ti99sim/
+//
+// The code has been altered from its original to be streamlined, and heavily
+// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
+//
+// This modified code is released under the same GPL License as mentioned in
+// Marc's original copyright statement below.
+// --------------------------------------------------------------------------
+
+
 //----------------------------------------------------------------------------
 //
 // File:        tms9900.cpp
@@ -38,6 +51,8 @@
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
 
+#define MAX_CART_SIZE    (512*1024)     // 512K maximum cart size...
+
 extern UINT8 WrCtrl9918(UINT8 value);
 extern UINT8 RdData9918(void);
 extern UINT8 RdCtrl9918(void);
@@ -50,7 +65,7 @@ static UINT16   parity[ 256 ] __attribute__((section(".dtcm")));
 
 UINT8           Memory[0x10000];            // 64K of CPU Memory Space
 UINT8           MemGROM[0x10000];           // 64K of GROM Memory Space
-UINT8           CartMem[1024*512];          // Cart C memory up to 512K
+UINT8           CartMem[MAX_CART_SIZE];     // Cart C memory up to 512K
 UINT8           MemFlags[0x10000];          // Memory flags for each address
 UINT8           DiskDSR[0x2000];            // Memory for the DiskDSR
 UINT8           DiskImage[180*1024];        // The .DSK image up to 180K (Double Sided, Single Density)
@@ -59,7 +74,7 @@ UINT16          InterruptFlag           __attribute__((section(".dtcm")));
 UINT32          WorkspacePtr            __attribute__((section(".dtcm")));
 UINT16          Status                  __attribute__((section(".dtcm")));
 UINT32          ClockCycleCounter       __attribute__((section(".dtcm")));
-UINT32          fetchPtr                __attribute__((section(".dtcm")));
+UINT32          ProgramCounter          __attribute__((section(".dtcm")));
 UINT16          curOpCode               __attribute__((section(".dtcm")));
 UINT32          bankOffset              __attribute__((section(".dtcm"))) = 0x00000000;
 UINT32          gromAddress             __attribute__((section(".dtcm"))) = 0x0000;
@@ -71,12 +86,14 @@ UINT8           m_GromReadShift         __attribute__((section(".dtcm")))  = 8;
 UINT8           bCPUIdleRequest         __attribute__((section(".dtcm")))  = 0;
 UINT8           AccurateEmulationFlags  __attribute__((section(".dtcm")))  = 0x00;
 
-UINT16 *OpCodeSpeedup __attribute__((section(".dtcm")))  = (UINT16*)0x06860000;
+sOpCode        **OpCodeSpeedup          __attribute__((section(".dtcm")))  = (sOpCode**)0x06860000;
+
+UINT32             InterruptOrTimerPossible __attribute__((section(".dtcm")))  = 0;
 
 char tmpFilename[256];
 
 #define WP  WorkspacePtr
-#define PC  fetchPtr
+#define PC  ProgramCounter
 #define ST  Status
 
 #define TMS5220_TS	0x80	// Talk Status
@@ -174,12 +191,12 @@ void TMS9900_Reset(char *szGame)
     // ---------------------------------------------------------
     // Now setup for all the CART and Console roms ...
     // ---------------------------------------------------------
-    memset(CartMem,         0xFF, 0x10000);  // The cart is not inserted to start... 
-    memset(Memory,          0xFF, 0x10000);  // Set all of memory to 0xFF (nothing mapped until proven otherwise)
-    memset(MemGROM,         0xFF, 0x10000);  // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
-    memset(&Memory[0x8000], 0x00, 0x400);    // Mark off RAM area by clearing bytes (TODO: randomize?)
-    memset(&Memory[0x2000], 0x00, 0x2000);   // 8K of Low Memory Expansion from 0x2000 to 0x3FFF
-    memset(&Memory[0xA000], 0x00, 0x6000);   // 24K of High Memory Expansion from 0xA000 to 0xFFFF
+    memset(CartMem,         0xFF, MAX_CART_SIZE);   // The cart is not inserted to start... 
+    memset(Memory,          0xFF, 0x10000);         // Set all of memory to 0xFF (nothing mapped until proven otherwise)
+    memset(MemGROM,         0xFF, 0x10000);         // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
+    memset(&Memory[0x8000], 0x00, 0x400);           // Mark off RAM area by clearing bytes (TODO: randomize?)
+    memset(&Memory[0x2000], 0x00, 0x2000);          // 8K of Low Memory Expansion from 0x2000 to 0x3FFF
+    memset(&Memory[0xA000], 0x00, 0x6000);          // 24K of High Memory Expansion from 0xA000 to 0xFFFF
     
     FILE *infile;
     
@@ -227,7 +244,7 @@ void TMS9900_Reset(char *szGame)
         bankMask = 0x003F;
         tmpFilename[strlen(tmpFilename)-5] = 'C';   // Try to find a 'C' file
         infile = fopen(tmpFilename, "rb");
-        int numRead = fread(CartMem, 1, 0x10000, infile);         // Whole cart C memory up to 64K if needed...
+        int numRead = fread(CartMem, 1, MAX_CART_SIZE, infile);     // Whole cart C memory as needed...
         fclose(infile);
         if (numRead <= 0x2000)   // If 8K... repeat
         {
@@ -242,9 +259,10 @@ void TMS9900_Reset(char *szGame)
         }
         else if (numRead > 0x2000)
         {
-            bankMask = (numRead / 0x2000) - 1;
+            UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
+            bankMask = numBanks - 1;
         }
-
+        
         tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
         infile = fopen(tmpFilename, "rb");
         if (infile != NULL)
@@ -267,10 +285,11 @@ void TMS9900_Reset(char *szGame)
     else // Full Load
     {
         infile = fopen(tmpFilename, "rb");
-        int numRead = fread(CartMem, 1, 512*1024, infile);        // Whole cart memory up to 512K if needed...
+        int numRead = fread(CartMem, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
-        bankMask = (numRead / 0x2000) - 1;
+        UINT8 numBanks = (numRead / 0x2000) + (numRead % 0x2000) ? 1:0;
+        bankMask = numBanks - 1;
     }
     
     AccurateEmulationFlags = 0x00;                  // Default to fast emulation... if we turn on DISK access or have an IDLE game, we will flip this
@@ -284,11 +303,13 @@ void TMS9900_Reset(char *szGame)
 void SignalInterrupt( UINT8 level )
 {
     InterruptFlag |= 1 << level;
+    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
 }
 
 void ClearInterrupt( UINT8 level )
 {
     InterruptFlag &= ~( 1 << level );
+    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
 }
 
 void ResetClocks( )
@@ -302,80 +323,87 @@ void ResetClocks( )
 // ==================================================================================================
 sOpCode OpCodes[ 70 ] __attribute__((section(".dtcm"))) =
 {
-    { "MOVB", 0xD000, 0xF000, opcode_MOVB, 14 }, // 14
-    { "MOV",  0xC000, 0xF000, opcode_MOV,  14 }, // 14
-    { "LI",   0x0200, 0xFFE0, opcode_LI,   12 }, // 12
-    { "DEC",  0x0600, 0xFFC0, opcode_DEC,  10 }, // 10
-    { "JGT",  0x1500, 0xFF00, opcode_JGT,   8 }, // 10
-    { "JEQ",  0x1300, 0xFF00, opcode_JEQ,   8 }, // 8/10
-    { "JNE",  0x1600, 0xFF00, opcode_JNE,   8 }, // 10
-    { "CB",   0x9000, 0xF000, opcode_CB,   14 }, // 14
-    { "A",    0xA000, 0xF000, opcode_A,    14 }, // 14
-    { "AB",   0xB000, 0xF000, opcode_AB,   14 }, // 14
-    { "ABS",  0x0740, 0xFFC0, opcode_ABS,  12 }, // 12/14
-    { "AI",   0x0220, 0xFFE0, opcode_AI,   14 }, // 14
-    { "ANDI", 0x0240, 0xFFE0, opcode_ANDI, 14 }, // 14
-    { "B",    0x0440, 0xFFC0, opcode_B,     8 }, // 8
-    { "BL",   0x0680, 0xFFC0, opcode_BL,   12 }, // 12
-    { "BLWP", 0x0400, 0xFFC0, opcode_BLWP, 26 }, // 26
-    { "C",    0x8000, 0xF000, opcode_C,    14 }, // 14
-    { "CI",   0x0280, 0xFFE0, opcode_CI,   14 }, // 14
-    { "CKOF", 0x03C0, 0xFFFF, opcode_CKOF, 12 }, // 12
-    { "CKON", 0x03A0, 0xFFFF, opcode_CKON, 12 }, // 12
-    { "CLR",  0x04C0, 0xFFC0, opcode_CLR,  10 }, // 10
-    { "COC",  0x2000, 0xFC00, opcode_COC,  14 }, // 14
-    { "CZC",  0x2400, 0xFC00, opcode_CZC,  14 }, // 14
-    { "DECT", 0x0640, 0xFFC0, opcode_DECT, 10 }, // 10
-    { "DIV",  0x3C00, 0xFC00, opcode_DIV,  16 }, // 16/92-124
-    { "IDLE", 0x0340, 0xFFFF, opcode_IDLE, 12 }, // 12
-    { "INC",  0x0580, 0xFFC0, opcode_INC,  10 }, // 10
-    { "INCT", 0x05C0, 0xFFC0, opcode_INCT, 10 }, // 10
-    { "INV",  0x0540, 0xFFC0, opcode_INV,  10 }, // 10
-    { "JH",   0x1B00, 0xFF00, opcode_JH,    8 }, // 10
-    { "JHE",  0x1400, 0xFF00, opcode_JHE,   8 }, // 10
-    { "JL",   0x1A00, 0xFF00, opcode_JL,    8 }, // 10
-    { "JLE",  0x1200, 0xFF00, opcode_JLE,   8 }, // 10
-    { "JLT",  0x1100, 0xFF00, opcode_JLT,   8 }, // 10
-    { "JMP",  0x1000, 0xFF00, opcode_JMP,   8 }, // 10
-    { "JNC",  0x1700, 0xFF00, opcode_JNC,   8 }, // 10
-    { "JNO",  0x1900, 0xFF00, opcode_JNO,   8 }, // 10
-    { "JOC",  0x1800, 0xFF00, opcode_JOC,   8 }, // 10
-    { "JOP",  0x1C00, 0xFF00, opcode_JOP,   8 }, // 10
-    { "LDCR", 0x3000, 0xFC00, opcode_LDCR, 20 }, // 20+2*bits
-    { "LIMI", 0x0300, 0xFFE0, opcode_LIMI, 16 }, // 16
-    { "LREX", 0x03E0, 0xFFFF, opcode_LREX, 12 }, // 12
-    { "LWPI", 0x02E0, 0xFFE0, opcode_LWPI, 10 }, // 10
-    { "MPY",  0x3800, 0xFC00, opcode_MPY,  52 }, // 52
-    { "NEG",  0x0500, 0xFFC0, opcode_NEG,  12 }, // 12
-    { "ORI",  0x0260, 0xFFE0, opcode_ORI,  14 }, // 14
-    { "RSET", 0x0360, 0xFFFF, opcode_RSET, 12 }, // 12
-    { "RTWP", 0x0380, 0xFFFF, opcode_RTWP, 14 }, // 14
-    { "S",    0x6000, 0xF000, opcode_S,    14 }, // 14
-    { "SB",   0x7000, 0xF000, opcode_SB,   14 }, // 14
-    { "SBO",  0x1D00, 0xFF00, opcode_SBO,  12 }, // 12
-    { "SBZ",  0x1E00, 0xFF00, opcode_SBZ,  12 }, // 12
-    { "SETO", 0x0700, 0xFFC0, opcode_SETO, 10 }, // 10
-    { "SLA",  0x0A00, 0xFF00, opcode_SLA,  12 }, // 12+2*disp/20+2*disp
-    { "SOC",  0xE000, 0xF000, opcode_SOC,  14 }, // 14
-    { "SOCB", 0xF000, 0xF000, opcode_SOCB, 14 }, // 14
-    { "SRA",  0x0800, 0xFF00, opcode_SRA,  12 }, // 12+2*disp/20+2*disp
-    { "SRC",  0x0B00, 0xFF00, opcode_SRC,  12 }, // 12+2*disp/20+2*disp
-    { "SRL",  0x0900, 0xFF00, opcode_SRL,  12 }, // 12+2*disp/20+2*disp
-    { "STCR", 0x3400, 0xFC00, opcode_STCR, 42 }, // 42/44/58/60
-    { "STST", 0x02C0, 0xFFE0, opcode_STST,  8 }, // 8
-    { "STWP", 0x02A0, 0xFFE0, opcode_STWP,  8 }, // 8
-    { "SWPB", 0x06C0, 0xFFC0, opcode_SWPB, 10 }, // 10
-    { "SZC",  0x4000, 0xF000, opcode_SZC,  14 }, // 14
-    { "SZCB", 0x5000, 0xF000, opcode_SZCB, 14 }, // 14
-    { "TB",   0x1F00, 0xFF00, opcode_TB,   12 }, // 12
-    { "X",    0x0480, 0xFFC0, opcode_X,     8 }, // 8
-    { "XOP",  0x2C00, 0xFC00, opcode_XOP,  36 }, // 36
-    { "XOR",  0x2800, 0xFC00, opcode_XOR,  14 }, // 14
-    { "INVL", 0x0000, 0x0000, InvalidOpcode,6 }    
+    { opcode_MOVB, 14,  0xD000, 0xF000, "MOVB", }, // 14
+    { opcode_MOV,  14,  0xC000, 0xF000, "MOV",  }, // 14
+    { opcode_LI,   12,  0x0200, 0xFFE0, "LI",   }, // 12
+    { opcode_DEC,  10,  0x0600, 0xFFC0, "DEC",  }, // 10
+    { opcode_JGT,   8,  0x1500, 0xFF00, "JGT",  }, // 10
+    { opcode_JEQ,   8,  0x1300, 0xFF00, "JEQ",  }, // 8/10
+    { opcode_JNE,   8,  0x1600, 0xFF00, "JNE",  }, // 10
+    { opcode_CB,   14,  0x9000, 0xF000, "CB",   }, // 14
+    { opcode_A,    14,  0xA000, 0xF000, "A",    }, // 14
+    { opcode_AB,   14,  0xB000, 0xF000, "AB",   }, // 14
+    { opcode_ABS,  12,  0x0740, 0xFFC0, "ABS",  }, // 12/14
+    { opcode_AI,   14,  0x0220, 0xFFE0, "AI",   }, // 14
+    { opcode_ANDI, 14,  0x0240, 0xFFE0, "ANDI", }, // 14
+    { opcode_B,     8,  0x0440, 0xFFC0, "B",    }, // 8
+    { opcode_BL,   12,  0x0680, 0xFFC0, "BL",   }, // 12
+    { opcode_BLWP, 26,  0x0400, 0xFFC0, "BLWP", }, // 26
+    { opcode_C,    14,  0x8000, 0xF000, "C",    }, // 14
+    { opcode_CI,   14,  0x0280, 0xFFE0, "CI",   }, // 14
+    { opcode_CKOF, 12,  0x03C0, 0xFFFF, "CKOF", }, // 12
+    { opcode_CKON, 12,  0x03A0, 0xFFFF, "CKON", }, // 12
+    { opcode_CLR,  10,  0x04C0, 0xFFC0, "CLR",  }, // 10
+    { opcode_COC,  14,  0x2000, 0xFC00, "COC",  }, // 14
+    { opcode_CZC,  14,  0x2400, 0xFC00, "CZC",  }, // 14
+    { opcode_DECT, 10,  0x0640, 0xFFC0, "DECT", }, // 10
+    { opcode_DIV,  16,  0x3C00, 0xFC00, "DIV",  }, // 16/92-124
+    { opcode_IDLE, 12,  0x0340, 0xFFFF, "IDLE", }, // 12
+    { opcode_INC,  10,  0x0580, 0xFFC0, "INC",  }, // 10
+    { opcode_INCT, 10,  0x05C0, 0xFFC0, "INCT", }, // 10
+    { opcode_INV,  10,  0x0540, 0xFFC0, "INV",  }, // 10
+    { opcode_JH,    8,  0x1B00, 0xFF00, "JH",   }, // 10
+    { opcode_JHE,   8,  0x1400, 0xFF00, "JHE",  }, // 10
+    { opcode_JL,    8,  0x1A00, 0xFF00, "JL",   }, // 10
+    { opcode_JLE,   8,  0x1200, 0xFF00, "JLE",  }, // 10
+    { opcode_JLT,   8,  0x1100, 0xFF00, "JLT",  }, // 10
+    { opcode_JMP,   8,  0x1000, 0xFF00, "JMP",  }, // 10
+    { opcode_JNC,   8,  0x1700, 0xFF00, "JNC",  }, // 10
+    { opcode_JNO,   8,  0x1900, 0xFF00, "JNO",  }, // 10
+    { opcode_JOC,   8,  0x1800, 0xFF00, "JOC",  }, // 10
+    { opcode_JOP,   8,  0x1C00, 0xFF00, "JOP",  }, // 10
+    { opcode_LDCR, 20,  0x3000, 0xFC00, "LDCR", }, // 20+2*bits
+    { opcode_LIMI, 16,  0x0300, 0xFFE0, "LIMI", }, // 16
+    { opcode_LREX, 12,  0x03E0, 0xFFFF, "LREX", }, // 12
+    { opcode_LWPI, 10,  0x02E0, 0xFFE0, "LWPI", }, // 10
+    { opcode_MPY,  52,  0x3800, 0xFC00, "MPY",  }, // 52
+    { opcode_NEG,  12,  0x0500, 0xFFC0, "NEG",  }, // 12
+    { opcode_ORI,  14,  0x0260, 0xFFE0, "ORI",  }, // 14
+    { opcode_RSET, 12,  0x0360, 0xFFFF, "RSET", }, // 12
+    { opcode_RTWP, 14,  0x0380, 0xFFFF, "RTWP", }, // 14
+    { opcode_S,    14,  0x6000, 0xF000, "S",    }, // 14
+    { opcode_SB,   14,  0x7000, 0xF000, "SB",   }, // 14
+    { opcode_SBO,  12,  0x1D00, 0xFF00, "SBO",  }, // 12
+    { opcode_SBZ,  12,  0x1E00, 0xFF00, "SBZ",  }, // 12
+    { opcode_SETO, 10,  0x0700, 0xFFC0, "SETO", }, // 10
+    { opcode_SLA,  12,  0x0A00, 0xFF00, "SLA",  }, // 12+2*disp/20+2*disp
+    { opcode_SOC,  14,  0xE000, 0xF000, "SOC",  }, // 14
+    { opcode_SOCB, 14,  0xF000, 0xF000, "SOCB", }, // 14
+    { opcode_SRA,  12,  0x0800, 0xFF00, "SRA",  }, // 12+2*disp/20+2*disp
+    { opcode_SRC,  12,  0x0B00, 0xFF00, "SRC",  }, // 12+2*disp/20+2*disp
+    { opcode_SRL,  12,  0x0900, 0xFF00, "SRL",  }, // 12+2*disp/20+2*disp
+    { opcode_STCR, 42,  0x3400, 0xFC00, "STCR", }, // 42/44/58/60
+    { opcode_STST,  8,  0x02C0, 0xFFE0, "STST", }, // 8
+    { opcode_STWP,  8,  0x02A0, 0xFFE0, "STWP", }, // 8
+    { opcode_SWPB, 10,  0x06C0, 0xFFC0, "SWPB", }, // 10
+    { opcode_SZC,  14,  0x4000, 0xF000, "SZC",  }, // 14
+    { opcode_SZCB, 14,  0x5000, 0xF000, "SZCB", }, // 14
+    { opcode_TB,   12,  0x1F00, 0xFF00, "TB",   }, // 12
+    { opcode_X,     8,  0x0480, 0xFFC0, "X",    }, // 8
+    { opcode_XOP,  36,  0x2C00, 0xFC00, "XOP",  }, // 36
+    { opcode_XOR,  14,  0x2800, 0xFC00, "XOR",  }, // 14
+    { InvalidOpcode,6,  0x0000, 0x0000, "INVL", }    
 };
 
 
 
+//-------------------------------------------------------------------
+// A GROM increment shuold take into account that it's only really 
+// incrementing and wrapping at the 8K boundary. But I've yet to 
+// find any game that relies on the wrap and games are always setting
+// the address before reads/increments and so this saves us some 
+// processing power necessary for the old DS-handhelds.
+//-------------------------------------------------------------------
 //#define GROM_INC(x) ((x&0xE000) | ((x+1)&0x1FFF))
 #define GROM_INC(x) (x+1)
 
@@ -417,7 +445,7 @@ inline UINT16 ReadPCMemoryW( UINT16 address )
     UINT8 flags = MemFlags[ address ];
     if (flags)
     {
-        if (flags & MEMFLG_8BIT) ClockCycleCounter += 4; // Penalty for 8-bit access...
+        ClockCycleCounter += 4; // Penalty for 8-bit access... any flag implies 8-bit access
         if (flags & MEMFLG_CART)
         {
             return __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
@@ -441,7 +469,11 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
     
     if (flags)
     {
-        if (flags & MEMFLG_VDPR)
+        if (flags & MEMFLG_CART)
+        {
+            retVal = __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
+        }
+        else if (flags & MEMFLG_VDPR)
         {
             if (address & 2) retVal = (UINT16)RdCtrl9918()<<8;
             else retVal = (UINT16)RdData9918()<<8;
@@ -458,10 +490,6 @@ ITCM_CODE UINT16 ReadMemoryW( UINT16 address )
                 retVal = ReadGROM();
                 retVal |= (UINT16)ReadGROM() << 8;
             }
-        }
-        else if (flags & MEMFLG_CART)
-        {
-            retVal = __builtin_bswap16(*(UINT16*) (&CartMem[bankOffset | (address&0x1FFF)]));
         }
         else if (flags & MEMFLG_SPEECH)
         {
@@ -544,7 +572,7 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 
 inline void WriteBank(UINT16 address)
 {
-    if (address & 1) return;    // Don't respond to writes at odd addresses
+    //if (address & 1) return;    // Don't respond to writes at odd addresses
     address = (address >> 1);   // Divide by 2 as we are always looking at bit 1
     address &= bankMask;        // Support up to 8 banks of 8K (64K total)
     bankOffset = (0x2000 * address);
@@ -591,7 +619,7 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         {
             // Not yet...   
         }        
-        
+        else
         // Possible 8-bit expanded RAM write
         if ((address >= 0x2000 && address < 0x4000) || (address >= 0xA000))
         {
@@ -699,11 +727,11 @@ void LookupOpCode( UINT16 opcode )
     {
         if ((opcode & OpCodes[i].mask) == OpCodes[i].opCode) 
         {
-            OpCodeSpeedup[opcode] = i;
+            OpCodeSpeedup[opcode] = &OpCodes[i];
             return;
         }
     }
-    OpCodeSpeedup[opcode] = 69; //Invalid
+    OpCodeSpeedup[opcode] = &OpCodes[69]; //Invalid
     return;
 }
 
@@ -720,7 +748,6 @@ void InitOpCodeLookup(void)
         parity[ i ] = ( value & 1 ) ? TMS_PARITY : 0;
     }
     
-    memset(OpCodeSpeedup, 0xFF, 0x20000);
     for (int i=0; i<65536; i++)
     {
         (void)LookupOpCode(i);
@@ -730,7 +757,7 @@ void InitOpCodeLookup(void)
 
 inline void _ExecuteInstruction( UINT16 opCode )
 {
-    sOpCode *op = &OpCodes[OpCodeSpeedup[opCode]];
+    sOpCode *op = OpCodeSpeedup[opCode];
     ClockCycleCounter += (op->clocks-2);
     ((void (*)( ))op->function )( );
 }
@@ -842,7 +869,10 @@ ITCM_CODE void TMS9900_Run()
     {
         do
         {
-            CheckInterrupt();
+            if (InterruptOrTimerPossible)
+            {
+                CheckInterrupt();
+            }
 
             if (bCPUIdleRequest)
             {
@@ -853,7 +883,7 @@ ITCM_CODE void TMS9900_Run()
                 if (PC == 0x40e8) HandleTICCSector();
 
                 curOpCode = ReadPCMemoryW( PC ); PC+=2;
-                sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
+                sOpCode *op = ((sOpCode**)0x06860000)[curOpCode];
                 ClockCycleCounter += op->clocks;
                 ((void (*)( ))op->function )( );
             }
@@ -864,10 +894,13 @@ ITCM_CODE void TMS9900_Run()
     {
         do
         {
-            CheckInterrupt();
+            if (InterruptOrTimerPossible)
+            {
+                CheckInterrupt();
+            }
 
             curOpCode = ReadPCMemoryW( PC ); PC+=2;
-            sOpCode *op = &OpCodes[OpCodeSpeedup[curOpCode]];
+            sOpCode *op = ((sOpCode**)0x06860000)[curOpCode];
             ClockCycleCounter += op->clocks;
             ((void (*)( ))op->function )( );
         }
@@ -876,15 +909,23 @@ ITCM_CODE void TMS9900_Run()
 }
 
 
+inline void SetFlags_LAE8( UINT8 val )
+{
+    if (val)
+    {
+        ST |= (val & 0x80) ? TMS_LOGICAL : (TMS_LOGICAL | TMS_ARITHMETIC);
+    }
+    else
+    {
+        ST |= TMS_EQUAL;
+    }
+}
+
 ITCM_CODE void SetFlags_LAE( UINT16 val )
 {
-    if(val & 0x8000)
+    if (val)
     {
-        ST |= TMS_LOGICAL;
-    }
-    else if (val)
-    {
-        ST |= TMS_LOGICAL | TMS_ARITHMETIC;
+        ST |= (val & 0x8000) ? TMS_LOGICAL : (TMS_LOGICAL | TMS_ARITHMETIC);
     }
     else
     {
@@ -1987,7 +2028,7 @@ ITCM_CODE ITCM_CODE void opcode_MOVB( )
 
     ST &= ~( TMS_LOGICAL | TMS_ARITHMETIC | TMS_EQUAL | TMS_PARITY );
     ST |= parity[ src ];
-    SetFlags_LAE(( INT8 ) src );
+    SetFlags_LAE8( src );
 
     // Hidden memory access
     ReadMemory_hidden( dstAddress );
