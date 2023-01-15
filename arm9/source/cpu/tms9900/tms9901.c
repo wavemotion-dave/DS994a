@@ -78,19 +78,13 @@ TMS9901 tms9901      __attribute__((section(".dtcm")));
 // --------------------------------------------------------------------
 void TMS9901_Reset(void)
 {
-    // Clear out the entire state of the TMS9901
+    // Clear out the entire state of the TMS9901 - this will also force all pins LOW
     memset(&tms9901, 0x00, sizeof(tms9901));
     
     // -------------------------------------------------------------------------------------------------------------------
     // Set the state of the 32 I/O pins... with the first pin being special to indicate timer active or IO mode active
     // -------------------------------------------------------------------------------------------------------------------
     tms9901.PinState[PIN_TIMER_OR_IO]  =  TIMER_INACTIVE;
-    
-    // And now set the rest of the pins...
-    for (u8 pin=1; pin<=31; pin++)
-    {
-        tms9901.PinState[pin]  =  PIN_LOW;
-    }    
     
     TMS9900_ClearInterrupt();
 }
