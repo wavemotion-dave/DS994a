@@ -89,7 +89,7 @@ u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of r
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 u8 last_pal_mode = 99;
-UINT8 tmpBuf[40];
+u8 tmpBuf[40];
 
 // The DS/DSi has 12 keys that can be mapped
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
@@ -421,11 +421,11 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
     
     if (bDiskIsMounted && (myDskFile != NULL))
     {
-        UINT16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
+        u16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
         siprintf(tmpBuf, " DISK IS %s/%s %3dKB", (DiskImage[0x12] == 2 ? "DS":"SS"), (DiskImage[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
         AffChaine(8,9+cassete_menu_items+3,(sel==cassete_menu_items)?2:0,tmpBuf);
         
-        UINT8 col=0;
+        u8 col=0;
         if (strlen(myDskFile) < 32) col=16-(strlen(myDskFile)/2);
         if (strlen(myDskFile) & 1) col--;
         AffChaine(col,9+cassete_menu_items+5,(sel==cassete_menu_items)?2:0,myDskFile);   
@@ -663,10 +663,9 @@ ITCM_CODE void ds99_main(void)
       kbd_key = 0;
 
       // Clear out the Joystick and Keyboard table - we'll check for keys below
-      memset(m_Joystick, 0x00, sizeof(m_Joystick));
-      memset(m_StateTable, 0x00, sizeof(m_StateTable));
+      TMS9901_ClearJoyKeyData();
         
-      m_StateTable[VK_CAPSLOCK] = myConfig.capsLock;        
+      tms9901.CapsLock = myConfig.capsLock; // Set the state of our Caps Lock
         
       if  (keysCurrent() & KEY_TOUCH)
       {
@@ -754,72 +753,71 @@ ITCM_CODE void ds99_main(void)
         else
           LoadNow = 0;
 
-
         // --------------------------------------------------------------------------
         // Test the touchscreen rendering of the keybaord
         // --------------------------------------------------------------------------
         if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
         {
-            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_1]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_2]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_3]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_4]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_5]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_7]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_8]=1; if (!bKeyClick) bKeyClick=1;}
+            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_1]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_2]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_3]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_4]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_5]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_7]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_8]=1; if (!bKeyClick) bKeyClick=1;}
         }
         else if ((iTy >= 56) && (iTy < 84))   // Row 2
         {
-            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_9]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_0]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_A]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_B]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_C]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_D]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_E]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_F]=1; if (!bKeyClick) bKeyClick=1;}
+            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_9]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_0]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_A]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_C]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_D]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_E]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_F]=1; if (!bKeyClick) bKeyClick=1;}
         }
         else if ((iTy >= 84) && (iTy < 112))  // Row 3
         {
-            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_G]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_H]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_I]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_J]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_K]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_L]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_M]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_N]=1; if (!bKeyClick) bKeyClick=1;}
+            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_G]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_H]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_I]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_J]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_K]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_L]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_M]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_N]=1; if (!bKeyClick) bKeyClick=1;}
         }
         else if ((iTy >= 112) && (iTy < 140))  // Row 4
         {
-            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_O]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_P]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_Q]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_R]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_S]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_T]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_U]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_V]=1; if (!bKeyClick) bKeyClick=1;}
+            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_O]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_P]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Q]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_R]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_S]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_T]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_U]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_V]=1; if (!bKeyClick) bKeyClick=1;}
         }
         else if ((iTy >= 140) && (iTy < 169))  // Row 5
         {
-            if      ((iTx >= 1)   && (iTx < 34))   {m_StateTable[VK_W]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {m_StateTable[VK_X]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {m_StateTable[VK_Y]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {m_StateTable[VK_Z]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {m_StateTable[VK_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {m_StateTable[VK_6]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
-            else if ((iTx >= 189) && (iTx < 220))  {m_StateTable[VK_8]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //REDO
-            else if ((iTx >= 220) && (iTx < 255))  {m_StateTable[VK_9]=1; m_StateTable[VK_FCTN]=1; if (!bKeyClick) bKeyClick=1;} //BACK
+            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_W]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_X]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Y]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_Z]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
+            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_8]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //REDO
+            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_9]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //BACK
         }
         else if ((iTy >= 169) && (iTy < 192))  // Row 6
         {
             if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
-            else if ((iTx >= 174) && (iTx < 214))  {m_StateTable[VK_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 214) && (iTx < 256))  {m_StateTable[VK_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 174) && (iTx < 214))  {tms9901.Keyboard[TMS_KEY_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 214) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
         }
-
+          
         if (bKeyClick == 1)
         {
             mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
@@ -855,68 +853,68 @@ ITCM_CODE void ds99_main(void)
                   u8 map = keyCoresp[myConfig.keymap[i]];
                   switch(map)
                   {
-                      case JOY1_UP:         m_Joystick[0].y_Axis = +1;    break;
-                      case JOY1_DOWN:       m_Joystick[0].y_Axis = -1;    break;
-                      case JOY1_LEFT:       m_Joystick[0].x_Axis = -1;    break;
-                      case JOY1_RIGHT:      m_Joystick[0].x_Axis = +1;    break;
-                      case JOY1_FIRE:       m_Joystick[0].isPressed = 1;  break;
+                      case JOY1_UP:         tms9901.Keyboard[TMS_KEY_JOY1_UP]=1;    break;
+                      case JOY1_DOWN:       tms9901.Keyboard[TMS_KEY_JOY1_DOWN]=1;  break;
+                      case JOY1_LEFT:       tms9901.Keyboard[TMS_KEY_JOY1_LEFT]=1;  break;
+                      case JOY1_RIGHT:      tms9901.Keyboard[TMS_KEY_JOY1_RIGHT]=1; break;
+                      case JOY1_FIRE:       tms9901.Keyboard[TMS_KEY_JOY1_FIRE]=1;  break;
                           
-                      case JOY2_UP:         m_Joystick[1].y_Axis = +1;    break;
-                      case JOY2_DOWN:       m_Joystick[1].y_Axis = -1;    break;
-                      case JOY2_LEFT:       m_Joystick[1].x_Axis = -1;    break;
-                      case JOY2_RIGHT:      m_Joystick[1].x_Axis = +1;    break;
-                      case JOY2_FIRE:       m_Joystick[1].isPressed = 1;  break;
+                      case JOY2_UP:         tms9901.Keyboard[TMS_KEY_JOY2_UP]=1;    break;
+                      case JOY2_DOWN:       tms9901.Keyboard[TMS_KEY_JOY2_DOWN]=1;  break;
+                      case JOY2_LEFT:       tms9901.Keyboard[TMS_KEY_JOY2_LEFT]=1;  break;
+                      case JOY2_RIGHT:      tms9901.Keyboard[TMS_KEY_JOY2_RIGHT]=1; break;
+                      case JOY2_FIRE:       tms9901.Keyboard[TMS_KEY_JOY2_FIRE]=1;  break;
 
-                      case KBD_A:           m_StateTable[VK_A]=1;         break;
-                      case KBD_B:           m_StateTable[VK_B]=1;         break;
-                      case KBD_C:           m_StateTable[VK_C]=1;         break;
-                      case KBD_D:           m_StateTable[VK_D]=1;         break;
-                      case KBD_E:           m_StateTable[VK_E]=1;         break;
-                      case KBD_F:           m_StateTable[VK_F]=1;         break;
-                      case KBD_G:           m_StateTable[VK_G]=1;         break;
-                      case KBD_H:           m_StateTable[VK_H]=1;         break;
-                      case KBD_I:           m_StateTable[VK_I]=1;         break;
-                      case KBD_J:           m_StateTable[VK_J]=1;         break;
-                      case KBD_K:           m_StateTable[VK_K]=1;         break;
-                      case KBD_L:           m_StateTable[VK_L]=1;         break;
-                      case KBD_M:           m_StateTable[VK_M]=1;         break;
-                      case KBD_N:           m_StateTable[VK_N]=1;         break;
-                      case KBD_O:           m_StateTable[VK_O]=1;         break;
-                      case KBD_P:           m_StateTable[VK_P]=1;         break;
-                      case KBD_Q:           m_StateTable[VK_Q]=1;         break;
-                      case KBD_R:           m_StateTable[VK_R]=1;         break;
-                      case KBD_S:           m_StateTable[VK_S]=1;         break;
-                      case KBD_T:           m_StateTable[VK_T]=1;         break;
-                      case KBD_U:           m_StateTable[VK_U]=1;         break;
-                      case KBD_V:           m_StateTable[VK_V]=1;         break;
-                      case KBD_W:           m_StateTable[VK_W]=1;         break;
-                      case KBD_X:           m_StateTable[VK_X]=1;         break;
-                      case KBD_Y:           m_StateTable[VK_Y]=1;         break;
-                      case KBD_Z:           m_StateTable[VK_Z]=1;         break;
+                      case KBD_A:           tms9901.Keyboard[TMS_KEY_A]=1;         break;
+                      case KBD_B:           tms9901.Keyboard[TMS_KEY_B]=1;         break;
+                      case KBD_C:           tms9901.Keyboard[TMS_KEY_C]=1;         break;
+                      case KBD_D:           tms9901.Keyboard[TMS_KEY_D]=1;         break;
+                      case KBD_E:           tms9901.Keyboard[TMS_KEY_E]=1;         break;
+                      case KBD_F:           tms9901.Keyboard[TMS_KEY_F]=1;         break;
+                      case KBD_G:           tms9901.Keyboard[TMS_KEY_G]=1;         break;
+                      case KBD_H:           tms9901.Keyboard[TMS_KEY_H]=1;         break;
+                      case KBD_I:           tms9901.Keyboard[TMS_KEY_I]=1;         break;
+                      case KBD_J:           tms9901.Keyboard[TMS_KEY_J]=1;         break;
+                      case KBD_K:           tms9901.Keyboard[TMS_KEY_K]=1;         break;
+                      case KBD_L:           tms9901.Keyboard[TMS_KEY_L]=1;         break;
+                      case KBD_M:           tms9901.Keyboard[TMS_KEY_M]=1;         break;
+                      case KBD_N:           tms9901.Keyboard[TMS_KEY_N]=1;         break;
+                      case KBD_O:           tms9901.Keyboard[TMS_KEY_O]=1;         break;
+                      case KBD_P:           tms9901.Keyboard[TMS_KEY_P]=1;         break;
+                      case KBD_Q:           tms9901.Keyboard[TMS_KEY_Q]=1;         break;
+                      case KBD_R:           tms9901.Keyboard[TMS_KEY_R]=1;         break;
+                      case KBD_S:           tms9901.Keyboard[TMS_KEY_S]=1;         break;
+                      case KBD_T:           tms9901.Keyboard[TMS_KEY_T]=1;         break;
+                      case KBD_U:           tms9901.Keyboard[TMS_KEY_U]=1;         break;
+                      case KBD_V:           tms9901.Keyboard[TMS_KEY_V]=1;         break;
+                      case KBD_W:           tms9901.Keyboard[TMS_KEY_W]=1;         break;
+                      case KBD_X:           tms9901.Keyboard[TMS_KEY_X]=1;         break;
+                      case KBD_Y:           tms9901.Keyboard[TMS_KEY_Y]=1;         break;
+                      case KBD_Z:           tms9901.Keyboard[TMS_KEY_Z]=1;         break;
 
-                      case KBD_1:           m_StateTable[VK_1]=1;         break;
-                      case KBD_2:           m_StateTable[VK_2]=1;         break;
-                      case KBD_3:           m_StateTable[VK_3]=1;         break;
-                      case KBD_4:           m_StateTable[VK_4]=1;         break;
-                      case KBD_5:           m_StateTable[VK_5]=1;         break;
-                      case KBD_6:           m_StateTable[VK_6]=1;         break;
-                      case KBD_7:           m_StateTable[VK_7]=1;         break;
-                      case KBD_8:           m_StateTable[VK_8]=1;         break;
-                      case KBD_9:           m_StateTable[VK_9]=1;         break;
-                      case KBD_0:           m_StateTable[VK_0]=1;         break;
+                      case KBD_1:           tms9901.Keyboard[TMS_KEY_1]=1;         break;
+                      case KBD_2:           tms9901.Keyboard[TMS_KEY_2]=1;         break;
+                      case KBD_3:           tms9901.Keyboard[TMS_KEY_3]=1;         break;
+                      case KBD_4:           tms9901.Keyboard[TMS_KEY_4]=1;         break;
+                      case KBD_5:           tms9901.Keyboard[TMS_KEY_5]=1;         break;
+                      case KBD_6:           tms9901.Keyboard[TMS_KEY_6]=1;         break;
+                      case KBD_7:           tms9901.Keyboard[TMS_KEY_7]=1;         break;
+                      case KBD_8:           tms9901.Keyboard[TMS_KEY_8]=1;         break;
+                      case KBD_9:           tms9901.Keyboard[TMS_KEY_9]=1;         break;
+                      case KBD_0:           tms9901.Keyboard[TMS_KEY_0]=1;         break;
                           
-                      case KBD_SPACE:       m_StateTable[VK_SPACE]=1;     break;
-                      case KBD_ENTER:       m_StateTable[VK_ENTER]=1;     break;
+                      case KBD_SPACE:       tms9901.Keyboard[TMS_KEY_SPACE]=1;     break;
+                      case KBD_ENTER:       tms9901.Keyboard[TMS_KEY_ENTER]=1;     break;
 
-                      case KBD_FNCT:        m_StateTable[VK_FCTN]=1;      break;
-                      case KBD_CTRL:        m_StateTable[VK_CTRL]=1;      break;
-                      case KBD_SHIFT:       m_StateTable[VK_SHIFT]=1;     break;
+                      case KBD_FNCT:        tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
+                      case KBD_CTRL:        tms9901.Keyboard[TMS_KEY_CONTROL]=1;   break;
+                      case KBD_SHIFT:       tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
                           
-                      case KBD_PLUS:        m_StateTable[VK_EQUALS]=1;  m_StateTable[VK_SHIFT]=1;   break;
-                      case KBD_MINUS:       m_StateTable[VK_DIVIDE]=1;  m_StateTable[VK_SHIFT]=1;   break;
-                      case KBD_PROC:        m_StateTable[VK_6]=1;       m_StateTable[VK_FCTN]=1;    break;
-                      case KBD_REDO:        m_StateTable[VK_8]=1;       m_StateTable[VK_FCTN]=1;    break;
-                      case KBD_BACK:        m_StateTable[VK_9]=1;       m_StateTable[VK_FCTN]=1;    break;
+                      case KBD_PLUS:        tms9901.Keyboard[TMS_KEY_EQUALS]=1;    tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
+                      case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_DIV]=1;       tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
+                      case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_REDO:        tms9901.Keyboard[TMS_KEY_8]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_BACK:        tms9901.Keyboard[TMS_KEY_9]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                   }
               }
           }

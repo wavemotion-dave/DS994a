@@ -66,7 +66,7 @@ void TI99SaveState()
     // Write Version
     u16 save_ver = TI_SAVE_VER;
     uNbO = fwrite(&save_ver, sizeof(u16), 1, handle);
-      
+#if 0      
     // Write TMS9900 CPU
     uNbO = fwrite(&InterruptFlag,       sizeof(InterruptFlag),       1, handle);
     uNbO = fwrite(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
@@ -92,7 +92,8 @@ void TI99SaveState()
     uNbO = fwrite(&m_CapsLock,          sizeof(m_CapsLock),          1, handle);
     uNbO = fwrite(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
     uNbO = fwrite(&m_HideShift,         sizeof(m_HideShift),         1, handle);
-     
+#endif
+      
     // Save TI Memory that might possibly be volatile (RAM areas mostly)
     if (uNbO) uNbO = fwrite(Memory+0x2000, 0x2000, 1, handle); 
     if (uNbO) uNbO = fwrite(Memory+0x6000, 0x2000, 1, handle); 
@@ -189,6 +190,7 @@ void TI99LoadState()
         
         if (save_ver == TI_SAVE_VER)
         {
+#if 0            
             // Load TMS9900 CPU
             if (uNbO) uNbO = fread(&InterruptFlag,       sizeof(InterruptFlag),       1, handle);
             if (uNbO) uNbO = fread(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
@@ -214,7 +216,7 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&m_CapsLock,          sizeof(m_CapsLock),          1, handle);
             if (uNbO) uNbO = fread(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
             if (uNbO) uNbO = fread(&m_HideShift,         sizeof(m_HideShift),         1, handle);
-            
+#endif
             // Restore TI Memory that might possibly be volatile (RAM areas mostly)
             if (uNbO) uNbO = fread(Memory+0x2000, 0x2000, 1, handle); 
             if (uNbO) uNbO = fread(Memory+0x6000, 0x2000, 1, handle); 

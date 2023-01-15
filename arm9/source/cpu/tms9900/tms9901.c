@@ -1,450 +1,264 @@
-// --------------------------------------------------------------------------
-// The original version of this file came from TI-99/Sim from Marc Rousseau:
+// =====================================================================================
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// https://www.mrousseau.org/programs/ti99sim/
+// Copying and distribution of this emulator, it's source code and associated 
+// readme files, with or without modification, are permitted in any medium without 
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The code has been altered from its original to be streamlined, and heavily
-// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
-//
-// This modified code is released under the same GPL License as mentioned in
-// Marc's original copyright statement below.
-// --------------------------------------------------------------------------
+// The TI99DS emulator is offered as-is, without any warranty.
+// =====================================================================================
 
-//----------------------------------------------------------------------------
-//
-// File:        tms9901.cpp
-// Date:        18-Dec-2001
-// Programmer:  Marc Rousseau
-//
-// Description:
-//
-// Copyright (c) 2001-2004 Marc Rousseau, All Rights Reserved.
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307, USA.
-//
-// Revision History:
-//
-//----------------------------------------------------------------------------
 #include <nds.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <fat.h>
 #include "tms9901.h"
 #include "tms9900.h"
 #include "../../disk.h"
 
-#define FUNCTION_ENTRY(a,b,c)   // Nothing
-#define DEBUG_STATUS(x)         // Nothing
-#define DBG_ASSERT(x)           // Nothing
+// From https://www.unige.ch/medecine/nouspikel/ti99/tms9901.htm 
+//
+// The main CRU handling is for the lower 32 bits defined as follows:
+//
+// Bit 0 is used to select the timer mode. When it equals 1, the TMS9901 is in timer mode and bits 1-15 have a special meaning (see below), 
+// when 0 it starts the timer (if needed) and bits 1-15 are used to control I/O pins, just as bits 16-31.
 
-extern UINT32 debug[];
+// Bits 1-15 are used to read the status of the 15 interrupt pins (whether they are used as interrupt pin or as input pin).
+// Writing to one of these bits does not output any data, but sets the interrupt mask for the corresponding pin: writing a 1 results
+// in issuing interrupts when the pin is held low. The interrupt trigger is synchronized by the PHI* pin.
 
-bool                m_TimerActive           __attribute__((section(".dtcm")));
-int                 m_ReadRegister          __attribute__((section(".dtcm")));
-int                 m_Decrementer           __attribute__((section(".dtcm")));
-int                 m_ClockRegister         __attribute__((section(".dtcm")));
-UINT8               m_PinState[ 32 ][ 2 ]   __attribute__((section(".dtcm")));
-int                 m_InterruptRequested    __attribute__((section(".dtcm")));
-int                 m_ActiveInterrupts      __attribute__((section(".dtcm")));
-int                 m_LastDelta             __attribute__((section(".dtcm")));
-UINT32              m_DecrementClock        __attribute__((section(".dtcm")));
-bool                m_CapsLock              __attribute__((section(".dtcm")));
-int                 m_ColumnSelect          __attribute__((section(".dtcm")));
-int                 m_HideShift             __attribute__((section(".dtcm")));
-UINT8               m_StateTable[ VK_MAX ]  __attribute__((section(".dtcm")));
-sJoystickInfo       m_Joystick[ 2 ]         __attribute__((section(".dtcm")));
+// Bits 16-31 are used to read the status of the 15 programmable I/O pins, provided they are used as input (or interrupt) pins. 
+// Note that the 8 versatile pins INT7*/P15 through INT15*/P7 can be read either with bits 7-15 or with bits 23-31. Writing to
+// CRU bits 16-31 turns the corresponding pins into output pins and places the bit values on the pins.
+    
+// From https://www.unige.ch/medecine/nouspikel/ti99/tms9901.htm 
+//    =   .   ,   M   N   /  fire1  fire2 
+// space  L   K   J   H   ;  left1  left2
+// enter  O   I   U   Y   P  right1 right2
+// (none) 9   8   7   6   0  down1  down2
+// fctn   2   3   4   5   1  up1    up2 
+// shift  S   D   F   G   A  (none) (none)
+// ctrl   W   E   R   T   Q  (none) (none)
+// (none) X   C   V   B   Z  (none) (none)
 
+
+// ------------------------------------------------------------------------------------------------------------
+// TMS Keys form an 8x8 matrix to mirror the spec above and can be scanned using the 3 keyboard column bits
+// ------------------------------------------------------------------------------------------------------------
+const u8 TIKeys[8][8] =
+{
+    { TMS_KEY_EQUALS,   TMS_KEY_PERIOD, TMS_KEY_COMMA, TMS_KEY_M,   TMS_KEY_N,   TMS_KEY_DIV,    TMS_KEY_JOY1_FIRE,     TMS_KEY_JOY2_FIRE   },
+    { TMS_KEY_SPACE,    TMS_KEY_L,      TMS_KEY_K,     TMS_KEY_J,   TMS_KEY_H,   TMS_KEY_SEMI,   TMS_KEY_JOY1_LEFT,     TMS_KEY_JOY2_LEFT   },
+    { TMS_KEY_ENTER,    TMS_KEY_O,      TMS_KEY_I,     TMS_KEY_U,   TMS_KEY_Y,   TMS_KEY_P,      TMS_KEY_JOY1_RIGHT,    TMS_KEY_JOY2_RIGHT  },
+    { TMS_KEY_NONE,     TMS_KEY_9,      TMS_KEY_8,     TMS_KEY_7,   TMS_KEY_6,   TMS_KEY_0,      TMS_KEY_JOY1_DOWN,     TMS_KEY_JOY2_DOWN   },
+    { TMS_KEY_FUNCTION, TMS_KEY_2,      TMS_KEY_3,     TMS_KEY_4,   TMS_KEY_5,   TMS_KEY_1,      TMS_KEY_JOY1_UP,       TMS_KEY_JOY2_UP     },
+    { TMS_KEY_SHIFT,    TMS_KEY_S,      TMS_KEY_D,     TMS_KEY_F,   TMS_KEY_G,   TMS_KEY_A,      TMS_KEY_NONE,          TMS_KEY_NONE        },
+    { TMS_KEY_CONTROL,  TMS_KEY_W,      TMS_KEY_E,     TMS_KEY_R,   TMS_KEY_T,   TMS_KEY_Q,      TMS_KEY_NONE,          TMS_KEY_NONE        },
+    { TMS_KEY_NONE,     TMS_KEY_X,      TMS_KEY_C,     TMS_KEY_V,   TMS_KEY_B,   TMS_KEY_Z,      TMS_KEY_NONE,          TMS_KEY_NONE        },
+};
+
+// ---------------------------------------------------------------------------------
+// Some pins are aliased... so we use a simple look-up table to map them correctly
+// ---------------------------------------------------------------------------------
+u16 CRU_AliasTable[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,15,16,17,18,19,20,21,22,23};
+
+// --------------------------------------------------------------------------------------------
+// The entire TMS9901 struct and state information is placed into .DTCM fast memory on the DS
+// so that it's as fast as possible. We will also try to put as much of the CRU logic into the
+// .ITCM fast instruction memory to speed up that processing to help the poor DS CPU along...
+// --------------------------------------------------------------------------------------------
+TMS9901 tms9901      __attribute__((section(".dtcm")));
+
+
+// --------------------------------------------------------------------
+// Clears out the TMS9901 and clears out any pending interrupts...
+// --------------------------------------------------------------------
 void TMS9901_Reset(void)
 {
-    // Mark pins P0-P16 as input/interrupt pins
-    for( int i = 16; i < 32; i++ )
-    {
-        m_PinState[ i ][ 1 ] = -1;
-    }
-    memset(m_StateTable, 0x00, sizeof(m_StateTable));
-    memset(m_Joystick,   0x00, sizeof(m_Joystick));
+    // Clear out the entire state of the TMS9901
+    memset(&tms9901, 0x00, sizeof(tms9901));
     
-    m_TimerActive          = 0;
-    m_ReadRegister         = 0;
-    m_ClockRegister        = 0;
-    m_LastDelta            = 0;
-    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
+    // -------------------------------------------------------------------------------------------------------------------
+    // Set the state of the 32 I/O pins... with the first pin being special to indicate timer active or IO mode active
+    // -------------------------------------------------------------------------------------------------------------------
+    tms9901.PinState[PIN_TIMER_OR_IO]  =  TIMER_INACTIVE;
+    
+    // And now set the rest of the pins...
+    for (u8 pin=1; pin<=31; pin++)
+    {
+        tms9901.PinState[pin]  =  PIN_LOW;
+    }    
+    
+    TMS9900_ClearInterrupt();
 }
 
-
-ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
+// -----------------------------------------------------------------------------------------
+// Write up to 16 bits of information to the CRU. This routine handles the data shifting
+// as needed to clock out one or more bits (up to the full 16 bits) to the CRU. The CPU
+// calls that bring us here will already have shifted down the cruAddress so we're dealing
+// with 0-31 for the main CRU bits.
+// -----------------------------------------------------------------------------------------
+ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
 {
-    FUNCTION_ENTRY( this, "WriteCRU", false );
+    if (num == 0) num = 16;     // A zero means write all 16 bits...
+    if (cruAddress < 0x880) cruAddress &= 0x1F;
     
-    // ------------------------------------
-    // Enable or Disable the TI Disk DSR...
-    // ------------------------------------
-    if (address >= 0x880 && address < 0x888) 
+    for (u8 bitNum = 0; bitNum < num; bitNum++)
     {
-        disk_cru_write(address, data);
-        return;
-    }
-    else if (address < 0x20)
-    {
-        // Address lines A4-A10 are not decoded - alias the address space
-        address &= 0x1F;
-
-        if( address == 0 )
-        {
-            UpdateTimer( ClockCycleCounter );
-            m_PinState[ 0 ][ 1 ] = data;
-            if( data == 1 )
-            {
-                //DBG_STATUS( "Timer mode On" );
-                m_ReadRegister = m_Decrementer;
-            }
-            else
-            {
-                //DBG_STATUS( "I/O mode On" );
-                if( m_ClockRegister != 0 )
-                {
-                    m_TimerActive = true;
-                }
-                m_Decrementer    = m_ClockRegister;
-                m_DecrementClock = ClockCycleCounter;
-                m_LastDelta      = 0;
-            }
-        }
-        else
-        {
-            if( m_PinState[ 0 ][ 1 ] == 1 )  // We're in timer mode
-            {            
-                if(( address >= 1 ) && ( address <= 14 ))
-                {
-                    int shift = address - 1;
-                    m_ClockRegister &= ~( 1 << shift );
-                    m_ClockRegister |= data << shift;
-                    m_Decrementer = m_ClockRegister;
-                    m_DecrementClock = ClockCycleCounter;
-                    m_LastDelta      = 0;
-                    InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
-                }
-                else if( address == 15 )
-                {
-                    TMS9901_Reset();
-                }
-            }
-            else  // We're in I/O mode
-            {
-                m_PinState[ address ][ 1 ] = ( char ) data;
-
-                if(( address >= 18 ) && ( address <= 20 ))
-                {
-                    int shift = address - 18;
-                    m_ColumnSelect &= ~( 1 << shift );
-                    m_ColumnSelect |= data << shift;
-                }
-                else if( address == 21 )
-                {
-                    m_CapsLock = ( data != 0 ) ? true : false;
-                }
-            }
-        }
-    }
-}
-
-/*
-    >00  0 = Internal 9901 Control   1 = Clock Control
-    >01  Set by an external Interrupt
-    >02  Set by TMS9918A on Vertical Retrace Interrupt
-    >03  Set by Clock Interrupt for Cassette read/write routines
-    >0C  Reserved - High Level
-    >16  Cassette CS1 motor control On/Off
-    >17  Cassette CS2 motor control On/Off
-    >18  Audio Gate enable/disable
-    >19  Cassette Tape Out
-    >1B  Cassette Tape In
- */
-
-ITCM_CODE UINT16 ReadCRU_Inner( ADDRESS address )
-{
-    FUNCTION_ENTRY( this, "ReadCRU", false );
-
-    // TI Keyboard Matrix
-    const UINT16 Keys[ 8 ][ 6 ] =
-    {
-        { VK_EQUALS, VK_PERIOD, VK_COMMA, VK_M,   VK_N,   VK_DIVIDE    },
-        { VK_SPACE,  VK_L,      VK_K,     VK_J,   VK_H,   VK_SEMICOLON },
-        { VK_ENTER,  VK_O,      VK_I,     VK_U,   VK_Y,   VK_P         },
-        { 0,         VK_9,      VK_8,     VK_7,   VK_6,   VK_0         },
-        { VK_FCTN,   VK_2,      VK_3,     VK_4,   VK_5,   VK_1         },
-        { VK_SHIFT,  VK_S,      VK_D,     VK_F,   VK_G,   VK_A         },
-        { VK_CTRL,   VK_W,      VK_E,     VK_R,   VK_T,   VK_Q         },
-        { 0,         VK_X,      VK_C,     VK_V,   VK_B,   VK_Z         }
-    };
-
-    // Address lines A4-A10 are not decoded - alias the address space
-    address &= 0x1F;
-    
-    int retVal = 1;
-
-    if( m_PinState[ 0 ][ 1 ] == 1 )  // We're in timer mode
-    {        
-        if( address == 0 )
-        {
-            // Mode
-            retVal = 1;
-        }
-        else if(( address >= 1 ) && ( address <= 14 ))
-        {
-            // ReadRegister
-            int mask = 1 << ( address - 1 );
-            retVal = ( m_ReadRegister & mask ) ? 1 : 0;
-        }
-        else if( address == 15 )
-        {
-            // INTREQ
-            retVal = ( m_InterruptRequested > 0 ) ? 1 : 0;
-        }
-    }
-    else  // We're in I/O mode
-    {
-        // Adjust for the aliased pins
-        if(( address >= 23 ) && ( address <= 31 ))
-        {
-            address = 38 - address;
-        }
+        u16 dataBit = (data & (1<<bitNum)) ? 1:0;  // Get the status of this data bit
         
-        if( address == 0 )
+        // --------------------------------------------------------------------------------------
+        // Enable or Disable the TI Disk DSR... pass this request along to the disk controller.
+        // --------------------------------------------------------------------------------------
+        if (cruAddress >= 0x880 && cruAddress < 0x888) 
         {
-            // Mode
-            retVal = 0;
+            disk_cru_write(cruAddress, dataBit);
         }
-        else if(( address >= 1 ) && ( address <= 2 ))
+        else if (cruAddress < MAX_PINS)    // This is the internal console CRU bits... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
         {
-            // Interrupt status INT1-INT2
-            if( m_PinState[ address ][ 0 ] != 0 )
+            // -------------------------------------------------------------------------------------------------
+            // Bit 0 is special as it defines if we are in Timer or I/O mode... We don't yet handle timer
+            // mode but it's only used for Cassette IO which is not currently supported but we track it still.
+            // -------------------------------------------------------------------------------------------------
+            if (cruAddress == PIN_TIMER_OR_IO)  tms9901.PinState[PIN_TIMER_OR_IO]  =  (dataBit ? TIMER_ACTIVE : TIMER_INACTIVE);
+
+            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)
             {
-                retVal = 0;
+                // --------------------------------------------------------------------------------------
+                // Do nothing... we don't support this yet except for reset handling
+                // --------------------------------------------------------------------------------------
+                if (cruAddress == 15) TMS9901_Reset();
+            }
+            else    // We're in I/O Mode
+            {
+                // --------------------------------------------------------------------------------------
+                // Just save the data bit (0 or 1) for the pin in I/O mode. We can decode the keyboard 
+                // column and alpha-lock easily enough with the use of defines from tms9901.h
+                // --------------------------------------------------------------------------------------
+                tms9901.PinState[cruAddress] = dataBit;
             }
         }
-        else if(( address >= 3 ) && ( address <= 10 ))
+        cruAddress++;   // Move to the next CRU bit (if any)
+    }
+}
+
+// --------------------------------------------------------------------------------------------------
+// Read from 1 to 16 bits of CRU information from the desired CRU address. This address has already
+// been shifted down 1 by the CPU core that called it... so we're dealing with 0-31 here.
+// --------------------------------------------------------------------------------------------------
+ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
+{
+    u16 retVal = 0x0000;        // Accumulate bits below
+ 
+    cruAddress &= 0x1F;         // CRU mirrors    
+    if (num == 0) num = 16;     // A zero means read all 16 bits...
+    
+    for (u8 bitNum = 0; bitNum < num; bitNum++)
+    {
+        if (cruAddress < MAX_PINS)  // We're only handling CRU reads for the internal 32 bits for now... good enough
         {
-            if(( m_CapsLock == false ) && ( address == 7 ))
+            u8 bitState = 1;        // Default output to a '1' until proven otherwise below...
+            
+            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)    // We are only handling bit 0 and bit 15
             {
-                if( m_StateTable[ VK_CAPSLOCK ] != 0 )
+                    switch (cruAddress)
                 {
-                    retVal = 0;
+                    case 0:     bitState = 1;                                           break;     // Bit 0 in timer mode always returns '1'
+                    case 15:    bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;     // Bit 15 in timer mode returns the state of the Interupt request
+                    default:    bitState = 1;                                           break;     // Otherwise do nothing... 
                 }
             }
-            else
+            else    // This is IO mode - there are some aliased pins we need to be careful of...
             {
-                switch( m_ColumnSelect )
+                // --------------------------------------------------
+                //0 >0000   I/O 0: I/O mode 1: timer mode 
+                //1 >0002   I+  Peripheral interrupt incoming line 
+                //2 >0004   I+  VDP interrupts incoming line 
+                // --------------------------------------------------
+                
+                // Some pins are aliased - this will correct the pin number
+                cruAddress = CRU_AliasTable[cruAddress];
+                
+                switch (cruAddress)
                 {
-                    case 6 :                            // Joystick 1
-                        switch( address )
+                    case 0:     bitState = 0;                                           break;      // Bit 0 in timer mode always returns '0'
+                        
+                    case 1:     bitState = 1;                                           break;      // We don't allow external interrupts yet
+                    case 2:     bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;      // Pin 2 is for the VDP interrupt... report if that's set
+                        
+                    case 3:     // Keyboard Row 1
+                    case 4:     // Keyboard Row 2
+                    case 5:     // Keyboard Row 3
+                    case 6:     // Keyboard Row 4
+                    case 7:     // Keyboard Row 5
+                    case 8:     // Keyboard Row 6
+                    case 9:     // Keyboard Row 7
+                    case 10:    // Keyboard Row 8
                         {
-                            case 3 :
-                                if( m_Joystick[ 0 ].isPressed )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 4 :
-                                if( m_Joystick[ 0 ].x_Axis < 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 5 :
-                                if( m_Joystick[ 0 ].x_Axis > 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 6 :
-                                if( m_Joystick[ 0 ].y_Axis < 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 7 :
-                                if( m_Joystick[ 0 ].y_Axis > 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
+                            // ------------------------------------------------------------------------------------------------------------------------
+                            // This handles both Keybaord and Joystick (P1 and P2) inputs in a unified manner... to the TI-99/4a, it's all the same.
+                            // ------------------------------------------------------------------------------------------------------------------------
+                            u8 column = (tms9901.PinState[PIN_COL3]<<2) | (tms9901.PinState[PIN_COL2]<<1) | (tms9901.PinState[PIN_COL1]<<0);
+                            if (tms9901.Keyboard[TIKeys[cruAddress-3][column]]) bitState = 0;
                         }
                         break;
-                    case 7 :                            // Joystick 2
-                        switch( address )
-                        {
-                            case 3 :
-                                if( m_Joystick[ 1 ].isPressed )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 4 :
-                                if( m_Joystick[ 1 ].x_Axis < 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 5 :
-                                if( m_Joystick[ 1 ].x_Axis > 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 6 :
-                                if( m_Joystick[ 1 ].y_Axis < 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                            case 7 :
-                                if( m_Joystick[ 1 ].y_Axis > 0 )
-                                {
-                                    retVal = 0;
-                                }
-                                break;
-                        }
-                        break;
-                    default :
-                        {
-                            int index;
-                            index = Keys[ address - 3 ][ m_ColumnSelect ];
-                            if(( index == VK_SHIFT ) && m_HideShift )
-                            {
-                                break;
-                            }
-                            if(( m_StateTable[ index ] ) != 0 )
-                            {
-                                retVal = 0;
-                            }
-                        }
-                        break;
+                       
+                    default:    break;                                                              // Otherwise do nothing... returned bit will be '1'
                 }
             }
-        }
-    }
-
-    return retVal;
-}
-
-
-
-ITCM_CODE void WriteCRU( ADDRESS address, UINT8 count, UINT16 value )
-{
-    FUNCTION_ENTRY( nullptr, "cTI994A::WriteCRU", false );
-
-    if (address > 0xFFF) return;
-    
-    while( count-- )
-    {
-        WriteCRU_Inner(( ADDRESS ) ( address++ & 0x1FFF ), ( UINT16 ) ( value & 1 ));
-        value >>= 1;
-    }
-}
-
-ITCM_CODE UINT16 ReadCRU( ADDRESS address, UINT8 count )
-{
-    FUNCTION_ENTRY( nullptr, "cTI994A::ReadCRU", false );
-    
-    if (address > 0xFFF) return 0x0000;
-
-    UINT16 value = 0;
-    address += ( UINT16 ) count;
-    while( count-- )
-    {
-        value <<= 1;
-        value |= ReadCRU_Inner(( ADDRESS ) ( --address & 0x1FFF ));
-    }
-    return value;
-}
-
-//----------------------------------------------------------------------------
-// iTMS9901 methods
-//----------------------------------------------------------------------------
-
-ITCM_CODE void UpdateTimer( UINT32 clockCycles )
-{
-    // Update the timer if we're in I/O mode
-    if( m_PinState[ 0 ][ 1 ] == 0 )
-    {
-        if( m_ClockRegister != 0 )
-        {
-            int delta = ( clockCycles - m_DecrementClock ) / 64;
-            if( delta != m_LastDelta )
+            
+            // ----------------------------------------------------------------------------------------------
+            // If we've decoded a '1' write that bit into the 16-bit return value into the appopriate spot.
+            // ----------------------------------------------------------------------------------------------
+            if (bitState) 
             {
-                int dif = delta - m_LastDelta;
-                m_LastDelta = delta;
-                if( m_Decrementer > dif )
-                {
-                    m_Decrementer -= dif;
-                }
-                else
-                {
-                    m_Decrementer = m_ClockRegister - ( dif - m_Decrementer );
-                    if( m_TimerActive == true )
-                    {
-                        m_TimerActive = false;
-                        tms9901_SignalInterrupt( 3 );
-                    }
-                }
+                retVal |= (1 << bitNum);
             }
         }
-    }
-}
-
-ITCM_CODE void tms9901_SignalInterrupt( int level )
-{
-    FUNCTION_ENTRY( this, "SignalInterrupt", false );
-
-    if( m_PinState[ level ][ 0 ] != 0 )
-    {
-        return;
+        cruAddress++;   // Move to the next CRU bit (if any)
     }
     
-    m_InterruptRequested++;
-    m_PinState[ level ][ 0 ] = -1;
-
-    // If this INT line is enabled, signal an interrupt to the CPU
-    if( m_PinState[ level ][ 1 ] == 1 )
-    {
-        m_ActiveInterrupts++;
-        if (m_ActiveInterrupts > 1) debug[2]++;
-        SignalInterrupt( 1 );
-    }
+    return retVal;  // Return the assembled word to the caller...
 }
 
-ITCM_CODE void tms9901_ClearInterrupt( int level )
+// -----------------------------------------------------------------------------------------
+// On each pass of the main loop (in DS99.c) we want to clear out the joystick and 
+// keyboard information and re-accumulate any joystick presses or keyboard presses.
+// -----------------------------------------------------------------------------------------
+ITCM_CODE void TMS9901_ClearJoyKeyData(void)
 {
-    FUNCTION_ENTRY( this, "ClearInterrupt", false );
+    memset(tms9901.Keyboard,  0x00, sizeof(tms9901.Keyboard));
+}
 
-    if( m_PinState[ level ][ 0 ] == 0 )
-    {
-        return;
-    }
-
-    m_PinState[ level ][ 0 ] = 0;
-    m_InterruptRequested--;
-
-    if( m_PinState[ level ][ 1 ] == 1 )
-    {
-        m_ActiveInterrupts--;
-        if( m_ActiveInterrupts == 0 )
+// -----------------------------------------------------------------------------------------
+// Right now we are only handling VDP interrupts. The Timer is only used for 
+// Cassette IO and we don't handle any external interupt sources.
+// -----------------------------------------------------------------------------------------
+ITCM_CODE void TMS9901_RaiseVDPInterrupt(void)
+{
+    if (!tms9901.VDPIntteruptInProcess)                     // Do nothing if we've already fired this interrupt...
+    {  
+        tms9901.VDPIntteruptInProcess = 1;                  // Remember that we raised this interrupt
+        if (tms9901.PinState[PIN_VDP_INT] == PIN_HIGH)      // Raise the interrupt if the CPU wants to see it
         {
-            ClearInterrupt( 1 );
+            TMS9900_RaiseInterrupt();                       // Tell the TMS9900 that we have an interrupt...
         }
     }
 }
 
+ITCM_CODE void TMS9901_ClearVDPInterrupt(void)
+{
+    if (tms9901.VDPIntteruptInProcess) 
+    {
+        tms9901.VDPIntteruptInProcess = 0;                  // Remember that we cleared this interrupt
+        if (tms9901.PinState[PIN_VDP_INT] == PIN_HIGH)      // Clear the interrupt if the CPU wants to see it
+        {
+            TMS9900_ClearInterrupt();                       // Tell the TMS9900 that we have cleared an interrupt...
+        }
+    }
+}
+
+// End of file...

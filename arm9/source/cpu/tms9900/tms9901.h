@@ -1,106 +1,73 @@
-// --------------------------------------------------------------------------
-// The original version of this file came from TI-99/Sim from Marc Rousseau:
+// =====================================================================================
+// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// https://www.mrousseau.org/programs/ti99sim/
+// Copying and distribution of this emulator, it's source code and associated 
+// readme files, with or without modification, are permitted in any medium without 
+// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The code has been altered from its original to be streamlined, and heavily
-// optmized for the DS CPU and run as fast as possible on the 67MHz handheld.
-//
-// This modified code is released under the same GPL License as mentioned in
-// Marc's original copyright statement below.
-// --------------------------------------------------------------------------
+// The TI99DS emulator is offered as-is, without any warranty.
+// =====================================================================================
 
+#ifndef TMS9901_H_
+#define TMS9901_H_
 
-//----------------------------------------------------------------------------
-//
-// File:        tms9901.hpp
-// Date:        18-Dec-2001
-// Programmer:  Marc Rousseau
-//
-// Description:
-//
-// Copyright (c) 2001-2004 Marc Rousseau, All Rights Reserved.
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
-//
-// Revision History:
-//
-//----------------------------------------------------------------------------
+#include <nds.h>
+#include <string.h>
 
-#ifndef TMS9901_HPP_
-#define TMS9901_HPP_
-
-#include <stdbool.h>
-
-typedef signed char             INT8;
-typedef unsigned char           UINT8;
-typedef signed short            INT16;
-typedef unsigned short          UINT16;
-typedef signed int              INT32;
-typedef unsigned int            UINT32;
-typedef signed long long int    INT64;  // C99 C++11
-typedef unsigned long long int  UINT64; // C99 C++11
-typedef char                    CHAR;
-typedef unsigned short          ADDRESS;
-
-typedef UINT8(*TRAP_FUNCTION)( void *, int, int, ADDRESS, UINT8 );
-typedef UINT16(*BREAKPOINT_FUNCTION)( void *, ADDRESS, int, UINT16, int, int );
-
-#define true                 1
-#define false                0
-
-typedef struct _sJoystickInfo
+enum KEYS
 {
-    int     isPressed;
-    int      x_Axis;
-    int      y_Axis;
-} sJoystickInfo;
+    TMS_KEY_NONE,
+    
+    TMS_KEY_1, TMS_KEY_2, TMS_KEY_3, TMS_KEY_4, TMS_KEY_5, TMS_KEY_6, TMS_KEY_7, TMS_KEY_8, TMS_KEY_9, TMS_KEY_0,
+    TMS_KEY_A, TMS_KEY_B, TMS_KEY_C, TMS_KEY_D, TMS_KEY_E, TMS_KEY_F, TMS_KEY_G, TMS_KEY_H, TMS_KEY_I, TMS_KEY_J,
+    TMS_KEY_K, TMS_KEY_L, TMS_KEY_M, TMS_KEY_N, TMS_KEY_O, TMS_KEY_P, TMS_KEY_Q, TMS_KEY_R, TMS_KEY_S, TMS_KEY_T,
+    TMS_KEY_U, TMS_KEY_V, TMS_KEY_W, TMS_KEY_X, TMS_KEY_Y, TMS_KEY_Z,
+    
+    TMS_KEY_ENTER,  TMS_KEY_SHIFT,   TMS_KEY_CONTROL, TMS_KEY_FUNCTION, TMS_KEY_SPACE,
+    TMS_KEY_PERIOD, TMS_KEY_COMMA,   TMS_KEY_DIV,     TMS_KEY_SEMI,     TMS_KEY_EQUALS,
+    
+    TMS_KEY_JOY1_UP, TMS_KEY_JOY1_DOWN, TMS_KEY_JOY1_LEFT, TMS_KEY_JOY1_RIGHT, TMS_KEY_JOY1_FIRE,
+    TMS_KEY_JOY2_UP, TMS_KEY_JOY2_DOWN, TMS_KEY_JOY2_LEFT, TMS_KEY_JOY2_RIGHT, TMS_KEY_JOY2_FIRE,
+    
+    TMS_KEY_MAX
+};
 
-typedef enum _VIRTUAL_KEY_E
+#define MAX_PINS        32      // 32 CRU pins that have to be handled in the TI99/4a
+
+enum PIN_STATE
 {
-    VK_NONE,
-    VK_ENTER, VK_SPACE, VK_COMMA, VK_PERIOD, VK_DIVIDE, VK_SEMICOLON, VK_EQUALS,
-    VK_CAPSLOCK, VK_SHIFT, VK_CTRL, VK_FCTN,
-    VK_0, VK_1, VK_2, VK_3, VK_4, VK_5, VK_6, VK_7, VK_8, VK_9,
-    VK_A, VK_B, VK_C, VK_D, VK_E, VK_F, VK_G, VK_H, VK_I, VK_J, VK_K, VK_L, VK_M,
-    VK_N, VK_O, VK_P, VK_Q, VK_R, VK_S, VK_T, VK_U, VK_V, VK_W, VK_X, VK_Y, VK_Z,
-    VK_MAX
-} VIRTUAL_KEY_E;
+    PIN_LOW = 0, 
+    PIN_HIGH           // Pins can either be high or low...
+};
 
+#define TIMER_ACTIVE    PIN_HIGH
+#define TIMER_INACTIVE  PIN_LOW
 
-extern bool                m_TimerActive;
-extern int                 m_ReadRegister;
-extern int                 m_Decrementer;
-extern int                 m_ClockRegister;
-extern UINT8               m_PinState[ 32 ][ 2 ];
-extern int                 m_InterruptRequested;
-extern int                 m_ActiveInterrupts;
-extern int                 m_LastDelta;
-extern UINT32              m_DecrementClock;
-extern bool                m_CapsLock;
-extern int                 m_ColumnSelect;
-extern int                 m_HideShift;
-extern UINT8               m_StateTable[ VK_MAX ];
-extern sJoystickInfo       m_Joystick[ 2 ];
+// ---------------------------------------------------------
+// Some special pins useful for keyboard decoding logic...
+// ---------------------------------------------------------
+#define PIN_TIMER_OR_IO     0
+#define PIN_VDP_INT         2
+#define PIN_COL1            18
+#define PIN_COL2            19
+#define PIN_COL3            20
+#define PIN_ALPHA_LOCK      21
 
-extern const char *GetName( ) ;
-extern void WriteCRU( ADDRESS cru, UINT8 count, UINT16 data ) ;
-extern UINT16 ReadCRU( ADDRESS cru, UINT8 count) ;
-extern void UpdateTimer( UINT32 ) ;
-extern void tms9901_SignalInterrupt( int ) ;
-extern void tms9901_ClearInterrupt( int ) ;
+typedef struct _TMS9901
+{
+    u8      Keyboard[TMS_KEY_MAX];      // Main TI-99/4a Keyboard plus joystick inputs for both P1 and P2
+    u8      PinState[MAX_PINS];         // The state of the 32 PINs
+    u8      CapsLock;                   // Set to '1' if the Caps Lock is active
+    u8      VDPIntteruptInProcess;      // Set to '1' if the VDP interrupt is in process
+} TMS9901;
 
-extern void TMS9901_Reset(void);
-#endif
+extern TMS9901 tms9901;
+
+extern void     TMS9901_Reset(void);
+extern void     TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num);
+extern u16      TMS9901_ReadCRU(u16 cruAddress, u8 num);
+extern void     TMS9901_ClearJoyKeyData(void);
+extern void     TMS9901_RaiseVDPInterrupt(void);
+extern void     TMS9901_ClearVDPInterrupt(void);
+
+#endif //TMS9901_H_

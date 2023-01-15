@@ -687,8 +687,8 @@ ITCM_CODE void WrData9918(byte value)
 }
 
 
-extern void tms9901_SignalInterrupt( int ) ;
-extern void tms9901_ClearInterrupt( int ) ;
+extern void TMS9901_RaiseVDPInterrupt(void);
+extern void TMS9901_ClearVDPInterrupt(void);
 
 
 /** WrCtrl9918() *********************************************/
@@ -705,7 +705,7 @@ ITCM_CODE void WrCtrl9918(byte value)
     VAddr = ((VAddr&0x00FF)|((u16)value<<8))&0x3FFF;                                // Set the high byte of the video address always
     if (value & 0x80)
     {
-        if (Write9918(value&0x07,VAddr&0x00FF)) tms9901_SignalInterrupt(2);         // Might generate an IRQ if we end up enabling interrupts and VBlank set
+        if (Write9918(value&0x07,VAddr&0x00FF)) TMS9901_RaiseVDPInterrupt();       // Might generate an IRQ if we end up enabling interrupts and VBlank set
     }
     else if (!(value & 0x40)) {VDPDlatch = pVDPVidMem[VAddr]; VAddr = (VAddr+1)&0x3FFF;} // As long as we're not read inhibited (either uppper 2 bits set), read ahead
   }
@@ -728,7 +728,7 @@ ITCM_CODE byte RdCtrl9918(void)
   VDPStatus &= 0x1F; // Top bits are cleared on a read... 
   VDPCtrlLatch = 0;
     
-  tms9901_ClearInterrupt(2);    // This is the VDP interrupt for the TMS9901/TMS9900
+  TMS9901_ClearVDPInterrupt();    // This is the VDP interrupt for the TMS9901/TMS9900
 
   return(data);
 }

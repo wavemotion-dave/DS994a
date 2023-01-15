@@ -175,7 +175,7 @@ ITCM_CODE u32 LoopTMS9900()
     // Refresh VDP 
     if(Loop9918()) 
     {
-      tms9901_SignalInterrupt(2);
+        TMS9901_RaiseVDPInterrupt();
     }
     
     // Drop out unless end of screen is reached 
