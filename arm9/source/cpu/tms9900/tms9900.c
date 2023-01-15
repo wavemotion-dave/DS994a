@@ -53,14 +53,10 @@
 
 #define MAX_CART_SIZE    (512*1024)     // 512K maximum cart size...
 
-extern UINT8 WrCtrl9918(UINT8 value);
-extern UINT8 RdData9918(void);
-extern UINT8 RdCtrl9918(void);
 extern void  ti_handle_sound(UINT16 value);
 
 extern UINT32 debug[];
 
-#define nullptr NULL
 static UINT16   parity[ 256 ] __attribute__((section(".dtcm")));
 
 UINT8           Memory[0x10000];            // 64K of CPU Memory Space
@@ -103,12 +99,8 @@ UINT8 BankMasks[256+1];
 #define TMS5220_BL	0x40	// Buffer Low
 #define TMS5220_BE	0x20	// Buffer Empty
 
-
-#define FUNCTION_ENTRY(a,b,c)   // Nothing
-
 void InvalidOpcode( )
 {
-    FUNCTION_ENTRY( nullptr, "InvalidOpcode", true );
 }
 
 void TI_Reset( )
@@ -126,6 +118,7 @@ void TMS9900_Reset(char *szGame)
     InitOpCodeLookup( );
     
     // Fill in the BankMasks[] for any number of possible banks
+    // up to the full limit of 256 banks (2MB of Cart Space!!)
     for (unsigned numBanks=0; numBanks<=256; numBanks++)
     {
         if      (numBanks <= 2)    BankMasks[numBanks] = 0x01;
@@ -198,11 +191,11 @@ void TMS9900_Reset(char *szGame)
         MemFlags[address] |= MEMFLG_CART;   // Bank Write Data
     }
     
-    bankOffset = 0x00000000;
-    bCPUIdleRequest = 0;
-    gromAddress = 0;
-    m_GromWriteShift = 8;
-    m_GromReadShift = 8;
+    bankOffset = 0x00000000;                // No cart banking to start
+    bCPUIdleRequest = 0;                    // No IDLE instruction seen
+    gromAddress = 0;                        // GROM address starts at 0
+    m_GromWriteShift = 8;                   // And GROM shifts are both 8
+    m_GromReadShift = 8;                    // ..
     
     // ---------------------------------------------------------
     // Now setup for all the CART and Console roms ...
@@ -275,7 +268,7 @@ void TMS9900_Reset(char *szGame)
         }
         else if (numRead > 0x2000)
         {
-            UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
+            UINT16 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
             bankMask = BankMasks[numBanks];
         }
         
@@ -304,16 +297,18 @@ void TMS9900_Reset(char *szGame)
         int numRead = fread(CartMem, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);    
         memcpy(&Memory[0x6000], CartMem, 0x2000);   // First bank loaded into main memory
-        UINT8 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
+        UINT16 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
         bankMask = BankMasks[numBanks];
     }
     
     AccurateEmulationFlags = 0x00;                  // Default to fast emulation... if we turn on DISK access or have an IDLE game, we will flip this
     
+    ClockCycleCounter = 0;
+    
     TI_Reset( );
     TMS9901_Reset( );
-    ResetClocks();
 }
+
 
 
 void SignalInterrupt( UINT8 level )
@@ -326,11 +321,6 @@ void ClearInterrupt( UINT8 level )
 {
     InterruptFlag &= ~( 1 << level );
     InterruptOrTimerPossible = m_ClockRegister | InterruptFlag;
-}
-
-void ResetClocks( )
-{
-    ClockCycleCounter = 0;
 }
 
 
@@ -414,21 +404,18 @@ sOpCode OpCodes[ 70 ] __attribute__((section(".dtcm"))) =
 
 
 //-------------------------------------------------------------------
-// A GROM increment shuold take into account that it's only really 
+// A GROM increment should take into account that it's only really 
 // incrementing and wrapping at the 8K boundary. But I've yet to 
 // find any game that relies on the wrap and games are always setting
 // the address before reads/increments and so this saves us some 
 // processing power necessary for the old DS-handhelds.
 //-------------------------------------------------------------------
 //#define GROM_INC(x) ((x&0xE000) | ((x+1)&0x1FFF))
-#define GROM_INC(x) (x+1)
 
-inline UINT8 ReadGROM(void)
+static inline UINT8 ReadGROM(void)
 {
     ClockCycleCounter += 19;
-    UINT8 retval = MemGROM[gromAddress++];
-    //gromAddress = GROM_INC(gromAddress);
-    return retval;
+    return MemGROM[gromAddress++];
 }
 
 ITCM_CODE UINT8 ReadGROMAddress(void)
@@ -458,6 +445,8 @@ ITCM_CODE void WriteGROMAddress(UINT8 data)
 
 inline UINT16 ReadPCMemoryW( UINT16 address )
 {
+    // We've already compensated the instruction table by 2 cycles for the PC read... extra 4 cycles penalty enforced below...
+    
     UINT8 flags = MemFlags[ address ];
     if (flags)
     {
@@ -539,11 +528,11 @@ ITCM_CODE UINT8 ReadMemoryB( UINT16 address )
 {
     UINT8 flags = MemFlags[ address ];
 
-    ClockCycleCounter += 2;
+    // Add 4 clock cycles if we're accessing 8-bit memory
+    ClockCycleCounter += (flags & MEMFLG_8BIT) ? 6:2;
     
     if (flags)
     {
-        ClockCycleCounter += 4; // Any flag implies 8-bit access and add 4 cycle penalty
         if (flags & MEMFLG_VDPR)
         {
             if (address & 2)
@@ -615,7 +604,7 @@ ITCM_CODE void WriteMemoryW( UINT16 address, UINT16 value )
         }
         else if (flags & MEMFLG_VDPW)
         {
-            if (address & 2) {if (WrCtrl9918(value>>8)) tms9901_SignalInterrupt(2);}
+            if (address & 2) WrCtrl9918(value>>8);
             else WrData9918(value>>8);
         }
         else if (flags & MEMFLG_GROMW)
@@ -683,7 +672,7 @@ ITCM_CODE void WriteMemoryB( UINT16 address, UINT8 value )
         }
         else if (flags & MEMFLG_VDPW)
         {
-            if (address & 2) {if (WrCtrl9918(value)) tms9901_SignalInterrupt(2);}
+            if (address & 2) WrCtrl9918(value);
             else WrData9918(value);
         }
         else if (flags & MEMFLG_GROMW)
@@ -881,6 +870,12 @@ ITCM_CODE void TMS9900_Run()
 {
     UINT32 myCounter = ClockCycleCounter+228;
 
+    // --------------------------------------------------------------------
+    // Accurate emulation is enabled if we see an IDLE instruction or
+    // if the disk controller access has been enabled... otherwise most
+    // games don't use either and we save the precious DS CPU cycles and
+    // not handle them for most games...
+    // --------------------------------------------------------------------
     if (AccurateEmulationFlags)
     {
         do
@@ -901,12 +896,12 @@ ITCM_CODE void TMS9900_Run()
                 curOpCode = ReadPCMemoryW( PC ); PC+=2;
                 sOpCode *op = ((sOpCode**)0x06860000)[curOpCode];
                 ClockCycleCounter += op->clocks;
-                ((void (*)( ))op->function )( );
+                op->function();
             }
         }
         while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
     }
-    else
+    else    // Faster emulation below... no DISK support nor IDLE handling
     {
         do
         {
@@ -918,14 +913,14 @@ ITCM_CODE void TMS9900_Run()
             curOpCode = ReadPCMemoryW( PC ); PC+=2;
             sOpCode *op = ((sOpCode**)0x06860000)[curOpCode];
             ClockCycleCounter += op->clocks;
-            ((void (*)( ))op->function )( );
+            op->function();
         }
         while(ClockCycleCounter < myCounter);    // There are 228 CPU clocks per line on the TI
     }
 }
 
 
-inline void SetFlags_LAE8( UINT8 val )
+ITCM_CODE void SetFlags_LAE8( UINT8 val )
 {
     if (val)
     {
@@ -1495,7 +1490,7 @@ ITCM_CODE void opcode_SLA( )
 //-----------------------------------------------------------------------------
 //   SRC    Format: V   Op-code: 0x0B00     Status: L A E C - - -
 //-----------------------------------------------------------------------------
-ITCM_CODE void opcode_SRC( )
+void opcode_SRC( )
 {
     int reg = curOpCode & 0x000F;
     unsigned int count = ( curOpCode >> 4 ) & 0x000F;
@@ -1635,7 +1630,7 @@ void opcode_JNO( )
 //-----------------------------------------------------------------------------
 //   JL     Format: II  Op-code: 0x1A00     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JL( )
+ITCM_CODE void opcode_JL( )
 {
     if( !( ST & ( TMS_LOGICAL | TMS_EQUAL )))
     {
@@ -1646,7 +1641,7 @@ void opcode_JL( )
 //-----------------------------------------------------------------------------
 //   JH     Format: II  Op-code: 0x1B00     Status: - - - - - - -
 //-----------------------------------------------------------------------------
-void opcode_JH( )
+ITCM_CODE void opcode_JH( )
 {
     if(( ST & TMS_LOGICAL ) && !( ST & TMS_EQUAL ))
     {
@@ -1755,7 +1750,7 @@ ITCM_CODE void opcode_XOR( )
 //-----------------------------------------------------------------------------
 //   XOP    Format: IX  Op-code: 0x2C00     Status: - - - - - - X
 //-----------------------------------------------------------------------------
-void opcode_XOP( )
+ITCM_CODE void opcode_XOP( )
 {
     UINT16 address = GetAddress( curOpCode, 2 );
     int level = (( curOpCode >> 4 ) & 0x003C ) + 64;
@@ -1981,7 +1976,7 @@ void opcode_CB( )
 //-----------------------------------------------------------------------------
 //   A      Format: I   Op-code: 0xA000     Status: L A E C O - -
 //-----------------------------------------------------------------------------
-void opcode_A( )
+ITCM_CODE void opcode_A( )
 {
     UINT16 srcAddress = GetAddress( curOpCode, 2 );
     UINT32 src = ReadMemoryW( srcAddress );
@@ -1999,7 +1994,7 @@ void opcode_A( )
 //-----------------------------------------------------------------------------
 //   AB     Format: I   Op-code: 0xB000     Status: L A E C O P -
 //-----------------------------------------------------------------------------
-void opcode_AB( )
+ITCM_CODE void opcode_AB( )
 {
     UINT16 srcAddress = GetAddress( curOpCode, 1 );
     UINT32 src = ReadMemoryB( srcAddress );

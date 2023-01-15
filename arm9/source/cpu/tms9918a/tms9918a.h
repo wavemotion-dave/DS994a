@@ -76,7 +76,7 @@ extern void RefreshLine3(u8 uY);
 
 extern u8 pVDPVidMem[];
 
-extern byte WrCtrl9918(byte value);
+extern void WrCtrl9918(byte value);
 extern void WrData9918(byte value);
 extern byte RdData9918(void);
 extern byte RdCtrl9918(void);

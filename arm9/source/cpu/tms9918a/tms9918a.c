@@ -687,6 +687,8 @@ ITCM_CODE void WrData9918(byte value)
 }
 
 
+extern void tms9901_SignalInterrupt( int ) ;
+extern void tms9901_ClearInterrupt( int ) ;
 
 
 /** WrCtrl9918() *********************************************/
@@ -694,28 +696,25 @@ ITCM_CODE void WrData9918(byte value)
 /** in this function may cause an IRQ to be generated. In   **/
 /** this case, WrCtrl9918() returns 1. Returns 0 otherwise. **/
 /*************************************************************/
-ITCM_CODE byte WrCtrl9918(byte value) 
+ITCM_CODE void WrCtrl9918(byte value) 
 {
   if(VDPCtrlLatch)  // Write the high byte of the video address
   { 
     VDPCtrlLatch=0; // Set the VDP flip-flop so we do the low byte next
       
     VAddr = ((VAddr&0x00FF)|((u16)value<<8))&0x3FFF;                                // Set the high byte of the video address always
-    if (value & 0x80) return(Write9918(value&0x07,VAddr&0x00FF));                   // Might generate an IRQ if we end up enabling interrupts and VBlank set
-    if (!(value & 0x40)) {VDPDlatch = pVDPVidMem[VAddr]; VAddr = (VAddr+1)&0x3FFF;} // As long as we're not read inhibited (either uppper 2 bits set), read ahead
+    if (value & 0x80)
+    {
+        if (Write9918(value&0x07,VAddr&0x00FF)) tms9901_SignalInterrupt(2);         // Might generate an IRQ if we end up enabling interrupts and VBlank set
+    }
+    else if (!(value & 0x40)) {VDPDlatch = pVDPVidMem[VAddr]; VAddr = (VAddr+1)&0x3FFF;} // As long as we're not read inhibited (either uppper 2 bits set), read ahead
   }
   else  // Write the low byte of the video address / control register
   {
       VDPCtrlLatch=1;   // Set the VDP flip-flow so we do the high byte next
       VAddr=(VAddr&0xFF00)|value; 
   }
-
-  /* No interrupts */
-  return(0);
 }
-
-extern void tms9901_SignalInterrupt( int ) ;
-extern void tms9901_ClearInterrupt( int ) ;
 
 
 /** RdCtrl9918() *********************************************/

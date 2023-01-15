@@ -99,8 +99,6 @@ extern const char *GetName( ) ;
 extern void WriteCRU( ADDRESS cru, UINT8 count, UINT16 data ) ;
 extern UINT16 ReadCRU( ADDRESS cru, UINT8 count) ;
 extern void UpdateTimer( UINT32 ) ;
-extern void HardwareReset( ) ;
-extern void SoftwareReset( ) ;
 extern void tms9901_SignalInterrupt( int ) ;
 extern void tms9901_ClearInterrupt( int ) ;
 

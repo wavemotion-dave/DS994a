@@ -138,7 +138,7 @@ ITCM_CODE void WriteCRU_Inner( ADDRESS address, UINT16 data )
                 }
                 else if( address == 15 )
                 {
-                    SoftwareReset( );
+                    TMS9901_Reset();
                 }
             }
             else  // We're in I/O mode
@@ -405,18 +405,6 @@ ITCM_CODE void UpdateTimer( UINT32 clockCycles )
     }
 }
 
-void HardwareReset( )
-{
-    FUNCTION_ENTRY( this, "HardwareReset", true );
-    TMS9901_Reset();
-}
-
-void SoftwareReset( )
-{
-    FUNCTION_ENTRY( this, "SoftwareReset", true );
-    TMS9901_Reset();
-}
-
 ITCM_CODE void tms9901_SignalInterrupt( int level )
 {
     FUNCTION_ENTRY( this, "SignalInterrupt", false );
@@ -433,6 +421,7 @@ ITCM_CODE void tms9901_SignalInterrupt( int level )
     if( m_PinState[ level ][ 1 ] == 1 )
     {
         m_ActiveInterrupts++;
+        if (m_ActiveInterrupts > 1) debug[2]++;
         SignalInterrupt( 1 );
     }
 }

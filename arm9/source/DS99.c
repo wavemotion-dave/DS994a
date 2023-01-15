@@ -612,8 +612,12 @@ ITCM_CODE void ds99_main(void)
             emuFps = emuActFrames;
             if (myConfig.showFPS)
             {
-                if (emuFps == 61) emuFps=60;
-                else if (emuFps == 59) emuFps=60;            
+                // If not asked to run full-speed... adjust FPS so it's stable near 60
+                if (myConfig.showFPS != 2)
+                {
+                    if (emuFps == 61) emuFps=60;
+                    else if (emuFps == 59) emuFps=60;            
+                }
                 if (emuFps/100) szChai[0] = '0' + emuFps/100;
                 else szChai[0] = ' ';
                 szChai[1] = '0' + (emuFps%100) / 10;
