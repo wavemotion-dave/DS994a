@@ -1,7 +1,7 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
+// Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
@@ -13,7 +13,7 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.5b"
+#define VERSIONDS99 "0.6"
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
@@ -108,5 +108,7 @@ extern void ResetStatusFlags(void);
 extern void ReadFileCRCAndConfig(void);
 extern void DisplayStatusLine(bool bForce);
 extern void ResetTI(void);
+extern void DiskSave(char *filename);
+extern void DrawCleanBackground(void);
 
 #endif

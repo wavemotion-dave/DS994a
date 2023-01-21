@@ -69,8 +69,6 @@ u8 driveWriteCounter     = 0;  // Set to some non-zero value to show 'DISK WRITE
 
 #define ERR_DEVICEERROR     6
 
-extern unsigned int debug[];
-
 void disk_cru_write(u16 address, u8 data)
 {
     extern u8 DiskDSR[];
@@ -81,11 +79,11 @@ void disk_cru_write(u16 address, u8 data)
             bDiskDeviceInstalled = data;
             if (data)
             {
-                memcpy(&Memory[0x4000], DiskDSR, 0x2000);
+                memcpy(&MemCPU[0x4000], DiskDSR, 0x2000);
             }
             else
             {
-                memset(&Memory[0x4000], 0xFF, 0x2000);
+                memset(&MemCPU[0x4000], 0xFF, 0x2000);
             }
             break;
             
@@ -207,7 +205,6 @@ void WriteTICCRegister(u16 address, u8 val)
     }
 }
 
-#define PC ProgramCounter
 void HandleTICCSector(void)
 {
     bool success = true;
@@ -215,18 +212,18 @@ void HandleTICCSector(void)
     
     if (driveSelected != 1) // We only support DSK1
     {
-        Memory[0x8350] = ERR_DEVICEERROR;  //tbd
-        PC = 0x42a0;       // error 31 (not found)        
+        MemCPU[0x8350] = ERR_DEVICEERROR;  //tbd
+        tms9900.PC = 0x42a0;       // error 31 (not found)        
     }
     
     // 834A = sector number
     // 834C = drive (1-3)
     // 834D = 0: write, anything else = read
     // 834E = VDP buffer address
-    u8  drive        = Memory[0x834C];
-    u8  isRead       = Memory[0x834D];
-    u16 sectorNumber = (Memory[0x834A]<<8) | Memory[0x834B];
-    u16 destVDP      = (Memory[0x834E]<<8) | Memory[0x834F];
+    u8  drive        = MemCPU[0x834C];
+    u8  isRead       = MemCPU[0x834D];
+    u16 sectorNumber = (MemCPU[0x834A]<<8) | MemCPU[0x834B];
+    u16 destVDP      = (MemCPU[0x834E]<<8) | MemCPU[0x834F];
     u32 index        = (sectorNumber * 256);
     
     if (drive == 1)
@@ -237,15 +234,15 @@ void HandleTICCSector(void)
             // Move the 256 byte sector from the .DSK image to the VDP memory
             // -----------------------------------------------------------------
             memcpy(&pVDPVidMem[destVDP], &DiskImage[index], 256);
-            *((u16*)&Memory[0x834A]) = sectorNumber;     // fill in the return data
-            Memory[0x8350] = 0;                             // should still be 0 if no error occurred
+            *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
+            MemCPU[0x8350] = 0;                             // should still be 0 if no error occurred
             driveReadCounter = 2;
         } 
         else  // Must be write
         {
             memcpy(&DiskImage[index], &pVDPVidMem[destVDP],256);
-            *((u16*)&Memory[0x834A]) = sectorNumber;     // fill in the return data
-            Memory[0x8350] = 0;                             // should still be 0 if no error occurred
+            *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
+            MemCPU[0x8350] = 0;                             // should still be 0 if no error occurred
             driveWriteCounter = 2;
         } 
     } else success = false;
@@ -253,12 +250,12 @@ void HandleTICCSector(void)
     
     if (success)
     {
-        PC = 0x4676;        // return from read or write (write normally goes through read to verify)    
+        tms9900.PC = 0x4676;        // return from read or write (write normally goes through read to verify)    
     }
     else
     {
-        Memory[0x8350] = ERR_DEVICEERROR;  //tbd
-        PC = 0x42a0;       // error 31 (not found)
+        MemCPU[0x8350] = ERR_DEVICEERROR;  //tbd
+        tms9900.PC = 0x42a0;       // error 31 (not found)
     }
 }
 

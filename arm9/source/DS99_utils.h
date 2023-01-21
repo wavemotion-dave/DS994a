@@ -1,7 +1,7 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
+// Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
@@ -10,21 +10,30 @@
 #ifndef _DS99_UTILS_H_
 #define _DS99_UTILS_H_
 
-#define MAX_ROMS            512
-#define MAX_ROM_LENGTH      160
+#define MAX_ROMS                512
+#define MAX_ROM_LENGTH          160
 
-#define MAX_CONFIGS         750
-#define CONFIG_VER          0x0002
+#define MAX_CONFIGS             750
+#define CONFIG_VER              0x0002
 
-#define TI99ROM             0x01
-#define DIRECT              0x02
+#define TI99ROM                 0x01
+#define DIRECT                  0x02
 
-#define ID_SHM_CANCEL       0x00
-#define ID_SHM_YES          0x01
-#define ID_SHM_NO           0x02
+#define ID_SHM_CANCEL           0x00
+#define ID_SHM_YES              0x01
+#define ID_SHM_NO               0x02
 
-#define DPAD_NORMAL         0
-#define DPAD_DIAGONALS      1
+#define DPAD_NORMAL             0
+#define DPAD_DIAGONALS          1
+
+#define MACH_TYPE_NORMAL32K     0
+#define MACH_TYPE_SAMS512K      1
+
+#define CART_TYPE_NORMAL        0
+#define CART_TYPE_SUPERCART     1
+#define CART_TYPE_MINIMEM       2
+#define CART_TYPE_MBX_NO_RAM    3
+#define CART_TYPE_MBX_WITH_RAM  4
 
 typedef struct {
   char szName[MAX_ROM_LENGTH];
@@ -47,8 +56,8 @@ struct __attribute__((__packed__)) Config_t
     u8  RAMMirrors;
     u8  keyboard;
     u8  emuSpeed;
-    u8  reservedE;
-    u8  reservedF;
+    u8  machineType;
+    u8  cartType;
     u8  reservedG;
     u8  reservedH;
     u8  reservedI;
@@ -60,7 +69,6 @@ struct __attribute__((__packed__)) Config_t
     u8  reservedZ;
     u32 reservedA32;
 };
- 
 
 extern struct Config_t myConfig;
 
@@ -74,6 +82,7 @@ extern int ucGameChoice;
 extern u8 showMessage(char *szCh1, char *szCh2);
 extern void TI99FindFiles(void);
 extern void tiDSChangeOptions(void);
+extern void DrawCleanBackground(void);
 
 extern void AffChaine(int iX,int iY,int iScr,char *szMessage);
 extern void dsPrintValue(int iX,int iY,int iScr,char *szMessage);

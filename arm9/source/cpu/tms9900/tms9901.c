@@ -39,10 +39,12 @@
 // space  L   K   J   H   ;  left1  left2
 // enter  O   I   U   Y   P  right1 right2
 // (none) 9   8   7   6   0  down1  down2
-// fctn   2   3   4   5   1  up1    up2 
+// fctn   2   3   4   5   1  up1    up2      [AlphaLock]
 // shift  S   D   F   G   A  (none) (none)
 // ctrl   W   E   R   T   Q  (none) (none)
 // (none) X   C   V   B   Z  (none) (none)
+
+// Alpha Lock is special... it's enabled via CRU[>15] and is read back on row 4... so it screws up joysticks when enabled. Sigh.
 
 
 // ------------------------------------------------------------------------------------------------------------
@@ -98,7 +100,6 @@ void TMS9901_Reset(void)
 ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
 {
     if (num == 0) num = 16;     // A zero means write all 16 bits...
-    if (cruAddress < 0x880) cruAddress &= 0x1F;
     
     for (u8 bitNum = 0; bitNum < num; bitNum++)
     {
@@ -107,24 +108,33 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         // Enable or Disable the TI Disk DSR... pass this request along to the disk controller.
         // --------------------------------------------------------------------------------------
-        if (cruAddress >= 0x880 && cruAddress < 0x888) 
+        if (cruAddress & 0xFC00)
         {
-            disk_cru_write(cruAddress, dataBit);
+            if ((cruAddress & 0xFF8) == 0x880)    // Disk support from >880 to >888 (CRU base >1000)
+            {
+                disk_cru_write(cruAddress, dataBit);
+            }
+            else if ((cruAddress & 0xFFE) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            {
+                SAMS_cru_write(cruAddress, dataBit);
+            }
         }
-        else if (cruAddress < MAX_PINS)    // This is the internal console CRU bits... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
+        else  // This is the internal console CRU bits below CRU base >400... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
         {
+            u8 cruA = cruAddress & 0x1F; // Map down to 32 bits...
+            
             // -------------------------------------------------------------------------------------------------
             // Bit 0 is special as it defines if we are in Timer or I/O mode... We don't yet handle timer
             // mode but it's only used for Cassette IO which is not currently supported but we track it still.
             // -------------------------------------------------------------------------------------------------
-            if (cruAddress == PIN_TIMER_OR_IO)  tms9901.PinState[PIN_TIMER_OR_IO]  =  (dataBit ? TIMER_ACTIVE : TIMER_INACTIVE);
+            if (cruA == PIN_TIMER_OR_IO) tms9901.PinState[PIN_TIMER_OR_IO] = (dataBit ? TIMER_ACTIVE : TIMER_INACTIVE);
 
             if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)
             {
                 // --------------------------------------------------------------------------------------
                 // Do nothing... we don't support this yet except for reset handling
                 // --------------------------------------------------------------------------------------
-                if (cruAddress == 15) TMS9901_Reset();
+                if (cruA == 15) TMS9901_Reset();
             }
             else    // We're in I/O Mode
             {
@@ -132,7 +142,7 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
                 // Just save the data bit (0 or 1) for the pin in I/O mode. We can decode the keyboard 
                 // column and alpha-lock easily enough with the use of defines from tms9901.h
                 // --------------------------------------------------------------------------------------
-                tms9901.PinState[cruAddress] = dataBit;
+                tms9901.PinState[cruA] = dataBit;
             }
         }
         cruAddress++;   // Move to the next CRU bit (if any)
@@ -183,14 +193,20 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
                     case 1:     bitState = 1;                                           break;      // We don't allow external interrupts yet
                     case 2:     bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;      // Pin 2 is for the VDP interrupt... report if that's set
                         
-                    case 3:     // Keyboard Row 1
-                    case 4:     // Keyboard Row 2
-                    case 5:     // Keyboard Row 3
-                    case 6:     // Keyboard Row 4
-                    case 7:     // Keyboard Row 5
-                    case 8:     // Keyboard Row 6
-                    case 9:     // Keyboard Row 7
-                    case 10:    // Keyboard Row 8
+                    case 7:     // Keyboard Row 4
+                                if (tms9901.PinState[PIN_ALPHA_LOCK] == PIN_LOW) 
+                                {
+                                    // The Alpha Lock is scanned on row 4 but only when the Alpha Lock scanning pin was driven LOW
+                                    if (tms9901.CapsLock) bitState = 0;
+                                }
+                                // No break is INTENTIONAL!
+                    case 3:     // Keyboard Row 0
+                    case 4:     // Keyboard Row 1
+                    case 5:     // Keyboard Row 2
+                    case 6:     // Keyboard Row 3
+                    case 8:     // Keyboard Row 5
+                    case 9:     // Keyboard Row 6
+                    case 10:    // Keyboard Row 7
                         {
                             // ------------------------------------------------------------------------------------------------------------------------
                             // This handles both Keybaord and Joystick (P1 and P2) inputs in a unified manner... to the TI-99/4a, it's all the same.

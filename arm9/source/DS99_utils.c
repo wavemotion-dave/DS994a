@@ -1,8 +1,8 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The TI99DS emulator is offered as-is, without any warranty.
@@ -20,8 +20,7 @@
 #include "DS99_utils.h"
 
 #include "ecranHaut.h"
-#include "ecranBas.h"
-#include "ecranBasSel.h"
+#include "options.h"
 
 #include "CRC32.h"
 
@@ -110,6 +109,22 @@ const char szKeyName[MAX_KEY_OPTIONS][18] = {
 };
 
 
+void DrawCleanBackground(void)
+{
+    // ---------------------------------------------------
+    // Put up a generic background for this mini-menu...
+    // ---------------------------------------------------
+    bg0b  = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
+    bg1b  = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
+    bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);
+    decompress(optionsTiles,  bgGetGfxPtr(bg0b), LZ77Vram);
+    decompress(optionsMap,  (void*) bgGetMapPtr(bg0b), LZ77Vram);
+    dmaCopy((void*) optionsPal,(void*)  BG_PALETTE_SUB,256*2);
+    unsigned short  dmaVal  = *(bgGetMapPtr(bg0b)+24*32);
+    dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
+    WAITVBL;
+}
+
 /*********************************************************************************
  * Show A message with YES / NO
  ********************************************************************************/
@@ -117,17 +132,16 @@ u8 showMessage(char *szCh1, char *szCh2) {
   u16 iTx, iTy;
   u8 uRet=ID_SHM_CANCEL;
   u8 ucGau=0x00, ucDro=0x00,ucGauS=0x00, ucDroS=0x00, ucCho = ID_SHM_YES;
-  
-  dmaCopy((void*) bgGetMapPtr(bg0b)+30*32*2,(void*) bgGetMapPtr(bg0b),32*24*2);
-  unsigned short dmaVal = *(bgGetMapPtr(bg0b)+24*32); 
-  dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
+
+  DrawCleanBackground();
+
   AffChaine(16-strlen(szCh1)/2,10,6,szCh1);
   AffChaine(16-strlen(szCh2)/2,12,6,szCh2);
   AffChaine(8,14,6,("> YES <"));
   AffChaine(20,14,6,("  NO   "));
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
-  while (uRet == ID_SHM_CANCEL) 
+  while (uRet == ID_SHM_CANCEL)
   {
     WAITVBL;
     if (keysCurrent() & KEY_TOUCH) {
@@ -170,7 +184,7 @@ u8 showMessage(char *szCh1, char *szCh2) {
       ucDroS = 0;
       ucGauS = 0;
     }
-    
+
     if (keysCurrent() & KEY_LEFT){
       if (!ucGau) {
         ucGau = 1;
@@ -185,11 +199,11 @@ u8 showMessage(char *szCh1, char *szCh2) {
           AffChaine(20,14,6,("  NO   "));
         }
         WAITVBL;
-      } 
+      }
     }
     else {
       ucGau = 0;
-    }  
+    }
     if (keysCurrent() & KEY_RIGHT) {
       if (!ucDro) {
         ucDro = 1;
@@ -204,25 +218,25 @@ u8 showMessage(char *szCh1, char *szCh2) {
           AffChaine(20,14,6,("  NO   "));
         }
         WAITVBL;
-      } 
+      }
     }
     else {
       ucDro = 0;
-    }  
+    }
     if (keysCurrent() & KEY_A) {
       uRet = ucCho;
     }
   }
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
-  
+
   InitBottomScreen();  // Could be generic or overlay...
-  
+
   return uRet;
 }
 
 void tiDSModeNormal(void) {
   REG_BG3CNT = BG_BMP8_256x256;
-  REG_BG3PA = (1<<8); 
+  REG_BG3PA = (1<<8);
   REG_BG3PB = 0;
   REG_BG3PC = 0;
   REG_BG3PD = (1<<8);
@@ -236,7 +250,6 @@ void tiDSModeNormal(void) {
 void TI99DSInitScreenUp(void) {
   videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
-  vramSetBankB(VRAM_B_MAIN_SPRITE);
   tiDSModeNormal();
 }
 
@@ -244,19 +257,19 @@ void TI99DSInitScreenUp(void) {
 /*********************************************************************************
  * Show The 14 games on the list to allow the user to choose a new game.
  ********************************************************************************/
-void dsDisplayFiles(u16 NoDebGame, u8 ucSel) 
+void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
   u8 maxLen;
   char szName2[80];
-  
+
   AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
   AffChaine(30,21,0,(NoDebGame+14<countTI ? ">" : " "));
   siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countTI);
   AffChaine(2,6,0, szName);
   for (ucBcl=0;ucBcl<14; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
-    if (ucGame < countTI) 
+    if (ucGame < countTI)
     {
       maxLen=strlen(gpFic[ucGame].szName);
       strcpy(szName,gpFic[ucGame].szName);
@@ -283,19 +296,19 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 /*********************************************************************************
  * Show The 14 DSKs on the list to allow the user to choose a new game.
  ********************************************************************************/
-void dsDisplayDsks(u16 NoDebGame, u8 ucSel) 
+void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
   u8 maxLen;
   char szName2[80];
-  
+
   AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
   AffChaine(30,21,0,(NoDebGame+14<countDSK ? ">" : " "));
   siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countDSK);
   AffChaine(2,6,0, szName);
   for (ucBcl=0;ucBcl<14; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
-    if (ucGame < countDSK) 
+    if (ucGame < countDSK)
     {
       maxLen=strlen(gpDsk[ucGame].szName);
       strcpy(szName,gpDsk[ucGame].szName);
@@ -323,7 +336,7 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
 // Standard qsort routine for the TI games - we sort all directory
 // listings first and then a case-insenstive sort of all games.
 // -------------------------------------------------------------------------
-int TI99Filescmp (const void *c1, const void *c2) 
+int TI99Filescmp (const void *c1, const void *c2)
 {
   FIC_TI99 *p1 = (FIC_TI99 *) c1;
   FIC_TI99 *p2 = (FIC_TI99 *) c2;
@@ -336,13 +349,13 @@ int TI99Filescmp (const void *c1, const void *c2)
       return -1;
   if ((p2->uType == DIRECT) && !(p1->uType == DIRECT))
       return 1;
-  return strcasecmp (p1->szName, p2->szName);        
+  return strcasecmp (p1->szName, p2->szName);
 }
 
 /*********************************************************************************
  * Find files (.bin) available - sort them for display.
  ********************************************************************************/
-void TI99FindFiles(void) 
+void TI99FindFiles(void)
 {
   u16 uNbFile;
   DIR *dir;
@@ -352,13 +365,13 @@ void TI99FindFiles(void)
   countTI=0;
 
   dir = opendir(".");
-  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS)) 
+  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS))
   {
     strcpy(szFile,pent->d_name);
-      
-    if(pent->d_type == DT_DIR) 
+
+    if(pent->d_type == DT_DIR)
     {
-      if (!( (szFile[0] == '.') && (strlen(szFile) == 1))) 
+      if (!( (szFile[0] == '.') && (strlen(szFile) == 1)))
       {
         strcpy(gpFic[uNbFile].szName,szFile);
         gpFic[uNbFile].uType = DIRECT;
@@ -378,36 +391,36 @@ void TI99FindFiles(void)
     }
   }
   closedir(dir);
-    
+
   // ----------------------------------------------
   // If we found any files, go sort the list...
   // ----------------------------------------------
   if (countTI)
   {
     qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
-  }    
+  }
 }
 
 /*********************************************************************************
  * Find files (.bin) available - sort them for display.
  ********************************************************************************/
-void TI99FindDskFiles(void) 
+void TI99FindDskFiles(void)
 {
   u16 uNbFile;
   DIR *dir;
   struct dirent *pent;
 
-  uNbFile=0;  
+  uNbFile=0;
   countDSK=0;
 
   dir = opendir(".");
-  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS)) 
+  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS))
   {
     strcpy(szFile,pent->d_name);
-      
-    if(pent->d_type == DT_DIR) 
+
+    if(pent->d_type == DT_DIR)
     {
-      if (!( (szFile[0] == '.') && (strlen(szFile) == 1))) 
+      if (!( (szFile[0] == '.') && (strlen(szFile) == 1)))
       {
         strcpy(gpDsk[uNbFile].szName,szFile);
         gpDsk[uNbFile].uType = DIRECT;
@@ -427,14 +440,14 @@ void TI99FindDskFiles(void)
     }
   }
   closedir(dir);
-    
+
   // ----------------------------------------------
   // If we found any files, go sort the list...
   // ----------------------------------------------
   if (countDSK)
   {
     qsort (gpDsk, countDSK, sizeof(FIC_TI99), TI99Filescmp);
-  }    
+  }
 }
 
 
@@ -451,12 +464,12 @@ char *TILoadDiskFile(void)
   AffChaine(7,5,0,"A=SELECT,  B=EXIT");
 
   TI99FindDskFiles();
-  
+
   chosenDSK = -1;
 
   nbRomPerPage = (countDSK>=14 ? 14 : countDSK);
   uNbRSPage = (countDSK>=5 ? 5 : countDSK);
-  
+
   if (ucDskAct>countDSK-nbRomPerPage)
   {
     firstRomDisplay=countDSK-nbRomPerPage;
@@ -468,7 +481,7 @@ char *TILoadDiskFile(void)
     romSelected=0;
   }
   dsDisplayDsks(firstRomDisplay,romSelected);
-    
+
   // -----------------------------------------------------
   // Until the user selects a file or exits the menu...
   // -----------------------------------------------------
@@ -498,7 +511,7 @@ char *TILoadDiskFile(void)
         ucHaut++;
         if (ucHaut>10) ucHaut=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else
     {
@@ -527,12 +540,12 @@ char *TILoadDiskFile(void)
         ucBas++;
         if (ucBas>10) ucBas=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucBas = 0;
     }
-      
+
     // -------------------------------------------------------------
     // Left and Right on the D-Pad will scroll 1 page at a time...
     // -------------------------------------------------------------
@@ -552,12 +565,12 @@ char *TILoadDiskFile(void)
         ucSBas++;
         if (ucSBas>10) ucSBas=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucSBas = 0;
     }
-      
+
     // -------------------------------------------------------------
     // Left and Right on the D-Pad will scroll 1 page at a time...
     // -------------------------------------------------------------
@@ -569,7 +582,7 @@ char *TILoadDiskFile(void)
         if (firstRomDisplay>nbRomPerPage) { firstRomDisplay -= nbRomPerPage; }
         else { firstRomDisplay = 0; }
         if (ucDskAct == 0) romSelected = 0;
-        if (romSelected > ucDskAct) romSelected = ucDskAct;          
+        if (romSelected > ucDskAct) romSelected = ucDskAct;
         ucSHaut=0x01;
         dsDisplayDsks(firstRomDisplay,romSelected);
       }
@@ -578,12 +591,12 @@ char *TILoadDiskFile(void)
         ucSHaut++;
         if (ucSHaut>10) ucSHaut=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucSHaut = 0;
     }
-    
+
     // -------------------------------------------------------------------------
     // They B key will exit out of the ROM selection without picking a new game
     // -------------------------------------------------------------------------
@@ -592,14 +605,14 @@ char *TILoadDiskFile(void)
       bDone=true;
       while (keysCurrent() & KEY_B);
     }
-      
+
     // -------------------------------------------------------------------
     // Any of these keys will pick the current ROM and try to load it...
     // -------------------------------------------------------------------
     if (keysCurrent() & KEY_A || keysCurrent() & KEY_Y || keysCurrent() & KEY_X)
     {
       if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
-          
+
       if (gpDsk[ucDskAct].uType != DIRECT)
       {
         bDone=true;
@@ -625,21 +638,21 @@ char *TILoadDiskFile(void)
         while (keysCurrent() & KEY_A);
       }
     }
-    
+
     // --------------------------------------------
     // If the filename is too long... scroll it.
     // --------------------------------------------
-    if (strlen(gpDsk[ucDskAct].szName) > 29) 
+    if (strlen(gpDsk[ucDskAct].szName) > 29)
     {
       ucFlip++;
-      if (ucFlip >= 25) 
+      if (ucFlip >= 25)
       {
         ucFlip = 0;
         uLenFic++;
-        if ((uLenFic+28)>strlen(gpDsk[ucDskAct].szName)) 
+        if ((uLenFic+28)>strlen(gpDsk[ucDskAct].szName))
         {
           ucFlop++;
-          if (ucFlop >= 15) 
+          if (ucFlop >= 15)
           {
             uLenFic=0;
             ucFlop = 0;
@@ -654,17 +667,17 @@ char *TILoadDiskFile(void)
     }
     swiWaitForVBlank();
   }
-    
+
   // Remet l'ecran du haut en mode bitmap
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
-  
+
   return gpDsk[chosenDSK].szName;
 }
 
 // ----------------------------------------------------------------
 // Let the user select a new game (rom) file and load it up!
 // ----------------------------------------------------------------
-u8 tiDSLoadFile(void) 
+u8 tiDSLoadFile(void)
 {
   bool bDone=false;
   u32 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00,romSelected= 0, firstRomDisplay=0,nbRomPerPage, uNbRSPage;
@@ -677,12 +690,12 @@ u8 tiDSLoadFile(void)
   AffChaine(7,5,0,"A=SELECT,  B=EXIT");
 
   TI99FindFiles();
-    
+
   ucGameChoice = -1;
 
   nbRomPerPage = (countTI>=14 ? 14 : countTI);
   uNbRSPage = (countTI>=5 ? 5 : countTI);
-  
+
   if (ucGameAct>countTI)
   {
     firstRomDisplay=ucGameAct=0;
@@ -699,7 +712,7 @@ u8 tiDSLoadFile(void)
     romSelected=0;
   }
   dsDisplayFiles(firstRomDisplay,romSelected);
-    
+
   // -----------------------------------------------------
   // Until the user selects a file or exits the menu...
   // -----------------------------------------------------
@@ -729,7 +742,7 @@ u8 tiDSLoadFile(void)
         ucHaut++;
         if (ucHaut>10) ucHaut=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else
     {
@@ -758,12 +771,12 @@ u8 tiDSLoadFile(void)
         ucBas++;
         if (ucBas>10) ucBas=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucBas = 0;
     }
-      
+
     // -------------------------------------------------------------
     // Left and Right on the D-Pad will scroll 1 page at a time...
     // -------------------------------------------------------------
@@ -783,12 +796,12 @@ u8 tiDSLoadFile(void)
         ucSBas++;
         if (ucSBas>10) ucSBas=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucSBas = 0;
     }
-      
+
     // -------------------------------------------------------------
     // Left and Right on the D-Pad will scroll 1 page at a time...
     // -------------------------------------------------------------
@@ -800,7 +813,7 @@ u8 tiDSLoadFile(void)
         if (firstRomDisplay>nbRomPerPage) { firstRomDisplay -= nbRomPerPage; }
         else { firstRomDisplay = 0; }
         if (ucGameAct == 0) romSelected = 0;
-        if (romSelected > ucGameAct) romSelected = ucGameAct;          
+        if (romSelected > ucGameAct) romSelected = ucGameAct;
         ucSHaut=0x01;
         dsDisplayFiles(firstRomDisplay,romSelected);
       }
@@ -809,12 +822,12 @@ u8 tiDSLoadFile(void)
         ucSHaut++;
         if (ucSHaut>10) ucSHaut=0;
       }
-      uLenFic=0; ucFlip=-50; ucFlop=0;     
+      uLenFic=0; ucFlip=-50; ucFlop=0;
     }
     else {
       ucSHaut = 0;
     }
-    
+
     // -------------------------------------------------------------------------
     // They B key will exit out of the ROM selection without picking a new game
     // -------------------------------------------------------------------------
@@ -823,14 +836,14 @@ u8 tiDSLoadFile(void)
       bDone=true;
       while (keysCurrent() & KEY_B);
     }
-      
+
     // -------------------------------------------------------------------
     // Any of these keys will pick the current ROM and try to load it...
     // -------------------------------------------------------------------
     if (keysCurrent() & KEY_A || keysCurrent() & KEY_Y || keysCurrent() & KEY_X)
     {
       if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
-          
+
       if (gpFic[ucGameAct].uType != DIRECT)
       {
         bDone=true;
@@ -856,21 +869,21 @@ u8 tiDSLoadFile(void)
         while (keysCurrent() & KEY_A);
       }
     }
-    
+
     // --------------------------------------------
     // If the filename is too long... scroll it.
     // --------------------------------------------
-    if (strlen(gpFic[ucGameAct].szName) > 29) 
+    if (strlen(gpFic[ucGameAct].szName) > 29)
     {
       ucFlip++;
-      if (ucFlip >= 25) 
+      if (ucFlip >= 25)
       {
         ucFlip = 0;
         uLenFic++;
-        if ((uLenFic+28)>strlen(gpFic[ucGameAct].szName)) 
+        if ((uLenFic+28)>strlen(gpFic[ucGameAct].szName))
         {
           ucFlop++;
-          if (ucFlop >= 15) 
+          if (ucFlop >= 15)
           {
             uLenFic=0;
             ucFlop = 0;
@@ -885,10 +898,10 @@ u8 tiDSLoadFile(void)
     }
     swiWaitForVBlank();
   }
-    
+
   // Remet l'ecran du haut en mode bitmap
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
-  
+
   return 0x01;
 }
 
@@ -901,7 +914,7 @@ void SaveConfig(bool bShow)
 {
     FILE *fp;
     int slot = 0;
-    
+
     if (bShow) dsPrintValue(6,0,0, (char*)"SAVING CONFIGURATION");
 
     // Set the global configuration version number...
@@ -914,11 +927,11 @@ void SaveConfig(bool bShow)
     {
         if (AllConfigs[slot].game_crc == myConfig.game_crc)  // Got a match?!
         {
-            break;                           
+            break;
         }
         if (AllConfigs[slot].game_crc == 0x00000000)  // Didn't find it... use a blank slot...
         {
-            break;                           
+            break;
         }
     }
 
@@ -946,7 +959,7 @@ void SaveConfig(bool bShow)
         fclose(fp);
     } else dsPrintValue(4,0,0, (char*)"ERROR SAVING CONFIG FILE");
 
-    if (bShow) 
+    if (bShow)
     {
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
         dsPrintValue(4,0,0, (char*)"                        ");
@@ -963,7 +976,7 @@ void MapPlayer2(void)
     myConfig.keymap[5]   = JOY2_FIRE;    // NDS B Button
     myConfig.keymap[6]   = JOY2_FIRE;    // NDS X Button
     myConfig.keymap[7]   = JOY2_FIRE;    // NDS Y Button
-    
+
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
@@ -980,7 +993,7 @@ void MapPlayer1(void)
     myConfig.keymap[5]   = JOY1_FIRE;    // NDS B Button
     myConfig.keymap[6]   = JOY1_FIRE;    // NDS X Button
     myConfig.keymap[7]   = JOY1_FIRE;    // NDS Y Button
-    
+
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
@@ -997,7 +1010,7 @@ void MapESDX(void)
     myConfig.keymap[5]   = KBD_SPACE;    // NDS B Button
     myConfig.keymap[6]   = KBD_Q;        // NDS X Button
     myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
-    
+
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
     myConfig.keymap[9]   = KBD_CTRL;     // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
@@ -1007,7 +1020,7 @@ void MapESDX(void)
 void SetDefaultGameConfig(void)
 {
     MapPlayer1();
-    
+
     myConfig.showFPS     = 0;
     myConfig.frameSkip   = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
     myConfig.frameBlend  = 0;
@@ -1018,8 +1031,8 @@ void SetDefaultGameConfig(void)
     myConfig.RAMMirrors  = 0;
     myConfig.keyboard    = 0;
     myConfig.emuSpeed    = 0;
-    myConfig.reservedE   = 0;
-    myConfig.reservedF   = 0;
+    myConfig.machineType = 0;
+    myConfig.cartType    = 0;
     myConfig.reservedG   = 0;
     myConfig.reservedH   = 0;
     myConfig.reservedI   = 0;
@@ -1030,7 +1043,7 @@ void SetDefaultGameConfig(void)
     myConfig.reservedN   = 0xFF;
     myConfig.reservedZ   = 0xFF;
     myConfig.reservedA32 = 0x00000000;
-    
+
     // And a few games don't want more than 4 max sprites (they pull tricks that rely on it)
     //if (file_crc == 0xee530ad2) myConfig.maxSprites  = 1;  // QBiqs
 }
@@ -1048,13 +1061,13 @@ void FindAndLoadConfig(void)
     // below, we will fill in the config with data read from the file.
     // -----------------------------------------------------------------
     SetDefaultGameConfig();
-    
+
     fp = fopen("/data/DS994a.DAT", "rb");
     if (fp != NULL)
     {
         fread(&AllConfigs, sizeof(AllConfigs), 1, fp);
         fclose(fp);
-        
+
         if (AllConfigs[0].config_ver != CONFIG_VER)
         {
             memset(&AllConfigs, 0x00, sizeof(AllConfigs));
@@ -1068,7 +1081,7 @@ void FindAndLoadConfig(void)
                 if (AllConfigs[slot].game_crc == file_crc)  // Got a match?!
                 {
                     memcpy(&myConfig, &AllConfigs[slot], sizeof(struct Config_t));
-                    break;                           
+                    break;
                 }
             }
         }
@@ -1084,7 +1097,7 @@ void FindAndLoadConfig(void)
 
 // ------------------------------------------------------------------------------
 // Options are handled here... we have a number of things the user can tweak
-// and these options are applied immediately. The user can also save off 
+// and these options are applied immediately. The user can also save off
 // their option choices for the currently running game into the NINTV-DS.DAT
 // configuration database. When games are loaded back up, NINTV-DS.DAT is read
 // to see if we have a match and the user settings can be restored for the game.
@@ -1100,23 +1113,25 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                                                                                                                                       &myConfig.showFPS,    3},
-        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,  3},
-        {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend, 2},
-        {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites, 2},
-        {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,      2},        
-        //{"KEYBOARD",       {"SIMPLIFIED", "TI99/4A"},                                                                                                                                           &myConfig.keyboard,   2},
-        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,   4},
-        {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,   2},
-        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors, 2},
-        {"RAM WIPE",       {"RANDOM", "CLEAR",},                                                                                                                                                &myConfig.memWipe,    5},
-        {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
+        {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                                                                                                                                       &myConfig.showFPS,      3},
+        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,    3},
+        {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend,   2},
+        {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites,   2},
+        {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,        2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K"},                                                                                                                                       &myConfig.machineType,  2},
+        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                                                                                              &myConfig.cartType,     5},
+        //{"OVERLAY",        {"SIMPLIFIED", "TI99/4A"},                                                                                                                                           &myConfig.keyboard,     2},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,     4},
+        {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,     2},
+        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors,   2},
+        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                                                                                &myConfig.memWipe,      5},
+        {NULL,             {"",      ""},                                                                                                                                                       NULL,                   1},
     },
     // Page 2
     {
         {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
     }
-};              
+};
 
 
 // ------------------------------------------------------------------
@@ -1126,7 +1141,7 @@ u8 display_options_list(bool bFullDisplay)
 {
     char strBuf[35];
     int len=0;
-    
+
     dsPrintValue(1,21, 0, (char *)"                              ");
     if (bFullDisplay)
     {
@@ -1138,14 +1153,14 @@ u8 display_options_list(bool bFullDisplay)
         }
 
         // Blank out rest of the screen... option menus are of different lengths...
-        for (int i=len; i<15; i++) 
+        for (int i=len; i<15; i++)
         {
             dsPrintValue(1,5+i, 0, (char *)"                               ");
         }
     }
 
     dsPrintValue(2,22, 0, (char *)"     B=EXIT, START=SAVE   ");
-    return len;    
+    return len;
 }
 
 
@@ -1209,7 +1224,7 @@ void tiDSGameOptions(void)
             {
                 SaveConfig(TRUE);
             }
-#if 0            
+#if 0
             if (keysCurrent() & (KEY_X)) // Toggle Table
             {
                 option_table = (option_table + 1) % 2;
@@ -1220,7 +1235,7 @@ void tiDSGameOptions(void)
                     WAITVBL;
                 }
             }
-#endif            
+#endif
             if ((keysCurrent() & KEY_B) || (keysCurrent() & KEY_A))  // Exit options
             {
                 option_table = 0;   // Reset for next time
@@ -1235,14 +1250,14 @@ void tiDSGameOptions(void)
     {
         swiWaitForVBlank();
     }
-    
+
     return;
 }
 
 //*****************************************************************************
 // Change Keymap Options for the current game
 //*****************************************************************************
-void DisplayKeymapName(u32 uY) 
+void DisplayKeymapName(u32 uY)
 {
   char szCha[34];
 
@@ -1276,7 +1291,7 @@ void DisplayKeymapName(u32 uY)
 // Allow the user to change the key map for the current game and give them
 // the option of writing that keymap out to a configuration file for the game.
 // ------------------------------------------------------------------------------
-void tiDSChangeKeymap(void) 
+void tiDSChangeKeymap(void)
 {
   u32 ucHaut=0x00, ucBas=0x00,ucL=0x00,ucR=0x00,ucY= 6, bOK=0, bIndTch=0;
 
@@ -1285,7 +1300,7 @@ void tiDSChangeKeymap(void)
   // ------------------------------------------------------
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-    
+
   // --------------------------------------------------
   // Give instructions to the user...
   // --------------------------------------------------
@@ -1294,7 +1309,7 @@ void tiDSChangeKeymap(void)
   AffChaine(1 ,21,0,("     X/Y : SWAP P1,P2 / ESDX "));
   AffChaine(1 ,22,0,("   START : SAVE KEYMAP       "));
   DisplayKeymapName(ucY);
-  
+
   // -----------------------------------------------------------------------
   // Clear out any keys that might be pressed on the way in - make sure
   // NDS keys are not being pressed. This prevents the inadvertant A key
@@ -1303,7 +1318,7 @@ void tiDSChangeKeymap(void)
   while ((keysCurrent() & (KEY_TOUCH | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_UP | KEY_DOWN))!=0)
       ;
   WAITVBL;
- 
+
   while (!bOK) {
     if (keysCurrent() & KEY_UP) {
       if (!ucHaut) {
@@ -1316,11 +1331,11 @@ void tiDSChangeKeymap(void)
       else {
         ucHaut++;
         if (ucHaut>10) ucHaut=0;
-      } 
+      }
     }
     else {
       ucHaut = 0;
-    }  
+    }
     if (keysCurrent() & KEY_DOWN) {
       if (!ucBas) {
         DisplayKeymapName(32);
@@ -1332,23 +1347,23 @@ void tiDSChangeKeymap(void)
       else {
         ucBas++;
         if (ucBas>10) ucBas=0;
-      } 
+      }
     }
     else {
       ucBas = 0;
-    }  
-      
-    if (keysCurrent() & KEY_START) 
+    }
+
+    if (keysCurrent() & KEY_START)
     {
         SaveConfig(true); // Save options
     }
-      
-    if (keysCurrent() & KEY_B) 
+
+    if (keysCurrent() & KEY_B)
     {
       bOK = 1;  // Exit menu
     }
-      
-    if (keysCurrent() & KEY_LEFT) 
+
+    if (keysCurrent() & KEY_LEFT)
     {
         if (ucL == 0) {
           bIndTch = (bIndTch == 0 ? (MAX_KEY_OPTIONS-1) : bIndTch-1);
@@ -1361,21 +1376,21 @@ void tiDSChangeKeymap(void)
           if (ucL > 10) ucL = 0;
         }
     }
-    else 
+    else
     {
         ucL = 0;
     }
-      
-    if (keysCurrent() & KEY_RIGHT) 
+
+    if (keysCurrent() & KEY_RIGHT)
     {
-        if (ucR == 0) 
+        if (ucR == 0)
         {
           bIndTch = (bIndTch == (MAX_KEY_OPTIONS-1) ? 0 : bIndTch+1);
           ucR=1;
           myConfig.keymap[ucY-6] = bIndTch;
           DisplayKeymapName(ucY);
         }
-        else 
+        else
         {
           ucR++;
           if (ucR > 10) ucR = 0;
@@ -1385,30 +1400,30 @@ void tiDSChangeKeymap(void)
     {
         ucR=0;
     }
-      
+
     // Swap Player 1 and Player 2 keymap
     if (keysCurrent() & KEY_X)
     {
         if (myConfig.keymap[0] != JOY2_UP)
             MapPlayer2();
-        else 
-            MapPlayer1(); 
+        else
+            MapPlayer1();
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
-        while (keysCurrent() & KEY_X) 
+        while (keysCurrent() & KEY_X)
             ;
         WAITVBL
     }
-      
+
     if (keysCurrent() & KEY_Y)
     {
         if (myConfig.keymap[0] == KBD_E)
             MapPlayer1();
-        else 
-            MapESDX(); 
+        else
+            MapESDX();
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
-        while (keysCurrent() & KEY_Y) 
+        while (keysCurrent() & KEY_Y)
             ;
         WAITVBL
     }
@@ -1439,7 +1454,7 @@ void DisplayFileName(void)
 //*****************************************************************************
 // Display TI99 screen and change options "main menu"
 //*****************************************************************************
-void affInfoOptions(u32 uY) 
+void affInfoOptions(u32 uY)
 {
     AffChaine(2, 8,(uY== 8 ? 2 : 0),("         LOAD  GAME         "));
     AffChaine(2,10,(uY==10 ? 2 : 0),("         PLAY  GAME         "));
@@ -1454,11 +1469,11 @@ void affInfoOptions(u32 uY)
 // --------------------------------------------------------------------
 void NoGameSelected(u32 ucY)
 {
-    unsigned short dmaVal = *(bgGetMapPtr(bg1b)+24*32); 
+    unsigned short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
     while (keysCurrent()  & (KEY_START | KEY_A));
     dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
-    AffChaine(5,10,0,("   NO GAME SELECTED   ")); 
-    AffChaine(5,12,0,("  PLEASE, USE OPTION  ")); 
+    AffChaine(5,10,0,("   NO GAME SELECTED   "));
+    AffChaine(5,12,0,("  PLEASE, USE OPTION  "));
     AffChaine(5,14,0,("      LOAD  GAME      "));
     while (!(keysCurrent()  & (KEY_START | KEY_A)));
     while (keysCurrent()  & (KEY_START | KEY_A));
@@ -1467,23 +1482,23 @@ void NoGameSelected(u32 ucY)
 }
 
 void ReadFileCRCAndConfig(void)
-{    
+{
     getfile_crc(gpFic[ucGameChoice].szName);
-    
+
     FindAndLoadConfig();    // Try to find keymap and config for this file...
 }
 
 // --------------------------------------------------------------------
 // Let the user select new options for the currently loaded game...
 // --------------------------------------------------------------------
-void tiDSChangeOptions(void) 
+void tiDSChangeOptions(void)
 {
   u32 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 8, bOK=0;
-  
-  // Affiche l'ecran en haut
-  videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
+
+  // Display the screen at the top
+  videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG);
-  vramSetBankB(VRAM_B_MAIN_SPRITE_0x06400000);
+
   bg0 = bgInit(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
   bg1 = bgInit(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
   bgSetPriority(bg0,1);bgSetPriority(bg1,0);
@@ -1492,25 +1507,27 @@ void tiDSChangeOptions(void)
   dmaCopy((void*) ecranHautPal,(void*) BG_PALETTE,256*2);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0) + 51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1),32*24*2);
-  AffChaine(31-strlen(VERSIONDS99),23,1,"V");AffChaine(31-strlen(VERSIONDS99)+1,23,1,VERSIONDS99);
 
-  // Affiche le clavier en bas
+  // Put out the version string...
+  //AffChaine(31-strlen(VERSIONDS99),23,1,"V");AffChaine(31-strlen(VERSIONDS99)+1,23,1,VERSIONDS99);
+
+  // Display the screen at the bottom
   bg0b = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
   bg1b = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
   bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);
-  decompress(ecranBasSelTiles, bgGetGfxPtr(bg0b), LZ77Vram);
-  decompress(ecranBasSelMap, (void*) bgGetMapPtr(bg0b), LZ77Vram);
-  dmaCopy((void*) ecranBasSelPal,(void*) BG_PALETTE_SUB,256*2);
-  dmaVal = *(bgGetMapPtr(bg1b)+24*32); 
+  decompress(optionsTiles, bgGetGfxPtr(bg0b), LZ77Vram);
+  decompress(optionsMap, (void*) bgGetMapPtr(bg0b), LZ77Vram);
+  dmaCopy((void*) optionsPal,(void*) BG_PALETTE_SUB,256*2);
+  dmaVal = *(bgGetMapPtr(bg1b)+24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b),32*24*2);
 
   affInfoOptions(ucY);
-  
-  if (ucGameChoice != -1) 
-  { 
+
+  if (ucGameChoice != -1)
+  {
       DisplayFileName();
   }
-  
+
   while (!bOK) {
     if (keysCurrent()  & KEY_UP) {
       if (!ucHaut) {
@@ -1522,11 +1539,11 @@ void tiDSChangeOptions(void)
       else {
         ucHaut++;
         if (ucHaut>10) ucHaut=0;
-      } 
+      }
     }
     else {
       ucHaut = 0;
-    }  
+    }
     if (keysCurrent()  & KEY_DOWN) {
       if (!ucBas) {
         affInfoOptions(32);
@@ -1537,11 +1554,11 @@ void tiDSChangeOptions(void)
       else {
         ucBas++;
         if (ucBas>10) ucBas=0;
-      } 
+      }
     }
     else {
       ucBas = 0;
-    }  
+    }
     if (keysCurrent()  & KEY_A) {
       if (!ucA) {
         ucA = 0x01;
@@ -1549,8 +1566,8 @@ void tiDSChangeOptions(void)
           case 8 :      // LOAD GAME
             tiDSLoadFile();
             dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-            if (ucGameChoice != -1) 
-            { 
+            if (ucGameChoice != -1)
+            {
                 ReadFileCRCAndConfig(); // Get CRC32 of the file and read the config/keys
                 DisplayFileName();      // And put up the filename on the bottom screen
             }
@@ -1558,57 +1575,57 @@ void tiDSChangeOptions(void)
             affInfoOptions(ucY);
             break;
           case 10 :     // PLAY GAME
-            if (ucGameChoice != -1) 
-            { 
+            if (ucGameChoice != -1)
+            {
               bOK = 1;
             }
-            else 
-            {    
+            else
+            {
                 NoGameSelected(ucY);
             }
             break;
           case 12 :     // REDEFINE KEYS
-            if (ucGameChoice != -1) 
-            { 
+            if (ucGameChoice != -1)
+            {
                 tiDSChangeKeymap();
                 dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
                 affInfoOptions(ucY);
                 DisplayFileName();
             }
-            else 
-            { 
+            else
+            {
                 NoGameSelected(ucY);
             }
             break;
           case 14 :     // GAME OPTIONS
-            if (ucGameChoice != -1) 
-            { 
+            if (ucGameChoice != -1)
+            {
                 tiDSGameOptions();
                 dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
                 affInfoOptions(ucY);
                 DisplayFileName();
             }
-            else 
-            {    
+            else
+            {
                NoGameSelected(ucY);
             }
-            break;                
-                
+            break;
+
           case 16 :     // QUIT EMULATOR
             exit(1);
             break;
-                
+
         }
       }
     }
     else
       ucA = 0x00;
     if (keysCurrent()  & KEY_START) {
-      if (ucGameChoice != -1) 
+      if (ucGameChoice != -1)
       {
         bOK = 1;
       }
-      else 
+      else
       {
         NoGameSelected(ucY);
       }
@@ -1631,12 +1648,14 @@ void AffChaine(int iX,int iY,int iScr,char *szMessage) {
   u16 *pusEcran,*pusMap;
   u16 usCharac;
   char szTexte[128],*pTrTxt=szTexte;
-  
+    
+  if (iScr == 1) return; //TODO: need t decide if we want to support text display on the top screen... probably don't need it
+
   strcpy(szTexte,szMessage);
   strupr(szTexte);
   pusEcran=(u16*) (iScr != 1 ? bgGetMapPtr(bg1b) : bgGetMapPtr(bg1))+iX+(iY<<5);
   pusMap=(u16*) (iScr != 1 ? (iScr == 6 ? bgGetMapPtr(bg0b)+24*32 : (iScr == 0 ? bgGetMapPtr(bg0b)+24*32 : bgGetMapPtr(bg0b)+26*32 )) : bgGetMapPtr(bg0)+51*32 );
-    
+
   while((*pTrTxt)!='\0' )
   {
     char ch = *pTrTxt;

@@ -1,7 +1,7 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
+// Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
@@ -48,7 +48,7 @@ u8 TI99Init(char *szGame)
   // -----------------------------------------------------------------
   videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
-  vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x6820000 we can use
+  vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
   
   REG_BG3CNT = BG_BMP8_256x256;
   REG_BG3PA = (1<<8); 
@@ -184,11 +184,6 @@ ITCM_CODE u32 LoopTMS9900()
       return 0;
     }
     return 1;
-}
-
-void ti_handle_sound(u16 value)
-{
-    sn76496W(value, &sncol);
 }
 
 // End of file

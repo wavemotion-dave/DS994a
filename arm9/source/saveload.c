@@ -1,7 +1,7 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
+// Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
@@ -24,7 +24,7 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0004        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0005        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -66,39 +66,16 @@ void TI99SaveState()
     // Write Version
     u16 save_ver = TI_SAVE_VER;
     uNbO = fwrite(&save_ver, sizeof(u16), 1, handle);
-#if 0      
-    // Write TMS9900 CPU
-    uNbO = fwrite(&InterruptFlag,       sizeof(InterruptFlag),       1, handle);
-    uNbO = fwrite(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
-    uNbO = fwrite(&Status,              sizeof(Status),              1, handle);
-    uNbO = fwrite(&ClockCycleCounter,   sizeof(ClockCycleCounter),   1, handle);
-    uNbO = fwrite(&ProgramCounter,      sizeof(ProgramCounter),      1, handle);
-    uNbO = fwrite(&curOpCode,           sizeof(curOpCode),           1, handle);
-    uNbO = fwrite(&bankOffset,          sizeof(bankOffset),          1, handle);
-    uNbO = fwrite(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);
-    uNbO = fwrite(&m_GromReadShift,     sizeof(m_GromReadShift),     1, handle);
-    uNbO = fwrite(&gromAddress,         sizeof(gromAddress),         1, handle);
-    uNbO = fwrite(&bCPUIdleRequest,     sizeof(bCPUIdleRequest),     1, handle);
-      
-    uNbO = fwrite(&m_TimerActive,       sizeof(m_TimerActive),       1, handle);
-    uNbO = fwrite(&m_ReadRegister,      sizeof(m_ReadRegister),      1, handle);
-    uNbO = fwrite(&m_Decrementer,       sizeof(m_Decrementer),       1, handle);
-    uNbO = fwrite(&m_ClockRegister,     sizeof(m_ClockRegister),     1, handle);
-    uNbO = fwrite(&m_PinState,          sizeof(m_PinState),          1, handle);
-    uNbO = fwrite(&m_InterruptRequested,sizeof(m_InterruptRequested),1, handle);
-    uNbO = fwrite(&m_ActiveInterrupts,  sizeof(m_ActiveInterrupts),  1, handle);
-    uNbO = fwrite(&m_LastDelta,         sizeof(m_LastDelta),         1, handle);
-    uNbO = fwrite(&m_DecrementClock,    sizeof(m_DecrementClock),    1, handle);
-    uNbO = fwrite(&m_CapsLock,          sizeof(m_CapsLock),          1, handle);
-    uNbO = fwrite(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
-    uNbO = fwrite(&m_HideShift,         sizeof(m_HideShift),         1, handle);
-#endif
+    
+    // Write TMS9900 CPU and TMS9901 IO handling memory
+    uNbO = fwrite(&tms9900, sizeof(tms9900), 1, handle);
+    uNbO = fwrite(&tms9901, sizeof(tms9901), 1, handle);
       
     // Save TI Memory that might possibly be volatile (RAM areas mostly)
-    if (uNbO) uNbO = fwrite(Memory+0x2000, 0x2000, 1, handle); 
-    if (uNbO) uNbO = fwrite(Memory+0x6000, 0x2000, 1, handle); 
-    if (uNbO) uNbO = fwrite(Memory+0x8000, 0x0400, 1, handle); 
-    if (uNbO) uNbO = fwrite(Memory+0xA000, 0x6000, 1, handle); 
+    if (uNbO) uNbO = fwrite(MemCPU+0x2000, 0x2000, 1, handle); 
+    if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
+    if (uNbO) uNbO = fwrite(MemCPU+0x8000, 0x0400, 1, handle); 
+    if (uNbO) uNbO = fwrite(MemCPU+0xA000, 0x6000, 1, handle); 
       
     // A few frame counters
     if (uNbO) uNbO = fwrite(&emuActFrames, sizeof(emuActFrames), 1, handle); 
@@ -190,38 +167,19 @@ void TI99LoadState()
         
         if (save_ver == TI_SAVE_VER)
         {
-#if 0            
-            // Load TMS9900 CPU
-            if (uNbO) uNbO = fread(&InterruptFlag,       sizeof(InterruptFlag),       1, handle);
-            if (uNbO) uNbO = fread(&WorkspacePtr,        sizeof(WorkspacePtr),        1, handle);
-            if (uNbO) uNbO = fread(&Status,              sizeof(Status),              1, handle);
-            if (uNbO) uNbO = fread(&ClockCycleCounter,   sizeof(ClockCycleCounter),   1, handle);
-            if (uNbO) uNbO = fread(&ProgramCounter,      sizeof(ProgramCounter),      1, handle);
-            if (uNbO) uNbO = fread(&curOpCode,           sizeof(curOpCode),           1, handle);
-            if (uNbO) uNbO = fread(&bankOffset,          sizeof(bankOffset),          1, handle);
-            if (uNbO) uNbO = fread(&m_GromWriteShift,    sizeof(m_GromWriteShift),    1, handle);
-            if (uNbO) uNbO = fread(&m_GromReadShift,     sizeof(m_GromReadShift),     1, handle);
-            if (uNbO) uNbO = fread(&gromAddress,         sizeof(gromAddress),         1, handle);
-            if (uNbO) uNbO = fread(&bCPUIdleRequest,     sizeof(bCPUIdleRequest),     1, handle);
+            // Load TMS9900 CPU and TMS9901 IO handling memory
+            if (uNbO) uNbO = fread(&tms9900, sizeof(tms9900), 1, handle);
+            if (uNbO) uNbO = fread(&tms9901, sizeof(tms9901), 1, handle);
             
-            if (uNbO) uNbO = fread(&m_TimerActive,       sizeof(m_TimerActive),       1, handle);
-            if (uNbO) uNbO = fread(&m_ReadRegister,      sizeof(m_ReadRegister),      1, handle);
-            if (uNbO) uNbO = fread(&m_Decrementer,       sizeof(m_Decrementer),       1, handle);
-            if (uNbO) uNbO = fread(&m_ClockRegister,     sizeof(m_ClockRegister),     1, handle);
-            if (uNbO) uNbO = fread(&m_PinState,          sizeof(m_PinState),          1, handle);
-            if (uNbO) uNbO = fread(&m_InterruptRequested,sizeof(m_InterruptRequested),1, handle);
-            if (uNbO) uNbO = fread(&m_ActiveInterrupts,  sizeof(m_ActiveInterrupts),  1, handle);
-            if (uNbO) uNbO = fread(&m_LastDelta,         sizeof(m_LastDelta),         1, handle);
-            if (uNbO) uNbO = fread(&m_DecrementClock,    sizeof(m_DecrementClock),    1, handle);
-            if (uNbO) uNbO = fread(&m_CapsLock,          sizeof(m_CapsLock),          1, handle);
-            if (uNbO) uNbO = fread(&m_ColumnSelect,      sizeof(m_ColumnSelect),      1, handle);
-            if (uNbO) uNbO = fread(&m_HideShift,         sizeof(m_HideShift),         1, handle);
-#endif
+            // Ensure we are pointing to the right cart bank in memory
+            if (tms9900.bankOffset == 0) tms9900.cartBankPtr = FastCartBuffer;
+            else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;
+            
             // Restore TI Memory that might possibly be volatile (RAM areas mostly)
-            if (uNbO) uNbO = fread(Memory+0x2000, 0x2000, 1, handle); 
-            if (uNbO) uNbO = fread(Memory+0x6000, 0x2000, 1, handle); 
-            if (uNbO) uNbO = fread(Memory+0x8000, 0x0400, 1, handle); 
-            if (uNbO) uNbO = fread(Memory+0xA000, 0x6000, 1, handle); 
+            if (uNbO) uNbO = fread(MemCPU+0x2000, 0x2000, 1, handle); 
+            if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
+            if (uNbO) uNbO = fread(MemCPU+0x8000, 0x0400, 1, handle); 
+            if (uNbO) uNbO = fread(MemCPU+0xA000, 0x6000, 1, handle); 
             
             // A few frame counters
             if (uNbO) uNbO = fread(&emuActFrames, sizeof(emuActFrames), 1, handle); 

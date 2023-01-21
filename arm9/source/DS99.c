@@ -1,7 +1,7 @@
 // =====================================================================================
 // Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, it's source code and associated 
+// Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
@@ -28,8 +28,7 @@
 #include "disk.h"
 #include "intro.h"
 #include "alpha.h"
-#include "ecranBas.h"
-#include "ecranBasSel.h"
+#include "options.h"
 #include "ecranHaut.h"
 
 #include "soundbank.h"
@@ -38,26 +37,6 @@
 
 u32 debug[32];
 
-// -------------------------------------------------------------------------------------------
-// All emulated systems have ROM, RAM and possibly BIOS or SRAM. So we create generic buffers 
-// for all this here... these are sized big enough to handle the largest memory necessary
-// to render games playable. There are a few MSX games that are larger than 512k but they 
-// are mostly demos or foreign-language adventures... not enough interest to try to squeeze
-// in a larger ROM buffer to include them - we are still trying to keep compatible with the
-// smaller memory model of the original DS/DS-LITE.
-//
-// These memory buffers will be pointed to by the MemoryMap[] array. This array contains 8
-// pointers that can break down the Z80 memory into 8k chunks.  For the few games that have
-// a smaller than 8k boundary (e.g. Creativision uses a 2k BIOS) we can just stage/build
-// up the memory into the RAM_Memory[] buffer and point into that as a single 64k layout.
-// -------------------------------------------------------------------------------------------
-
-// --------------------------------------------------------------------------
-// For machines that have a full keybaord, we use the Left and Right
-// shoulder buttons on the NDS to emulate the SHIFT and CTRL keys...
-// --------------------------------------------------------------------------
-u8 key_shift __attribute__((section(".dtcm"))) = false;
-u8 key_ctrl  __attribute__((section(".dtcm"))) = false;
 
 // ------------------------------------------------------------------------------------------
 // Various sound chips in the system. We emulate the SN and AY sound chips but both of 
@@ -82,7 +61,6 @@ u8 bTIDISKFound      = false;
 
 u8 soundEmuPause     __attribute__((section(".dtcm"))) = 1;       // Set to 1 to pause (mute) sound, 0 is sound unmuted (sound channels active)
 
-u8 kbd_key           __attribute__((section(".dtcm"))) = 0;       // 0 if no key pressed, othewise the ASCII key (e.g. 'A', 'B', '3', etc)
 u16 nds_key          __attribute__((section(".dtcm"))) = 0;       // 0 if no key pressed, othewise the NDS keys from keysCurrent() or similar
 
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
@@ -91,10 +69,10 @@ volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario spr
 u8 last_pal_mode = 99;
 u8 tmpBuf[40];
 
-// The DS/DSi has 12 keys that can be mapped
+// The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
 
-char *myDskFile = NULL;
+char *myDskFile = NULL; // This will point to .DSK file on disk or NULL if no disk is mounted
 
 // --------------------------------------------------------------------
 // The key map for the TI... mapped into the NDS controller
@@ -354,7 +332,14 @@ void DisplayStatusLine(bool bForce)
     if (driveWriteCounter)
     {
         if (--driveWriteCounter) AffChaine(12,0,6, "DISK WRITE");
-        else AffChaine(12,0,6, "          ");
+        else
+        {
+            if (myDskFile != NULL)
+            {
+                DiskSave(myDskFile);
+            }
+            AffChaine(12,0,6, "          ");
+        }
     }
     else if (driveReadCounter)
     {
@@ -363,9 +348,9 @@ void DisplayStatusLine(bool bForce)
     }
 }
 
-// ------------------------------------------------------------------------
-// Swap in a new .cas Cassette/Tape - reset position counter to zero.
-// ------------------------------------------------------------------------
+// --------------------------------
+// Swap in a new .DSK Disk Image
+// --------------------------------
 void DiskMount(char *filename)
 {
     FILE *infile = fopen(filename, "rb");
@@ -374,13 +359,11 @@ void DiskMount(char *filename)
         fread(DiskImage, (180*1024), 1, infile);
         fclose(infile);
         bDiskIsMounted = true;
-        AccurateEmulationFlags |= EMU_DISK;
     }
     else
     {
         memset(DiskImage, 0xFF, (180*1024));
         bDiskIsMounted = false;
-        AccurateEmulationFlags &= ~EMU_DISK;
     }
 }
 
@@ -388,9 +371,62 @@ void DiskUnmount(void)
 {
     memset(DiskImage, 0xFF, (180*1024));
     bDiskIsMounted = false;
-    AccurateEmulationFlags &= ~EMU_DISK;
 }
 
+void DiskSave(char *filename)
+{
+    FILE *outfile = fopen(filename, "wb");
+    if (outfile)
+    {
+        u16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
+        u32 diskSize = (numSectors*256);
+        fwrite(DiskImage, diskSize, 1, outfile);
+        fclose(outfile);
+    }
+}
+
+
+void ShowDiskListing(void)
+{
+    char fileName[12];
+    
+    // Clear the screen...
+    for (u8 i=0; i<20; i++)
+    {
+        AffChaine(1,4+i,6, "                                ");
+    }
+
+    while (keysCurrent()) WAITVBL; // While any key is pressed...
+
+    u8 idx=0;
+    AffChaine(5,7,6,      "=== DISK CONTENTS ===");
+    if (bDiskIsMounted && (myDskFile != NULL))
+    {
+        u16 numFiles = 0;
+        u16 sectorPtr = 0;
+        for (u16 i=0; i<256; i += 2)
+        {
+            sectorPtr = (DiskImage[256 + (i+0)] << 8) | (DiskImage[256 + (i+1)] << 0);
+            if (sectorPtr == 0) break;
+            if (++numFiles > 24) break;
+            for (u8 j=0; j<10; j++) 
+            {
+                fileName[j] = DiskImage[(256*sectorPtr) + j];
+            }
+            fileName[10] = 0;
+            AffChaine((numFiles<12) ? 5:18,9+((numFiles<12) ? numFiles:(numFiles-11)),0, fileName);
+        }
+    }
+    else
+    {
+        idx++;idx++;
+        AffChaine(9,9+idx,0,  "NO DISK MOUNTED"); idx++;
+    }
+
+    // Wait for any press and release...
+    while (!keysCurrent()) WAITVBL; // While no key is pressed...
+    WAITVBL;WAITVBL;
+}
 
 // ------------------------------------------------------------------------
 // Show the Cassette Menu text - highlight the selected row.
@@ -401,19 +437,13 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
     cassete_menu_items = 0;
     if (bClearScreen)
     {
-      // ---------------------------------------------------    
-      // Put up a generic background for this mini-menu...
-      // ---------------------------------------------------    
-      dmaCopy((void*) bgGetMapPtr(bg0b)+30*32*2,(void*) bgGetMapPtr(bg0b),32*24*2);
-      unsigned short dmaVal = *(bgGetMapPtr(bg0b)+24*32); 
-      dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-      swiWaitForVBlank();
+        DrawCleanBackground();
     }
     
     AffChaine(8,7,6,                                                 " TI DISK MENU  ");
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK  ");  cassete_menu_items++;
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " SAVE    DISK  ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " LIST    DISK  ");  cassete_menu_items++;
     AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU  ");  cassete_menu_items++;
 
     if (bDiskIsMounted) AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
@@ -429,7 +459,6 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
         if (strlen(myDskFile) < 32) col=16-(strlen(myDskFile)/2);
         if (strlen(myDskFile) & 1) col--;
         AffChaine(col,9+cassete_menu_items+5,(sel==cassete_menu_items)?2:0,myDskFile);   
-        
     }
 }
 
@@ -482,14 +511,8 @@ void CassetteMenu(void)
             }
             if (menuSelection == 2)
             {
-                if  (showMessage("DO YOU REALLY WANT TO","WRITE .DSK DATA?") == ID_SHM_YES) 
-                {
-                    {
-                        showMessage("SORRY - .DSK WRITE IS","NOT YET SUPPORTED...");
-                    }
-                }
-                CassetteMenuShow(true, menuSelection);
-                
+                  ShowDiskListing();
+                  CassetteMenuShow(true, menuSelection);
             }
             if (menuSelection == 3)
             {
@@ -498,30 +521,6 @@ void CassetteMenu(void)
             if (menuSelection == 4)
             {
                   break;
-            }
-            if (menuSelection == 5)
-            {
-                  break;
-            }
-            if (menuSelection == 6)
-            {
-                  break;
-            }
-            if (menuSelection == 7)
-            {
-                  break;
-            }
-            if (menuSelection == 8)
-            {
-                  break;
-            }
-            if (menuSelection == 9)
-            {
-                break;
-            }
-            if (menuSelection == 10)
-            {
-                break;
             }
         }
         if (nds_key & KEY_B)  
@@ -551,6 +550,81 @@ u8 bKeyClick = 0;
 
 u16 PAL_Timing[] = {656, 596, 546, 504};
 u16 NTSC_Timing[] = {546, 496, 454, 420};
+
+
+void CheckKeyboardInput(u16 iTy, u16 iTx)
+{          
+    // --------------------------------------------------------------------------
+    // Test the touchscreen rendering of the keyboard
+    // --------------------------------------------------------------------------
+    if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
+    {
+        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_1]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_2]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_3]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_4]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_5]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_7]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_8]=1; if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 56) && (iTy < 84))   // Row 2
+    {
+        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_9]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_0]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_A]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_C]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_D]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_E]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_F]=1; if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 84) && (iTy < 112))  // Row 3
+    {
+        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_G]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_H]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_I]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_J]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_K]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_L]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_M]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_N]=1; if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 112) && (iTy < 140))  // Row 4
+    {
+        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_O]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_P]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Q]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_R]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_S]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_T]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_U]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_V]=1; if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 140) && (iTy < 169))  // Row 5
+    {
+        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_W]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_X]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Y]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_Z]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
+        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_8]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //REDO
+        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_9]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //BACK
+    }
+    else if ((iTy >= 169) && (iTy < 192))  // Row 6
+    {
+        if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
+        else if ((iTx >= 174) && (iTx < 214))  {tms9901.Keyboard[TMS_KEY_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 214) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
+    }
+
+    if (bKeyClick == 1)
+    {
+        mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
+        bKeyClick = 2;
+    }    
+}
 
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the Z80, VDP and PSG 
@@ -657,14 +731,9 @@ ITCM_CODE void ds99_main(void)
             if (myConfig.showFPS == 2) break;   // If Full Speed, break out...
         }
         
-      // ------------------------------------------
-      // Handle any screen touch events
-      // ------------------------------------------
-      kbd_key = 0;
-
       // Clear out the Joystick and Keyboard table - we'll check for keys below
       TMS9901_ClearJoyKeyData();
-        
+      
       tms9901.CapsLock = myConfig.capsLock; // Set the state of our Caps Lock
         
       if  (keysCurrent() & KEY_TOUCH)
@@ -751,78 +820,15 @@ ITCM_CODE void ds99_main(void)
           }
         }
         else
+        {
           LoadNow = 0;
-
-        // --------------------------------------------------------------------------
-        // Test the touchscreen rendering of the keybaord
-        // --------------------------------------------------------------------------
-        if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
-        {
-            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_1]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_2]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_3]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_4]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_5]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_7]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_8]=1; if (!bKeyClick) bKeyClick=1;}
         }
-        else if ((iTy >= 56) && (iTy < 84))   // Row 2
-        {
-            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_9]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_0]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_A]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_C]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_D]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_E]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_F]=1; if (!bKeyClick) bKeyClick=1;}
-        }
-        else if ((iTy >= 84) && (iTy < 112))  // Row 3
-        {
-            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_G]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_H]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_I]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_J]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_K]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_L]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_M]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_N]=1; if (!bKeyClick) bKeyClick=1;}
-        }
-        else if ((iTy >= 112) && (iTy < 140))  // Row 4
-        {
-            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_O]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_P]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Q]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_R]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_S]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_T]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_U]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_V]=1; if (!bKeyClick) bKeyClick=1;}
-        }
-        else if ((iTy >= 140) && (iTy < 169))  // Row 5
-        {
-            if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_W]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_X]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Y]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_Z]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
-            else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_8]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //REDO
-            else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_9]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //BACK
-        }
-        else if ((iTy >= 169) && (iTy < 192))  // Row 6
-        {
-            if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
-            else if ((iTx >= 174) && (iTx < 214))  {tms9901.Keyboard[TMS_KEY_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 214) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
-        }
+        
+        // ---------------------------------
+        // Check the Keyboard for input...
+        // ---------------------------------
+        CheckKeyboardInput(iTy, iTx);
           
-        if (bKeyClick == 1)
-        {
-            mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
-            bKeyClick = 2;
-        }
       } // No Screen Touch...
       else  
       {
@@ -933,8 +939,8 @@ void TI99DSInit(void)
   videoSetMode(MODE_0_2D  | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG);
-  vramSetBankB(VRAM_B_MAIN_SPRITE);          // Once emulation of game starts, we steal this back for an additional 128K of VRAM at 0x6820000
   vramSetBankC(VRAM_C_SUB_BG);
+  vramSetBankB(VRAM_B_LCD);                  // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 
   vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 
   vramSetBankE(VRAM_E_LCD );                 // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000
   vramSetBankF(VRAM_F_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000
@@ -959,9 +965,9 @@ void TI99DSInit(void)
   bg0b  = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
   bg1b  = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
   bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);
-  decompress(ecranBasSelTiles,  bgGetGfxPtr(bg0b), LZ77Vram);
-  decompress(ecranBasSelMap,  (void*) bgGetMapPtr(bg0b), LZ77Vram);
-  dmaCopy((void*) ecranBasSelPal,(void*)  BG_PALETTE_SUB,256*2);
+  decompress(optionsTiles,  bgGetGfxPtr(bg0b), LZ77Vram);
+  decompress(optionsMap,  (void*) bgGetMapPtr(bg0b), LZ77Vram);
+  dmaCopy((void*) optionsPal,(void*)  BG_PALETTE_SUB,256*2);
   dmaVal  = *(bgGetMapPtr(bg0b)+24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
     

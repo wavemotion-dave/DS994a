@@ -9,6 +9,7 @@ Features :
 -----------------------
 * Cart loads up to 512K Banked (+40K of GROM unbanked)
 * 32K RAM Expansion
+* SAMS 512K memory Expansion
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
@@ -23,8 +24,15 @@ This program is made up of a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 
 As such, the following copyrights apply:
 
+The SN76496 sound core is from FluBBa and is used with permission. 
+
 The TI9918A code came from Marat Fayzullin (ColEM) and retains Marat's original copyright
 statement. Do not use any of that code without trying to contact Marat.
+
+The TI9900 CPU core is mainly my own with some significant bits of scaffolding from 
+Mike Brent's Classic99 emulator - especially in the status bits handling and some 
+of the more tricky opcode algorithms so they run correctly. This is used with permission 
+and with great thanks!
 
 For the rest of the code: as long as there is no commercial use (i.e. no profit is made),
 copying and distribution of this emulator, it's source code and associated readme files, with 
@@ -38,7 +46,9 @@ Credits :
 * Thanks to Alekmaul who provided the baseline code to work with and to lobo for the menu graphical design.
 * Thanks to Flubba for the SN76496 sound core.
 * Thanks to Marat Fayzullin (ColEM) for the TI991A video driver.
-* Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU code (and help me hook it in!).
+* Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code.
+* Thanks to Pete Eberlein and some great ideas and a bit of code from his upcoming BuLWiP emulator. 
+* Thanks to ti99iuc over on AtariAge for the DS99/4a Logo
 * Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
 
 
@@ -64,12 +74,13 @@ Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay.
+* Save and Load state do not yet work with SAMS expanded memory nor the special SuperCart or MiniMem. Coming soon.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 
 
 Blend Mode (DSi) :
 -----------------------
-ColecoDS supports a "blend mode" which I borrowed from my scheme on StellaDS. In this mode, 
+DS99/4a supports a "blend mode" which I borrowed from my scheme on StellaDS. In this mode, 
 two frames are blended together - this is really useful when playing games like Space Fury or Galaxian 
 where the bullets on screen are only 1 pixel wide and the DSi LCD just doesn't hold onto the pixels 
 long enough to be visible. These games were designed to run on an old tube TV with phosphor which 
@@ -91,6 +102,14 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.6: 21-Jan-2023 by wavemotion-dave
+* Re-write of the CPU core. It's 20% smaller and 20% faster.
+* Added ability to list disk contents so you can see what programs are on it.
+* Added write-backing of .DSK files. When they chagne the file is written out in the background.
+* Added SAMS 512K expanded memory support - must be enabled in OPTIONS on a per-game basis.
+* Added new cartridge types to support SuperCart 8K, MiniMemory 4K and Milton Bradley MBX carts (with and without special 1K RAM).
+* New splash screen... new logo icon... a fresh start!
+
 V0.5: 12-Jan-2023 by wavemotion-dave
 * Streamlined save and load of save state so it's only 2 blocks of SD card (64K).  Old saves will not work with version 0.5 - so finish your games before you upgrade.
 * Fixed banking so that Skyway8.bin (and probably others) will load properly.
