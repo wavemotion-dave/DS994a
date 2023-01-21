@@ -52,7 +52,7 @@
 // ------------------------------------------------------------------------------------------------------------
 const u8 TIKeys[8][8] =
 {
-    { TMS_KEY_EQUALS,   TMS_KEY_PERIOD, TMS_KEY_COMMA, TMS_KEY_M,   TMS_KEY_N,   TMS_KEY_DIV,    TMS_KEY_JOY1_FIRE,     TMS_KEY_JOY2_FIRE   },
+    { TMS_KEY_EQUALS,   TMS_KEY_PERIOD, TMS_KEY_COMMA, TMS_KEY_M,   TMS_KEY_N,   TMS_KEY_SLASH,  TMS_KEY_JOY1_FIRE,     TMS_KEY_JOY2_FIRE   },
     { TMS_KEY_SPACE,    TMS_KEY_L,      TMS_KEY_K,     TMS_KEY_J,   TMS_KEY_H,   TMS_KEY_SEMI,   TMS_KEY_JOY1_LEFT,     TMS_KEY_JOY2_LEFT   },
     { TMS_KEY_ENTER,    TMS_KEY_O,      TMS_KEY_I,     TMS_KEY_U,   TMS_KEY_Y,   TMS_KEY_P,      TMS_KEY_JOY1_RIGHT,    TMS_KEY_JOY2_RIGHT  },
     { TMS_KEY_NONE,     TMS_KEY_9,      TMS_KEY_8,     TMS_KEY_7,   TMS_KEY_6,   TMS_KEY_0,      TMS_KEY_JOY1_DOWN,     TMS_KEY_JOY2_DOWN   },

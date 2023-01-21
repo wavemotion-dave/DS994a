@@ -559,58 +559,65 @@ void CheckKeyboardInput(u16 iTy, u16 iTx)
     // --------------------------------------------------------------------------
     if ((iTy >= 28) && (iTy < 56))        // Row 1 (top row)
     {
-        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_1]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_2]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_3]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_4]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_5]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_7]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_8]=1; if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 31))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 31)  && (iTx < 60))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 60)  && (iTx < 90))   {tms9901.Keyboard[TMS_KEY_3]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 90)  && (iTx < 118))  {tms9901.Keyboard[TMS_KEY_4]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 118) && (iTx < 147))  {tms9901.Keyboard[TMS_KEY_5]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 147) && (iTx < 176))  {tms9901.Keyboard[TMS_KEY_6]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 176) && (iTx < 205))  {tms9901.Keyboard[TMS_KEY_7]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 205) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_8]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 234) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_EQUALS]=1; if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 56) && (iTy < 84))   // Row 2
     {
-        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_9]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_0]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_A]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_C]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_D]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_E]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_F]=1; if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 31))   {tms9901.Keyboard[TMS_KEY_9]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 31)  && (iTx < 60))   {tms9901.Keyboard[TMS_KEY_0]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 60)  && (iTx < 90))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 90)  && (iTx < 118))  {tms9901.Keyboard[TMS_KEY_B]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 118) && (iTx < 147))  {tms9901.Keyboard[TMS_KEY_C]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 147) && (iTx < 176))  {tms9901.Keyboard[TMS_KEY_D]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 176) && (iTx < 205))  {tms9901.Keyboard[TMS_KEY_E]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 205) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_F]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 234) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_SLASH]=1;  if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 84) && (iTy < 112))  // Row 3
     {
-        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_G]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_H]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_I]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_J]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_K]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_L]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_M]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_N]=1; if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 31))   {tms9901.Keyboard[TMS_KEY_G]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 31)  && (iTx < 60))   {tms9901.Keyboard[TMS_KEY_H]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 60)  && (iTx < 90))   {tms9901.Keyboard[TMS_KEY_I]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 90)  && (iTx < 118))  {tms9901.Keyboard[TMS_KEY_J]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 118) && (iTx < 147))  {tms9901.Keyboard[TMS_KEY_K]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 147) && (iTx < 176))  {tms9901.Keyboard[TMS_KEY_L]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 176) && (iTx < 205))  {tms9901.Keyboard[TMS_KEY_M]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 205) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_N]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 234) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_SEMI]=1;   if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 112) && (iTy < 140))  // Row 4
     {
-        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_O]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_P]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Q]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_R]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_S]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_T]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_U]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_V]=1; if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 31))   {tms9901.Keyboard[TMS_KEY_O]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 31)  && (iTx < 60))   {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 60)  && (iTx < 90))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 90)  && (iTx < 118))  {tms9901.Keyboard[TMS_KEY_R]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 118) && (iTx < 147))  {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 147) && (iTx < 176))  {tms9901.Keyboard[TMS_KEY_T]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 176) && (iTx < 205))  {tms9901.Keyboard[TMS_KEY_U]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 205) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_V]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 234) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_S]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 140) && (iTy < 169))  // Row 5
     {
-        if      ((iTx >= 1)   && (iTx < 34))   {tms9901.Keyboard[TMS_KEY_W]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 34)  && (iTx < 65))   {tms9901.Keyboard[TMS_KEY_X]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 65)  && (iTx < 96))   {tms9901.Keyboard[TMS_KEY_Y]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 96)  && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_Z]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 158))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 158) && (iTx < 189))  {tms9901.Keyboard[TMS_KEY_6]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
-        else if ((iTx >= 189) && (iTx < 220))  {tms9901.Keyboard[TMS_KEY_8]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //REDO
-        else if ((iTx >= 220) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_9]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //BACK
+        if      ((iTx >= 1)   && (iTx < 31))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 31)  && (iTx < 60))   {tms9901.Keyboard[TMS_KEY_X]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 60)  && (iTx < 90))   {tms9901.Keyboard[TMS_KEY_Y]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 90)  && (iTx < 118))  {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
+        
+        else if ((iTx >= 118) && (iTx < 150))  {tms9901.Keyboard[TMS_KEY_6]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //PRO'C
+        else if ((iTx >= 150) && (iTx < 180))  {tms9901.Keyboard[TMS_KEY_8]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //REDO
+        else if ((iTx >= 180) && (iTx < 212))  {tms9901.Keyboard[TMS_KEY_9]=1; tms9901.Keyboard[TMS_KEY_FUNCTION]=1; if (!bKeyClick) bKeyClick=1;} //BACK
+        
+        else if ((iTx >= 212) && (iTx < 233))  {tms9901.Keyboard[TMS_KEY_COMMA]=1;   if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 233) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1;  if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 169) && (iTy < 192))  // Row 6
     {
@@ -917,7 +924,7 @@ ITCM_CODE void ds99_main(void)
                       case KBD_SHIFT:       tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
                           
                       case KBD_PLUS:        tms9901.Keyboard[TMS_KEY_EQUALS]=1;    tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
-                      case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_DIV]=1;       tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
+                      case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_SLASH]=1;     tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
                       case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                       case KBD_REDO:        tms9901.Keyboard[TMS_KEY_8]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                       case KBD_BACK:        tms9901.Keyboard[TMS_KEY_9]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;

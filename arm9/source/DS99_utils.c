@@ -978,7 +978,7 @@ void MapPlayer2(void)
     myConfig.keymap[7]   = JOY2_FIRE;    // NDS Y Button
 
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
-    myConfig.keymap[9]   = KBD_CTRL;     // NDS R
+    myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
@@ -995,7 +995,7 @@ void MapPlayer1(void)
     myConfig.keymap[7]   = JOY1_FIRE;    // NDS Y Button
 
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
-    myConfig.keymap[9]   = KBD_CTRL;     // NDS R
+    myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
@@ -1012,7 +1012,7 @@ void MapESDX(void)
     myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
 
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
-    myConfig.keymap[9]   = KBD_CTRL;     // NDS R
+    myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
     myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
@@ -1124,7 +1124,7 @@ const struct options_t Option_Table[2][20] =
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,     4},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors,   2},
-        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                                                                                &myConfig.memWipe,      5},
+        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                                                                                &myConfig.memWipe,      2},
         {NULL,             {"",      ""},                                                                                                                                                       NULL,                   1},
     },
     // Page 2
