@@ -46,10 +46,10 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
-
-#define SAMS_BANKS  128  // 512K of SAMS memory
-u8 MemSAMS[(SAMS_BANKS * 4 * 1024) - (128*1024)];    // We use 128K of VRAM and the rest comes from here...
 #define MemSAMS_fast            ((u8*)0x06820000)    // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
+
+u16 SAMS_BANKS  = 128;   // 512K or 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
+u8 *MemSAMS     = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -366,6 +366,28 @@ void TMS9900_buildopcodes(void)
     }
 }
 
+
+// ---------------------------------------------------------
+// Allocate enough memory for a SAMS 512K (DS) or 1MB (DSi)
+// ---------------------------------------------------------
+void InitMemoryPoolSAMS(void)
+{
+    // Only allocate the memory once...
+    if (MemSAMS == 0)
+    {
+        if (isDSiMode())
+        {
+            SAMS_BANKS = 256;                           // 256 * 4K = 1024K
+            MemSAMS = malloc((SAMS_BANKS-32) * 0x1000); // We can save 128K since we're getting the first 128K from our DS VRAM
+        }
+        else
+        {
+            SAMS_BANKS = 128;                           // 128 * 4K = 512K
+            MemSAMS = malloc((SAMS_BANKS-32) * 0x1000); // We can save 128K since we're getting the first 128K from our DS VRAM
+        }
+    }
+}
+
 // ----------------------------------------------------------------------------------------------------
 // Called when a new CART is loaded and the game system needs to be started at a RESET condition.
 // Caller passes in the game filename (ROM) they wish to load... C/D/G files will find their siblings.
@@ -671,12 +693,14 @@ void TMS9900_Reset(char *szGame)
     }
 
     // -------------------------------------------------
-    // SAMS support... Only 512K support for now...
+    // SAMS support... 512K for DS and 1MB for DSi
     // -------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS512K)
+    if (myConfig.machineType == MACH_TYPE_SAMS)
     {
+        InitMemoryPoolSAMS();   // Make sure we have the memory...
+        
         // We don't map the MemType[] here.. only when CRU bit is written
-        memset(MemSAMS,         0x00, sizeof(MemSAMS));
+        memset(MemSAMS,         0x00, ((SAMS_BANKS-32) * 0x1000));
         memset(MemSAMS_fast,    0x00, (128 * 1024));
     }
 
@@ -926,7 +950,7 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
     // -----------------------------------------------------------
     // If the machine has been configured for SAMS operation...
     // -----------------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS512K)
+    if (myConfig.machineType == MACH_TYPE_SAMS)
     {
         u8 oldEnable = tms9900.cruSAMS[1];
         tms9900.cruSAMS[cruAddress & 1] = dataBit;

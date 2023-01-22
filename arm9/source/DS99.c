@@ -97,6 +97,13 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_K, KBD_L, KBD_M, KBD_N, KBD_O,
     KBD_P, KBD_Q, KBD_R, KBD_S, KBD_T,
     KBD_U, KBD_V, KBD_W, KBD_X, KBD_Y, KBD_Z,
+    KBD_EQUALS,
+    KBD_SLASH,
+    KBD_PERIOD,
+    KBD_COMMA,    
+    KBD_SEMI,   
+    KBD_PLUS,
+    KBD_MINUS,    
     KBD_UP_ARROW,
     KBD_DOWN_ARROW,
     KBD_LEFT_ARROW,
@@ -107,8 +114,6 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_FNCT,
     KBD_CTRL,
     KBD_SHIFT,
-    KBD_PLUS,
-    KBD_MINUS
 };
 
 
@@ -320,8 +325,10 @@ void ResetTI(void)
 // AY sound chip support and MegaCart support.  Game players
 // probably don't care, but it's really helpful for devs.
 // ------------------------------------------------------------
-void DisplayStatusLine(bool bForce)
+void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 {
+    static u8 bShiftKeysBlanked = 0;
+    
     if (bForce) last_pal_mode = 98;
     if (last_pal_mode != myConfig.isPAL)
     {
@@ -345,6 +352,37 @@ void DisplayStatusLine(bool bForce)
     {
         if (--driveReadCounter) AffChaine(12,0,6, "DISK READ ");
         else AffChaine(12,0,6, "          ");
+    }
+    
+    // Show the keyboard shift/function/control
+    if(tms9901.Keyboard[TMS_KEY_FUNCTION] == 1) 
+    {
+        AffChaine(0,0,6, "FCTN"); 
+        bShiftKeysBlanked = 0;
+    }
+    else 
+    {
+        if(tms9901.Keyboard[TMS_KEY_SHIFT] == 1)
+        {
+            AffChaine(0,0,6, "SHIFT");
+            bShiftKeysBlanked = 0;
+        }
+        else 
+        {
+            if(tms9901.Keyboard[TMS_KEY_CONTROL] == 1)
+            {
+                AffChaine(0,0,6, "CTRL");
+                bShiftKeysBlanked = 0;
+            }
+            else
+            {
+                if (!bShiftKeysBlanked)
+                {
+                    AffChaine(0,0,6, "     ");
+                    bShiftKeysBlanked = 1;
+                }
+            }
+        }
     }
 }
 
@@ -633,14 +671,8 @@ void CheckKeyboardInput(u16 iTy, u16 iTx)
     }    
 }
 
-// ------------------------------------------------------------------------
-// The main emulation loop is here... call into the Z80, VDP and PSG 
-// ------------------------------------------------------------------------
-ITCM_CODE void ds99_main(void) 
+void ds99_main_setup(void)
 {
-  u16 iTx,  iTy;
-  u8 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
-
   // Returns when  user has asked for a game to run...
   showMainMenu();
     
@@ -664,6 +696,18 @@ ITCM_CODE void ds99_main(void)
     
   // Force the sound engine to turn on when we start emulation
   bStartSoundEngine = true;
+   
+}
+
+// ------------------------------------------------------------------------
+// The main emulation loop is here... call into the Z80, VDP and PSG 
+// ------------------------------------------------------------------------
+ITCM_CODE void ds99_main(void) 
+{
+  u16 iTx,  iTy;
+  u8 ResetNow  = 0, SaveNow = 0, LoadNow = 0;
+
+  ds99_main_setup();    // Stuff we don't need in ITCM fast memory...
     
   // -------------------------------------------------------------------
   // Stay in this loop running the TI99 game until the user exits...
@@ -691,10 +735,10 @@ ITCM_CODE void ds99_main(void)
             TIMER1_DATA = 0;
             TIMER1_CR=TIMER_ENABLE | TIMER_DIV_1024;
             emuFps = emuActFrames;
-            if (myConfig.showFPS)
+            if (globalConfig.showFPS)
             {
                 // If not asked to run full-speed... adjust FPS so it's stable near 60
-                if (myConfig.showFPS != 2)
+                if (globalConfig.showFPS != 2)
                 {
                     if (emuFps == 61) emuFps=60;
                     else if (emuFps == 59) emuFps=60;            
@@ -735,7 +779,7 @@ ITCM_CODE void ds99_main(void)
         // --------------------------------------------
         while(TIMER2_DATA < ((myConfig.isPAL ? PAL_Timing[myConfig.emuSpeed] : NTSC_Timing[myConfig.emuSpeed])*(timingFrames+1)))
         {
-            if (myConfig.showFPS == 2) break;   // If Full Speed, break out...
+            if (globalConfig.showFPS == 2) break;   // If Full Speed, break out...
         }
         
       // Clear out the Joystick and Keyboard table - we'll check for keys below
@@ -1054,6 +1098,7 @@ void LoadBIOSFiles(void)
     
 }
 
+
 /*********************************************************************************
  * Program entry point - check if an argument has been passed in probably from TWL++
  ********************************************************************************/
@@ -1068,11 +1113,15 @@ int main(int argc, char **argv)
      return -1;
   }
     
+  // Need to load in config file if only for the global options at this point...
+  FindAndLoadConfig();
+ 
+  // Read in and store the DS994a.HI file
   highscore_init();
-
+    
   lcdMainOnTop();
     
-  //  Init timer for frame management
+  //  Init timer for frame management and install the sound handlers
   TIMER2_DATA=0;
   TIMER2_CR=TIMER_ENABLE|TIMER_DIV_1024;  
   dsInstallSoundEmuFIFO();
@@ -1113,8 +1162,15 @@ int main(int argc, char **argv)
   else
   {
       initial_file[0]=0; // No file passed on command line...
-      chdir("/roms");    // Try to start in roms area... doesn't matter if it fails
-      chdir("ti99");     // And try to start in the subdir /ti99... doesn't matter if it fails.
+      if (globalConfig.romsDIR == 0)
+      {
+          chdir("/roms");    // Try to start in roms area... doesn't matter if it fails
+          chdir("ti99");     // And try to start in the subdir /ti99... doesn't matter if it fails.
+      }
+      else if (globalConfig.romsDIR == 1)
+      {
+          chdir("/roms");    // Try to start in roms area... doesn't matter if it fails
+      }
   }
     
   SoundPause();
@@ -1131,24 +1187,27 @@ int main(int argc, char **argv)
     // ---------------------------------------------------------------
     if (bTIBIOSFound)
     {
-        u8 idx = 6;
-        AffChaine(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
-        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
-        if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  GROM FOUND"); }
-        if (bTIDISKFound)          {AffChaine(2,idx++,0,"994aDISK.bin  DSR  FOUND"); }
-        idx++;
-        AffChaine(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
-        
-        while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))!=0);
-        while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))==0);
-        while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))!=0);
+        if (globalConfig.skipBIOS == 0)
+        {
+            u8 idx = 6;
+            AffChaine(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
+            if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
+            if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  GROM FOUND"); }
+            if (bTIDISKFound)          {AffChaine(2,idx++,0,"994aDISK.bin  DSR  FOUND"); }
+            idx++;
+            AffChaine(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
+
+            while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))!=0);
+            while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))==0);
+            while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))!=0);
+        }
     }
     else
     {
         AffChaine(2,10,0,"ERROR: TI99 BIOS NOT FOUND");
         AffChaine(2,12,0,"ERROR: CANT RUN WITHOUT BIOS");
         AffChaine(3,12,0,"ERROR: SEE README FILE");
-        while(1) ;  // We're done... Need a TI99 bios to run a CV emulator
+        while(1) ;  // We're done... Need a TI99 bios to run this emulator
     }
   
     while(1) 

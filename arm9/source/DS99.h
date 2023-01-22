@@ -13,8 +13,6 @@
 #include <nds.h>
 #include <string.h>
 
-#define VERSIONDS99 "0.6"
-
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
 enum
@@ -67,6 +65,13 @@ enum
     KBD_X,
     KBD_Y,
     KBD_Z,
+    KBD_EQUALS,
+    KBD_SLASH,
+    KBD_PERIOD,
+    KBD_COMMA,    
+    KBD_SEMI,
+    KBD_PLUS,
+    KBD_MINUS,    
     KBD_UP_ARROW,
     KBD_DOWN_ARROW,
     KBD_LEFT_ARROW,
@@ -77,8 +82,6 @@ enum
     KBD_FNCT,
     KBD_CTRL,
     KBD_SHIFT,
-    KBD_PLUS,
-    KBD_MINUS,
     MAX_KEY_OPTIONS
 };
 

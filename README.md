@@ -9,11 +9,11 @@ Features :
 -----------------------
 * Cart loads up to 512K Banked (+40K of GROM unbanked)
 * 32K RAM Expansion
-* SAMS 512K memory Expansion
+* SAMS 512K memory Expansion for the DS and 1MB for the DSi (and above)
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* Disk Support using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* Disk Support of 90K and 180K using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
 
 Copyright :

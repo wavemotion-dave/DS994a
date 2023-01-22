@@ -39,13 +39,14 @@ char szDiskName[256];
 char szFile[256];
 u32 file_size = 0;
 
+struct GlobalConfig_t globalConfig;
 struct Config_t AllConfigs[MAX_CONFIGS];
 struct Config_t myConfig __attribute((aligned(4))) __attribute__((section(".dtcm")));
 extern u32 file_crc;
 
 u8 option_table=0;
 
-const char szKeyName[MAX_KEY_OPTIONS][18] = {
+const char szKeyName[MAX_KEY_OPTIONS][20] = {
   "P1 JOY UP",
   "P1 JOY DOWN",
   "P1 JOY LEFT",
@@ -94,6 +95,16 @@ const char szKeyName[MAX_KEY_OPTIONS][18] = {
   "KEYBOARD X",
   "KEYBOARD Y",
   "KEYBOARD Z",
+    
+  "KEYBOARD EQUALS",
+  "KEYBOARD SLASH",
+  "KEYBOARD PERIOD",
+  "KEYBOARD COMMA",
+  "KEYBOARD SEMI",
+    
+  "KEYBOARD PLUS",
+  "KEYBOARD MINUS",
+    
   "KEYBOARD UP",
   "KEYBOARD DOWN",
   "KEYBOARD LEFT",
@@ -104,8 +115,6 @@ const char szKeyName[MAX_KEY_OPTIONS][18] = {
   "KEYBOARD FCTN",
   "KEYBOARD CTRL",
   "KEYBOARD SHIFT",
-  "KEYBOARD PLUS",
-  "KEYBOARD MINUS"
 };
 
 
@@ -918,27 +927,30 @@ void SaveConfig(bool bShow)
     if (bShow) dsPrintValue(6,0,0, (char*)"SAVING CONFIGURATION");
 
     // Set the global configuration version number...
-    myConfig.config_ver = CONFIG_VER;
+    globalConfig.config_ver = CONFIG_VER;
 
     // If there is a game loaded, save that into a slot... re-use the same slot if it exists
-    myConfig.game_crc = file_crc;
-    // Find the slot we should save into...
-    for (slot=0; slot<MAX_CONFIGS; slot++)
+    if (ucGameChoice != -1)
     {
-        if (AllConfigs[slot].game_crc == myConfig.game_crc)  // Got a match?!
+        myConfig.game_crc = file_crc;
+        // Find the slot we should save into...
+        for (slot=0; slot<MAX_CONFIGS; slot++)
         {
-            break;
+            if (AllConfigs[slot].game_crc == myConfig.game_crc)  // Got a match?!
+            {
+                break;
+            }
+            if (AllConfigs[slot].game_crc == 0x00000000)  // Didn't find it... use a blank slot...
+            {
+                break;
+            }
         }
-        if (AllConfigs[slot].game_crc == 0x00000000)  // Didn't find it... use a blank slot...
-        {
-            break;
-        }
-    }
 
-    // --------------------------------------------------------------------------
-    // Copy our current game configuration to the main configuration database...
-    // --------------------------------------------------------------------------
-    memcpy(&AllConfigs[slot], &myConfig, sizeof(struct Config_t));
+        // --------------------------------------------------------------------------
+        // Copy our current game configuration to the main configuration database...
+        // --------------------------------------------------------------------------
+        memcpy(&AllConfigs[slot], &myConfig, sizeof(struct Config_t));
+    }
 
     // --------------------------------------------------
     // Now save the config file out o the SD card...
@@ -955,6 +967,7 @@ void SaveConfig(bool bShow)
     fp = fopen("/data/DS994a.DAT", "wb+");
     if (fp != NULL)
     {
+        fwrite(&globalConfig, sizeof(globalConfig), 1, fp);
         fwrite(&AllConfigs, sizeof(AllConfigs), 1, fp);
         fclose(fp);
     } else dsPrintValue(4,0,0, (char*)"ERROR SAVING CONFIG FILE");
@@ -1021,31 +1034,30 @@ void SetDefaultGameConfig(void)
 {
     MapPlayer1();
 
-    myConfig.showFPS     = 0;
     myConfig.frameSkip   = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
     myConfig.frameBlend  = 0;
     myConfig.isPAL       = 0;
-    myConfig.maxSprites  = 0;
+    myConfig.maxSprites  = globalConfig.maxSprites;
     myConfig.memWipe     = 0;
     myConfig.capsLock    = 0;
     myConfig.RAMMirrors  = 0;
-    myConfig.keyboard    = 0;
+    myConfig.overlay     = 0;
     myConfig.emuSpeed    = 0;
-    myConfig.machineType = 0;
+    myConfig.machineType = globalConfig.machineType;
     myConfig.cartType    = 0;
     myConfig.reservedG   = 0;
     myConfig.reservedH   = 0;
     myConfig.reservedI   = 0;
     myConfig.reservedJ   = 0;
-    myConfig.reservedK   = 1;
-    myConfig.reservedL   = 1;
-    myConfig.reservedM   = 2;
-    myConfig.reservedN   = 0xFF;
+    myConfig.reservedK   = 0;
+    myConfig.reservedL   = 0;
+    myConfig.reservedM   = 1;
+    myConfig.reservedN   = 1;
+    myConfig.reservedO   = 2;
+    myConfig.reservedP   = 0xFF;
+    myConfig.reservedQ   = 0xFF;
     myConfig.reservedZ   = 0xFF;
     myConfig.reservedA32 = 0x00000000;
-
-    // And a few games don't want more than 4 max sprites (they pull tricks that rely on it)
-    //if (file_crc == 0xee530ad2) myConfig.maxSprites  = 1;  // QBiqs
 }
 
 // -------------------------------------------------------------------------
@@ -1065,23 +1077,28 @@ void FindAndLoadConfig(void)
     fp = fopen("/data/DS994a.DAT", "rb");
     if (fp != NULL)
     {
+        fread(&globalConfig, sizeof(globalConfig), 1, fp);
         fread(&AllConfigs, sizeof(AllConfigs), 1, fp);
         fclose(fp);
 
-        if (AllConfigs[0].config_ver != CONFIG_VER)
+        if (globalConfig.config_ver != CONFIG_VER)
         {
+            memset(&globalConfig, 0x00, sizeof(globalConfig));
             memset(&AllConfigs, 0x00, sizeof(AllConfigs));
             SetDefaultGameConfig();
             SaveConfig(FALSE);
         }
         else
         {
-            for (u16 slot=0; slot<MAX_CONFIGS; slot++)
+            if (ucGameChoice != -1) // If we have a game selected...
             {
-                if (AllConfigs[slot].game_crc == file_crc)  // Got a match?!
+                for (u16 slot=0; slot<MAX_CONFIGS; slot++)
                 {
-                    memcpy(&myConfig, &AllConfigs[slot], sizeof(struct Config_t));
-                    break;
+                    if (AllConfigs[slot].game_crc == file_crc)  // Got a match?!
+                    {
+                        memcpy(&myConfig, &AllConfigs[slot], sizeof(struct Config_t));
+                        break;
+                    }
                 }
             }
         }
@@ -1105,7 +1122,7 @@ void FindAndLoadConfig(void)
 struct options_t
 {
     const char  *label;
-    const char  *option[37];
+    const char  *option[16];    // Up to 16 option choices per option row
     u8          *option_val;
     u8           option_max;
 };
@@ -1113,14 +1130,13 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                                                                                                                                       &myConfig.showFPS,      3},
+        {"OVERLAY",        {"DEFAULT", "TI99/4A KBD"},                                                                                                                                          &myConfig.overlay,      2},
         {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,    3},
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend,   2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites,   2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K"},                                                                                                                                       &myConfig.machineType,  2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K/1MB"},                                                                                                                                   &myConfig.machineType,  2},
         {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                                                                                              &myConfig.cartType,     5},
-        //{"OVERLAY",        {"SIMPLIFIED", "TI99/4A"},                                                                                                                                           &myConfig.keyboard,     2},
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,     4},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors,   2},
@@ -1254,6 +1270,122 @@ void tiDSGameOptions(void)
     return;
 }
 
+
+const struct options_t GlobalOption_Table[20] =
+{
+    {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
+    {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
+    {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                  &globalConfig.romsDIR,       3},
+    {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
+    {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
+
+    {NULL,             {"",      ""},                                           NULL,                        1},
+};
+
+
+// ------------------------------------------------------------------
+// Display the current list of options for the user.
+// ------------------------------------------------------------------
+u8 display_global_options_list(bool bFullDisplay)
+{
+    char strBuf[35];
+    int len=0;
+
+    dsPrintValue(1,21, 0, (char *)"                              ");
+    if (bFullDisplay)
+    {
+        while (true)
+        {
+            siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[len].label, GlobalOption_Table[len].option[*(GlobalOption_Table[len].option_val)]);
+            dsPrintValue(1,5+len, (len==0 ? 2:0), strBuf); len++;
+            if (GlobalOption_Table[len].label == NULL) break;
+        }
+
+        // Blank out rest of the screen... option menus are of different lengths...
+        for (int i=len; i<15; i++)
+        {
+            dsPrintValue(1,5+i, 0, (char *)"                               ");
+        }
+    }
+
+    dsPrintValue(2,22, 0, (char *)"     B=EXIT, START=SAVE   ");
+    return len;
+}
+
+void tiDSGlobalOptions(void)
+{
+    u8 optionHighlighted;
+    u8 idx;
+    bool bDone=false;
+    int keys_pressed;
+    int last_keys_pressed = 999;
+    char strBuf[35];
+
+    idx=display_global_options_list(true);
+    optionHighlighted = 0;
+    while (keysCurrent() != 0)
+    {
+        WAITVBL;
+    }
+    while (!bDone)
+    {
+        keys_pressed = keysCurrent();
+        if (keys_pressed != last_keys_pressed)
+        {
+            last_keys_pressed = keys_pressed;
+            if (keysCurrent() & KEY_UP) // Previous option
+            {
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,0, strBuf);
+                if (optionHighlighted > 0) optionHighlighted--; else optionHighlighted=(idx-1);
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,2, strBuf);
+            }
+            if (keysCurrent() & KEY_DOWN) // Next option
+            {
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,0, strBuf);
+                if (optionHighlighted < (idx-1)) optionHighlighted++;  else optionHighlighted=0;
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,2, strBuf);
+            }
+
+            if (keysCurrent() & KEY_RIGHT)  // Toggle option clockwise
+            {
+                *(GlobalOption_Table[optionHighlighted].option_val) = (*(GlobalOption_Table[optionHighlighted].option_val) + 1) % GlobalOption_Table[optionHighlighted].option_max;
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,2, strBuf);
+            }
+            if (keysCurrent() & KEY_LEFT)  // Toggle option counterclockwise
+            {
+                if ((*(GlobalOption_Table[optionHighlighted].option_val)) == 0)
+                    *(GlobalOption_Table[optionHighlighted].option_val) = GlobalOption_Table[optionHighlighted].option_max -1;
+                else
+                    *(GlobalOption_Table[optionHighlighted].option_val) = (*(GlobalOption_Table[optionHighlighted].option_val) - 1) % GlobalOption_Table[optionHighlighted].option_max;
+                siprintf(strBuf, " %-12s : %-14s", GlobalOption_Table[optionHighlighted].label, GlobalOption_Table[optionHighlighted].option[*(GlobalOption_Table[optionHighlighted].option_val)]);
+                dsPrintValue(1,5+optionHighlighted,2, strBuf);
+            }
+            if (keysCurrent() & KEY_START)  // Save Options
+            {
+                SaveConfig(TRUE);
+            }
+            if ((keysCurrent() & KEY_B) || (keysCurrent() & KEY_A))  // Exit options
+            {
+                break;
+            }
+        }
+        swiWaitForVBlank();
+    }
+
+    // Give a third of a second time delay...
+    for (int i=0; i<20; i++)
+    {
+        swiWaitForVBlank();
+    }
+
+    return;
+}
+
 //*****************************************************************************
 // Change Keymap Options for the current game
 //*****************************************************************************
@@ -1306,7 +1438,7 @@ void tiDSChangeKeymap(void)
   // --------------------------------------------------
   AffChaine(1 ,19,0,("   D-PAD : CHANGE KEY MAP    "));
   AffChaine(1 ,20,0,("       B : RETURN MAIN MENU  "));
-  AffChaine(1 ,21,0,("     X/Y : SWAP P1,P2 / ESDX "));
+  AffChaine(1 ,21,0,("       X : SWAP P1,P2,ESDX   "));
   AffChaine(1 ,22,0,("   START : SAVE KEYMAP       "));
   DisplayKeymapName(ucY);
 
@@ -1401,13 +1533,18 @@ void tiDSChangeKeymap(void)
         ucR=0;
     }
 
-    // Swap Player 1 and Player 2 keymap
+    // ------------------------------------------------------
+    // Cycle between Player 1, Player 2 and ESDX keymaps
+    // ------------------------------------------------------
     if (keysCurrent() & KEY_X)
     {
-        if (myConfig.keymap[0] != JOY2_UP)
+        if ((myConfig.keymap[0] != JOY2_UP) && (myConfig.keymap[0] != KBD_E))
             MapPlayer2();
-        else
+        else if (myConfig.keymap[0] == KBD_E)
             MapPlayer1();
+        else 
+            MapESDX();
+        
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
         while (keysCurrent() & KEY_X)
@@ -1415,18 +1552,6 @@ void tiDSChangeKeymap(void)
         WAITVBL
     }
 
-    if (keysCurrent() & KEY_Y)
-    {
-        if (myConfig.keymap[0] == KBD_E)
-            MapPlayer1();
-        else
-            MapESDX();
-        bIndTch = myConfig.keymap[ucY-6];
-        DisplayKeymapName(ucY);
-        while (keysCurrent() & KEY_Y)
-            ;
-        WAITVBL
-    }
     swiWaitForVBlank();
   }
   while (keysCurrent() & KEY_B);
@@ -1456,10 +1581,11 @@ void DisplayFileName(void)
 //*****************************************************************************
 void affInfoOptions(u32 uY)
 {
-    AffChaine(2, 8,(uY== 8 ? 2 : 0),("         LOAD  GAME         "));
-    AffChaine(2,10,(uY==10 ? 2 : 0),("         PLAY  GAME         "));
-    AffChaine(2,12,(uY==12 ? 2 : 0),("     REDEFINE  KEYS         "));
-    AffChaine(2,14,(uY==14 ? 2 : 0),("        GAME   OPTIONS      "));
+    AffChaine(2, 6,(uY== 6 ? 2 : 0),("         LOAD  GAME         "));
+    AffChaine(2, 8,(uY==8  ? 2 : 0),("         PLAY  GAME         "));
+    AffChaine(2,10,(uY==10 ? 2 : 0),("     REDEFINE  KEYS         "));
+    AffChaine(2,12,(uY==12 ? 2 : 0),("        GAME   OPTIONS      "));
+    AffChaine(2,14,(uY==14 ? 2 : 0),("      GLOBAL   OPTIONS      "));
     AffChaine(2,16,(uY==16 ? 2 : 0),("        QUIT   EMULATOR     "));
     AffChaine(6,18,0,("USE D-PAD  A=SELECT"));
 }
@@ -1493,7 +1619,7 @@ void ReadFileCRCAndConfig(void)
 // --------------------------------------------------------------------
 void tiDSChangeOptions(void)
 {
-  u32 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 8, bOK=0;
+  u32 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 6, bOK=0;
 
   // Display the screen at the top
   videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
@@ -1507,9 +1633,6 @@ void tiDSChangeOptions(void)
   dmaCopy((void*) ecranHautPal,(void*) BG_PALETTE,256*2);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0) + 51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1),32*24*2);
-
-  // Put out the version string...
-  //AffChaine(31-strlen(VERSIONDS99),23,1,"V");AffChaine(31-strlen(VERSIONDS99)+1,23,1,VERSIONDS99);
 
   // Display the screen at the bottom
   bg0b = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
@@ -1532,7 +1655,7 @@ void tiDSChangeOptions(void)
     if (keysCurrent()  & KEY_UP) {
       if (!ucHaut) {
         affInfoOptions(32);
-        ucY = (ucY == 8 ? 16 : ucY -2);
+        ucY = (ucY == 6 ? 16 : ucY -2);
         ucHaut=0x01;
         affInfoOptions(ucY);
       }
@@ -1547,7 +1670,7 @@ void tiDSChangeOptions(void)
     if (keysCurrent()  & KEY_DOWN) {
       if (!ucBas) {
         affInfoOptions(32);
-        ucY = (ucY == 16 ? 8 : ucY +2);
+        ucY = (ucY == 16 ? 6 : ucY +2);
         ucBas=0x01;
         affInfoOptions(ucY);
       }
@@ -1563,7 +1686,7 @@ void tiDSChangeOptions(void)
       if (!ucA) {
         ucA = 0x01;
         switch (ucY) {
-          case 8 :      // LOAD GAME
+          case 6 :      // LOAD GAME
             tiDSLoadFile();
             dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
             if (ucGameChoice != -1)
@@ -1571,10 +1694,10 @@ void tiDSChangeOptions(void)
                 ReadFileCRCAndConfig(); // Get CRC32 of the file and read the config/keys
                 DisplayFileName();      // And put up the filename on the bottom screen
             }
-            ucY = 10;
+            ucY = 8;
             affInfoOptions(ucY);
             break;
-          case 10 :     // PLAY GAME
+          case 8 :     // PLAY GAME
             if (ucGameChoice != -1)
             {
               bOK = 1;
@@ -1584,7 +1707,7 @@ void tiDSChangeOptions(void)
                 NoGameSelected(ucY);
             }
             break;
-          case 12 :     // REDEFINE KEYS
+          case 10 :     // REDEFINE KEYS
             if (ucGameChoice != -1)
             {
                 tiDSChangeKeymap();
@@ -1597,7 +1720,7 @@ void tiDSChangeOptions(void)
                 NoGameSelected(ucY);
             }
             break;
-          case 14 :     // GAME OPTIONS
+          case 12 :     // GAME OPTIONS
             if (ucGameChoice != -1)
             {
                 tiDSGameOptions();
@@ -1611,6 +1734,13 @@ void tiDSChangeOptions(void)
             }
             break;
 
+          case 14 :     // GLOBAL OPTIONS
+            tiDSGlobalOptions();
+            dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
+            affInfoOptions(ucY);
+            DisplayFileName();
+            break;
+                
           case 16 :     // QUIT EMULATOR
             exit(1);
             break;

@@ -14,7 +14,7 @@
 #define MAX_ROM_LENGTH          160
 
 #define MAX_CONFIGS             750
-#define CONFIG_VER              0x0002
+#define CONFIG_VER              0x0004
 
 #define TI99ROM                 0x01
 #define DIRECT                  0x02
@@ -27,7 +27,7 @@
 #define DPAD_DIAGONALS          1
 
 #define MACH_TYPE_NORMAL32K     0
-#define MACH_TYPE_SAMS512K      1
+#define MACH_TYPE_SAMS          1
 
 #define CART_TYPE_NORMAL        0
 #define CART_TYPE_SUPERCART     1
@@ -41,12 +41,32 @@ typedef struct {
   u32 uCrc;
 } FIC_TI99;
 
-struct __attribute__((__packed__)) Config_t
+struct __attribute__((__packed__)) GlobalConfig_t
 {
     u16 config_ver;
+    u16 configCRC;
+    u8  showFPS;
+    u8  skipBIOS;
+    u8  romsDIR;
+    u8  maxSprites;
+    u8  machineType;
+    u8  reservedF;
+    u8  reservedG;
+    u8  reservedH;
+    u8  reservedI;
+    u8  reservedJ;
+    u8  reservedK;
+    u8  reservedL;
+    u8  reservedM;
+    u8  reservedN;
+    u8  reservedO;
+    u8  reservedP;
+};
+
+struct __attribute__((__packed__)) Config_t
+{
     u32 game_crc;
     u8  keymap[12];
-    u8  showFPS;
     u8  frameSkip;
     u8  frameBlend;
     u8  maxSprites;
@@ -54,7 +74,7 @@ struct __attribute__((__packed__)) Config_t
     u8  isPAL;
     u8  capsLock;
     u8  RAMMirrors;
-    u8  keyboard;
+    u8  overlay;
     u8  emuSpeed;
     u8  machineType;
     u8  cartType;
@@ -66,11 +86,15 @@ struct __attribute__((__packed__)) Config_t
     u8  reservedL;
     u8  reservedM;
     u8  reservedN;
+    u8  reservedO;
+    u8  reservedP;
+    u8  reservedQ;
     u8  reservedZ;
     u32 reservedA32;
 };
 
 extern struct Config_t myConfig;
+extern struct GlobalConfig_t globalConfig;
 
 extern void FindAndLoadConfig(void);
 
