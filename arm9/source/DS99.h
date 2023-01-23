@@ -85,6 +85,17 @@ enum
     MAX_KEY_OPTIONS
 };
 
+#define META_KEY_NONE           0
+#define META_KEY_QUIT           1 
+#define META_KEY_HIGHSCORE      2
+#define META_KEY_SAVESTATE      3
+#define META_KEY_LOADSTATE      4
+#define META_KEY_MINIMENU       5
+#define META_KEY_ALPHALOCK      6
+#define META_KEY_SHIFT          7
+#define META_KEY_CONTROL        8
+#define META_KEY_FUNCTION       9
+
 extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;

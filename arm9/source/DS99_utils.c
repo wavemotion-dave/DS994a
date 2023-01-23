@@ -277,7 +277,7 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
   AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
   AffChaine(30,21,0,(NoDebGame+14<countTI ? ">" : " "));
   siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countTI);
-  AffChaine(2,6,0, szName);
+  AffChaine(3,6,0, szName);
   for (ucBcl=0;ucBcl<14; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
     if (ucGame < countTI)
@@ -316,7 +316,7 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
   AffChaine(30,8,0,(NoDebGame>0 ? "<" : " "));
   AffChaine(30,21,0,(NoDebGame+14<countDSK ? ">" : " "));
   siprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countDSK);
-  AffChaine(2,6,0, szName);
+  AffChaine(3,6,0, szName);
   for (ucBcl=0;ucBcl<14; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
     if (ucGame < countDSK)
@@ -689,7 +689,7 @@ char *TILoadDiskFile(void)
       getcwd(currentDirDSKs, MAX_PATH);
   }
 
-  // Remet l'ecran du haut en mode bitmap
+  // Returns the top screen to bitmap mode
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
 
   return gpDsk[chosenDSK].szName;
@@ -923,7 +923,7 @@ u8 tiDSLoadFile(void)
     swiWaitForVBlank();
   }
 
-  // Remet l'ecran du haut en mode bitmap
+  // Returns the top screen to bitmap mode
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
     
   // If a game was selected...
@@ -1063,7 +1063,7 @@ void SetDefaultGameConfig(void)
     myConfig.memWipe     = 0;
     myConfig.capsLock    = 0;
     myConfig.RAMMirrors  = 0;
-    myConfig.overlay     = 0;
+    myConfig.overlay     = globalConfig.overlay;
     myConfig.emuSpeed    = 0;
     myConfig.machineType = globalConfig.machineType;
     myConfig.cartType    = 0;
@@ -1152,22 +1152,22 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"OVERLAY",        {"DEFAULT", "TI99/4A KBD"},                                                                                                                                          &myConfig.overlay,      2},
-        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                                                                     &myConfig.frameSkip,    3},
-        {"FRAME BLEND",    {"OFF", "ON"},                                                                                                                                                       &myConfig.frameBlend,   2},
-        {"MAX SPRITES",    {"4",   "32"},                                                                                                                                                       &myConfig.maxSprites,   2},
-        {"TV TYPE",        {"NTSC","PAL"},                                                                                                                                                      &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K/1MB"},                                                                                                                                   &myConfig.machineType,  2},
-        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                                                                                              &myConfig.cartType,     5},
-        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                                                                                             &myConfig.emuSpeed,     4},
-        {"CAPS LOCK",      {"OFF", "ON"},                                                                                                                                                       &myConfig.capsLock,     2},
-        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                                                                       &myConfig.RAMMirrors,   2},
-        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                                                                                &myConfig.memWipe,      2},
-        {NULL,             {"",      ""},                                                                                                                                                       NULL,                   1},
+        {"OVERLAY",        {"DS99 KEYBOARD", "TI99 KEYBOARD"},                                                                &myConfig.overlay,      2},
+        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                   &myConfig.frameSkip,    3},
+        {"FRAME BLEND",    {"OFF", "ON"},                                                                                     &myConfig.frameBlend,   2},
+        {"MAX SPRITES",    {"4",   "32"},                                                                                     &myConfig.maxSprites,   2},
+        {"TV TYPE",        {"NTSC","PAL"},                                                                                    &myConfig.isPAL,        2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K/1MB"},                                                                 &myConfig.machineType,  2},
+        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                            &myConfig.cartType,     5},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                           &myConfig.emuSpeed,     4},
+        {"CAPS LOCK",      {"OFF", "ON"},                                                                                     &myConfig.capsLock,     2},
+        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                     &myConfig.RAMMirrors,   2},
+        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                              &myConfig.memWipe,      2},
+        {NULL,             {"",      ""},                                                                                     NULL,                   1},
     },
     // Page 2
     {
-        {NULL,             {"",      ""},                                                                                                                                                       NULL,                 1},
+        {NULL,             {"",      ""},                                                                                     NULL,                   1},
     }
 };
 
@@ -1298,8 +1298,9 @@ const struct options_t GlobalOption_Table[20] =
     {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
     {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
     {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                  &globalConfig.romsDIR,       3},
-    {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
+    {"DEF OVERLAY",    {"DS99 KEYBOARD", "TI99 KEYBOARD"},                      &globalConfig.overlay,       2},
     {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
+    {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
 
     {NULL,             {"",      ""},                                           NULL,                        1},
 };

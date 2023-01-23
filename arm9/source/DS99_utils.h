@@ -51,7 +51,7 @@ struct __attribute__((__packed__)) GlobalConfig_t
     u8  romsDIR;
     u8  maxSprites;
     u8  machineType;
-    u8  reservedF;
+    u8  overlay;
     u8  reservedG;
     u8  reservedH;
     u8  reservedI;
