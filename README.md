@@ -85,6 +85,7 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * You will need the disk (.DSK) image for the game you want to play
 * Load the cartridge file normally... then use the Cassette icon to mount the .DSK
 * For Adventure you load the game by typing "DSK1.PIRATE" (for Pirate's adventure... or whatever name/game you want... use LIST DISK to see what's on the disk as there were more than a dozen Scott Adams adventure games).
+* For Scott Adams adventures you should enable the ALPHA LOCK key in Game Options (lowercase filenames won't load).
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part).
 
 
