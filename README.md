@@ -12,7 +12,7 @@ Features :
 * SAMS 512K memory Expansion for the DS and 1MB for the DSi (and above)
 * Save and Load State
 * High score saving for up to 10 scores per game
-* Mull mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
+* Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Disk Support of 90K and 180K using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
 
@@ -20,7 +20,7 @@ Copyright :
 -----------------------
 DS99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
 
-This program is made up of a number of constituent bits and pieces of code from
+This program is made up from a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 
 As such, the following copyrights apply:
 
@@ -43,7 +43,7 @@ The DS99 emulator is offered as-is, without any warranty.
 
 Credits :
 -----------------------
-* Thanks to Alekmaul who provided the baseline code to work with and to lobo for the menu graphical design.
+* Thanks to Alekmaul who provided the original Coleco emulator framework of which this is based.
 * Thanks to Flubba for the SN76496 sound core.
 * Thanks to Marat Fayzullin (ColEM) for the TI991A video driver.
 * Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code.
@@ -73,7 +73,7 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
-* Borzork has audio squealing during gameplay.
+* Borzork has audio squealing during gameplay. Cause unknown.
 * Save and Load state do not yet work with SAMS expanded memory.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 
