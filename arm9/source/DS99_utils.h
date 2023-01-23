@@ -12,6 +12,7 @@
 
 #define MAX_ROMS                512
 #define MAX_ROM_LENGTH          160
+#define MAX_PATH                255
 
 #define MAX_CONFIGS             750
 #define CONFIG_VER              0x0004
@@ -95,6 +96,9 @@ struct __attribute__((__packed__)) Config_t
 
 extern struct Config_t myConfig;
 extern struct GlobalConfig_t globalConfig;
+
+extern char currentDirROMs[];
+extern char currentDirDSKs[];
 
 extern void FindAndLoadConfig(void);
 

@@ -654,7 +654,7 @@ void TMS9900_Reset(char *szGame)
         {
             MemType[address] = MF_RAM8; // Supercart maps ram into the cart slot
         }
-        memset(MemCPU+0x6000, 0x00, (8*1024));
+        memset(MemCPU+0x6000, 0x00, 0x2000);
     }
 
     // ------------------------------------------------------------

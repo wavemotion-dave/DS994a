@@ -413,6 +413,9 @@ void DiskUnmount(void)
 
 void DiskSave(char *filename)
 {
+    // Change into the last known DSKs directory
+    chdir(currentDirDSKs);
+
     FILE *outfile = fopen(filename, "wb");
     if (outfile)
     {
@@ -1112,7 +1115,7 @@ int main(int argc, char **argv)
      iprintf("Unable to initialize libfat!\n");
      return -1;
   }
-    
+
   // Need to load in config file if only for the global options at this point...
   FindAndLoadConfig();
  
@@ -1172,6 +1175,10 @@ int main(int argc, char **argv)
           chdir("/roms");    // Try to start in roms area... doesn't matter if it fails
       }
   }
+    
+  // Start off with current directory for both ROMs and DSKs
+  getcwd(currentDirROMs, MAX_PATH);
+  getcwd(currentDirDSKs, MAX_PATH);
     
   SoundPause();
   

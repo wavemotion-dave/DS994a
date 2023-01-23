@@ -74,7 +74,7 @@ Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay.
-* Save and Load state do not yet work with SAMS expanded memory nor the special SuperCart or MiniMem. Coming soon.
+* Save and Load state do not yet work with SAMS expanded memory.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 
 

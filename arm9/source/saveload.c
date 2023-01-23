@@ -37,6 +37,18 @@ void TI99SaveState()
   u32 uNbO;
   long pSvg;
     
+  if (myConfig.machineType == MACH_TYPE_SAMS)
+  {
+    AffChaine(6,0,0,"SAMS SAVE NOT SUPPORTED");
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+    AffChaine(6,0,0,"                       "); 
+    return;  
+  }
+    
+  // Change into the last known ROMs directory
+  chdir(currentDirROMs);
+    
   // Init filename = romname and SAV in place of ROM
   DIR* dir = opendir("sav");
   if (dir) closedir(dir);  // Directory exists... close it out and move on.
@@ -57,6 +69,7 @@ void TI99SaveState()
       szFile[len-2] = 'a';
       szFile[len-1] = 'v';
   }
+  
   strcpy(szCh1,"SAVING...");
   AffChaine(10,0,0,szCh1);
   
@@ -112,6 +125,20 @@ void TI99SaveState()
       
     // Some spare memory we can eat into...
     if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
+      
+    // And finally the 'special' memory layout carts...
+    if (myConfig.cartType == CART_TYPE_SUPERCART)
+    {
+        if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
+    }
+    if (myConfig.cartType == CART_TYPE_MINIMEM)
+    {
+        if (uNbO) uNbO = fwrite(MemCPU+0x7000, 0x1000, 1, handle); 
+    }
+    if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
+    {
+        if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
+    }
 
     fclose(handle);
       
@@ -139,6 +166,9 @@ void TI99LoadState()
     u32 uNbO;
     long pSvg;
 
+    // Change into the last known ROMs directory
+    chdir(currentDirROMs);
+    
     // Init filename = romname and .SAV in place of ROM
     siprintf(szFile,"sav/%s", gpFic[ucGameAct].szName);
     int len = strlen(szFile);
@@ -218,6 +248,20 @@ void TI99LoadState()
             
             // Load spare memory for future use
             if (uNbO) uNbO = fread(&spare, 512,1, handle); 
+            
+            // And finally the 'special' memory layout carts...
+            if (myConfig.cartType == CART_TYPE_SUPERCART)
+            {
+                if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
+            }
+            if (myConfig.cartType == CART_TYPE_MINIMEM)
+            {
+                if (uNbO) uNbO = fread(MemCPU+0x7000, 0x1000, 1, handle); 
+            }
+            if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
+            {
+                if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
+            }
             
             // Fix up transparency
             if (BGColor)

@@ -38,6 +38,8 @@ char szName[256];
 char szDiskName[256];
 char szFile[256];
 u32 file_size = 0;
+char currentDirROMs[MAX_PATH];
+char currentDirDSKs[MAX_PATH];
 
 struct GlobalConfig_t globalConfig;
 struct Config_t AllConfigs[MAX_CONFIGS];
@@ -471,6 +473,9 @@ char *TILoadDiskFile(void)
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
   AffChaine(7,5,0,"A=SELECT,  B=EXIT");
+    
+  // Change into the last known DSKs directory
+  chdir(currentDirDSKs);
 
   TI99FindDskFiles();
 
@@ -676,6 +681,13 @@ char *TILoadDiskFile(void)
     }
     swiWaitForVBlank();
   }
+    
+  // If a DSK was selected...
+  if (chosenDSK != -1)
+  {
+      // Remember the directory for the rom
+      getcwd(currentDirDSKs, MAX_PATH);
+  }
 
   // Remet l'ecran du haut en mode bitmap
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
@@ -698,6 +710,9 @@ u8 tiDSLoadFile(void)
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
   AffChaine(7,5,0,"A=SELECT,  B=EXIT");
 
+  // Change into the last known ROMs directory
+  chdir(currentDirROMs);
+    
   TI99FindFiles();
 
   ucGameChoice = -1;
@@ -910,6 +925,13 @@ u8 tiDSLoadFile(void)
 
   // Remet l'ecran du haut en mode bitmap
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
+    
+  // If a game was selected...
+  if (ucGameChoice != -1)
+  {
+      // Remember the directory for the rom
+      getcwd(currentDirROMs, MAX_PATH);
+  }
 
   return 0x01;
 }
