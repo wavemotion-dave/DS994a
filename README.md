@@ -113,6 +113,13 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.7: 24-Jan-2023 by wavemotion-dave
+* New TI99 Keyboard Layout - select in Global Options or on a Per-Game basis.
+* Better DSK vs ROM handling - remembers last directory for each.
+* SAMS 1MB enabled for DSi and above.
+* Fixed save/load state for Mini-Men, SuperCart and MBX Carts (only SAMS save/load is non-functional right now).
+* Other cleanups as time permitted.
+
 V0.6: 21-Jan-2023 by wavemotion-dave
 * Re-write of the CPU core. It's 20% smaller and 20% faster.
 * Added ability to list disk contents so you can see what programs are on it.

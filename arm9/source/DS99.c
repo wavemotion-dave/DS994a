@@ -29,6 +29,7 @@
 #include "intro.h"
 #include "alpha.h"
 #include "ti99kbd.h"
+#include "ti99kbd-func.h"
 #include "options.h"
 #include "ecranHaut.h"
 
@@ -66,7 +67,7 @@ u16 nds_key          __attribute__((section(".dtcm"))) = 0;       // 0 if no key
 
 u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;
-u8 handling_meta     __attribute__((section(".dtcm"))) = 0;
+u8 handling_meta    __attribute__((section(".dtcm"))) = 0;
 
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
@@ -835,8 +836,13 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     {
         mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
         bKeyClick = 2;
-        meta_next_key = 0;
-        handling_meta = 0;
+        if (meta_next_key == META_KEY_FUNCTION)
+        {
+          meta_next_key = 0;
+          InitBottomScreen();
+        } else meta_next_key = 0;
+        
+        handling_meta = 0;  // We've handled a normal key... no more meta
     }
     
     return META_KEY_NONE;
@@ -1034,7 +1040,7 @@ ITCM_CODE void ds99_main(void)
             break;
                 
             case META_KEY_ALPHALOCK:
-                if (!handling_meta)
+                if (handling_meta == 0)
                 {
                     alpha_lock = alpha_lock^1;
                     DisplayStatusLine(false);
@@ -1042,7 +1048,7 @@ ITCM_CODE void ds99_main(void)
                 }
                 break;
             case META_KEY_SHIFT:
-                if (!handling_meta)
+                if (handling_meta == 0)
                 {
                     if (meta_next_key == META_KEY_SHIFT) meta_next_key = 0;
                     else meta_next_key = META_KEY_SHIFT;
@@ -1050,9 +1056,18 @@ ITCM_CODE void ds99_main(void)
                     DisplayStatusLine(false);
                     handling_meta = 1;
                 }
+                else if (handling_meta == 2)
+                {
+                    tms9901.Keyboard[TMS_KEY_SHIFT]=0;
+                    meta_next_key = 0;
+                    handling_meta = 0;
+                    InitBottomScreen();
+                    DisplayStatusLine(false);
+                    handling_meta = 3;
+                }
                 break;
             case META_KEY_CONTROL:
-                if (!handling_meta)
+                if (handling_meta == 0)
                 {
                     if (meta_next_key == META_KEY_CONTROL) meta_next_key = 0;
                     else meta_next_key = META_KEY_CONTROL;
@@ -1060,15 +1075,35 @@ ITCM_CODE void ds99_main(void)
                     DisplayStatusLine(false);
                     handling_meta = 1;
                 }
+                else if (handling_meta == 2)
+                {
+                    tms9901.Keyboard[TMS_KEY_CONTROL]=0;
+                    meta_next_key = 0;
+                    handling_meta = 0;
+                    InitBottomScreen();
+                    DisplayStatusLine(false);
+                    handling_meta = 3;
+                }
                 break;
             case META_KEY_FUNCTION:
-                if (!handling_meta)
+                if (handling_meta == 0)
                 {
                     if (meta_next_key == META_KEY_FUNCTION) meta_next_key = 0;
                     else meta_next_key = META_KEY_FUNCTION;
                     tms9901.Keyboard[TMS_KEY_FUNCTION]=1;
-                    DisplayStatusLine(false);
+                    InitBottomScreen();
+                    meta_next_key = META_KEY_FUNCTION;
                     handling_meta = 1;
+                    DisplayStatusLine(false);
+                } 
+                else if (handling_meta == 2)
+                {
+                    tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
+                    meta_next_key = 0;
+                    handling_meta = 0;
+                    InitBottomScreen();
+                    DisplayStatusLine(false);
+                    handling_meta = 3;
                 }
                 break;
         }
@@ -1080,6 +1115,10 @@ ITCM_CODE void ds99_main(void)
               if (meta_next_key == 0) // if we were dealing with Alpha Lock
               {
                   handling_meta = 0; 
+              }
+              else
+              {
+                  handling_meta = 2;    // We've released a meta key...
               }
           }
           ResetNow = 0;
@@ -1242,12 +1281,22 @@ void InitBottomScreen(void)
         unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
         dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
     }
-    else
+    else // Must be TI99 keyboard
     {
-        decompress(ti99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-        decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
-        dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-        dmaCopy((void*) ti99kbdPal,(void*) BG_PALETTE_SUB,256*2);
+        if (meta_next_key == META_KEY_FUNCTION)
+        {
+            decompress(ti99kbd_funcTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+            decompress(ti99kbd_funcMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+            dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
+            dmaCopy((void*) ti99kbd_funcPal,(void*) BG_PALETTE_SUB,256*2);
+        }
+        else
+        {
+            decompress(ti99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+            decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+            dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
+            dmaCopy((void*) ti99kbdPal,(void*) BG_PALETTE_SUB,256*2);
+        }
 
         unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
         dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
