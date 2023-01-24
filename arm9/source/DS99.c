@@ -617,6 +617,7 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " LOAD   STATE  ");  mini_menu_items++;
+    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " DISK   MENU   ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " EXIT   MENU   ");  mini_menu_items++;
 }
@@ -654,7 +655,8 @@ u8 MiniMenu(void)
             if      (menuSelection == 0) retVal = META_KEY_HIGHSCORE;
             else if (menuSelection == 1) retVal = META_KEY_SAVESTATE;
             else if (menuSelection == 2) retVal = META_KEY_LOADSTATE;
-            else if (menuSelection == 3) retVal = META_KEY_QUIT;
+            else if (menuSelection == 3) retVal = META_KEY_DISKMENU;
+            else if (menuSelection == 4) retVal = META_KEY_QUIT;
             else retVal = META_KEY_NONE;
             break;
         }
@@ -1038,6 +1040,10 @@ ITCM_CODE void ds99_main(void)
               SoundUnPause();
             }
             break;
+                
+            case META_KEY_DISKMENU:
+                CassetteMenu();
+                break;             
                 
             case META_KEY_ALPHALOCK:
                 if (handling_meta == 0)

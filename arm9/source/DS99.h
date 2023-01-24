@@ -95,6 +95,7 @@ enum
 #define META_KEY_SHIFT          7
 #define META_KEY_CONTROL        8
 #define META_KEY_FUNCTION       9
+#define META_KEY_DISKMENU       10
 
 extern u16 emuFps;
 extern u16 emuActFrames;
