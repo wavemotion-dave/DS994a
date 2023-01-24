@@ -1277,6 +1277,7 @@ void InitBottomScreen(void)
 {
     //  Init bottom screen
     
+    swiWaitForVBlank();
     if (myConfig.overlay == 0)
     {
         decompress(alphaTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
