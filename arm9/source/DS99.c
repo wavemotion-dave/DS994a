@@ -520,8 +520,8 @@ void ShowDiskListing(void)
         {
             key = keysCurrent();
             if (key != 0) while (!keysCurrent()) WAITVBL; // wait for release
-            if (key == KEY_DOWN){sel++; sel = sel % dsk_num_files;}
-            if (key == KEY_UP)  {sel--; sel = sel % dsk_num_files;}
+            if (key == KEY_DOWN){if (sel < (dsk_num_files-1)) sel++;}
+            if (key == KEY_UP)  {if (sel > 0) sel--;}
             WAITVBL;
             if (last_sel != sel)
             {

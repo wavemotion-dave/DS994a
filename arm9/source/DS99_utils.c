@@ -26,7 +26,7 @@
 
 typedef enum {FT_NONE,FT_FILE,FT_DIR} FILE_TYPE;
 
-int countTI=0;
+u16 countTI=0;
 int countDSK=0;
 int chosenDSK=0;
 int ucGameAct=0;
@@ -408,7 +408,24 @@ void TI99FindFiles(void)
   // ----------------------------------------------
   if (countTI)
   {
-    qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
+      qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
+      
+      // And finally we remove files that are part of the same binary package C/D/G files...
+      for (s16 i=0; i<countTI-1; i++)
+      {
+          if (strlen(gpFic[i].szName) > 5)
+          {
+              if (strncmp(gpFic[i].szName, gpFic[i+1].szName, strlen(gpFic[i].szName)-5) == 0)
+              {
+                  for (u16 j=i+1; j<countTI; j++)
+                  {
+                      memcpy(&gpFic[j], &gpFic[j+1], sizeof(FIC_TI99));
+                  }
+                  countTI--;
+                  i--;
+              }
+          }
+      }
   }
 }
 
