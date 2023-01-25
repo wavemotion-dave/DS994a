@@ -75,6 +75,11 @@ volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario spr
 u8 last_pal_mode = 99;
 u8 tmpBuf[40];
 
+u8 key_push_write = 0;
+u8 key_push_read  = 0;
+char key_push[0x20];
+char dsk_filename[16];
+
 u16 PAL_Timing[] = {656, 596, 546, 504};    // 100%, 110%, 120% and 130%
 u16 NTSC_Timing[] = {546, 496, 454, 420};   // 100%, 110%, 120% and 130%
 
@@ -330,6 +335,10 @@ void ResetTI(void)
   meta_next_key    = 0;
   handling_meta    = 0;
     
+  key_push_write = 0;
+  key_push_read  = 0;
+  strcpy(dsk_filename,"");    
+    
   memset(debug, 0x00, sizeof(debug));
 }
 
@@ -399,6 +408,27 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
     }
 }
 
+
+// ------------------------------------------------------
+// So we can stuff keys into the keyboard buffer...
+// ------------------------------------------------------
+void KeyPush(u8 key)
+{
+    key_push[key_push_write] = key;
+    key_push_write = (key_push_write+1) & 0x1F;
+}
+
+void KeyPushFilename(char *filename)
+{
+    for (int i=0; i<strlen(filename); i++)
+    {
+        if (filename[i] >= 'A' && filename[i] <= 'Z')       KeyPush(TMS_KEY_A + (filename[i]-'A'));
+        else if (filename[i] >= 'a' && filename[i] <= 'z')  KeyPush(TMS_KEY_A + (filename[i]-'a'));
+        else if (filename[i] >= '1' && filename[i] <= '9')  KeyPush(TMS_KEY_1 + (filename[i]-'1'));
+        else if (filename[i] == '0')                        KeyPush(TMS_KEY_0);
+    }
+}
+
 // --------------------------------
 // Swap in a new .DSK Disk Image
 // --------------------------------
@@ -422,6 +452,7 @@ void DiskUnmount(void)
 {
     memset(DiskImage, 0xFF, (180*1024));
     bDiskIsMounted = false;
+    strcpy(dsk_filename, "");
 }
 
 void DiskSave(char *filename)
@@ -440,10 +471,11 @@ void DiskSave(char *filename)
 }
 
 
+#define MAX_FILES_PER_DSK           32         // We allow 36 files shown per disk... that's enough for our purposes and it's what we can show on screen
+char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per file (really 10 but we keep it on an 16-byte boundary)
+u8   dsk_num_files = 0;
 void ShowDiskListing(void)
 {
-    char fileName[12];
-    
     // Clear the screen...
     for (u8 i=0; i<20; i++)
     {
@@ -451,25 +483,61 @@ void ShowDiskListing(void)
     }
 
     while (keysCurrent()) WAITVBL; // While any key is pressed...
+    
+    // ---------------------------------------------------------------
+    // Set all dsk listings to spaces until we read disk contents
+    // ---------------------------------------------------------------
+    for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
+    {
+        strcpy(dsk_listing[i], "          ");
+    }
 
     u8 idx=0;
-    AffChaine(5,7,6,      "=== DISK CONTENTS ===");
+    AffChaine(5,5,6,      "=== DISK CONTENTS ===");
+    dsk_num_files = 0;
     if (bDiskIsMounted && (myDskFile != NULL))
     {
-        u16 numFiles = 0;
+        // --------------------------------------------------------
+        // First find all files and store them into our array...
+        // --------------------------------------------------------
         u16 sectorPtr = 0;
         for (u16 i=0; i<256; i += 2)
         {
             sectorPtr = (DiskImage[256 + (i+0)] << 8) | (DiskImage[256 + (i+1)] << 0);
             if (sectorPtr == 0) break;
-            if (++numFiles > 24) break;
             for (u8 j=0; j<10; j++) 
             {
-                fileName[j] = DiskImage[(256*sectorPtr) + j];
+                dsk_listing[dsk_num_files][j] = DiskImage[(256*sectorPtr) + j];
             }
-            fileName[10] = 0;
-            AffChaine((numFiles<12) ? 5:18,9+((numFiles<12) ? numFiles:(numFiles-11)),0, fileName);
+            dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
+            if (++dsk_num_files > MAX_FILES_PER_DSK) break;
         }
+        
+        u16 key = 0; 
+        u8 last_sel = 255;
+        u8 sel = 0;
+        while (key != KEY_A)
+        {
+            key = keysCurrent();
+            if (key != 0) while (!keysCurrent()) WAITVBL; // wait for release
+            if (key == KEY_DOWN){sel++; sel = sel % dsk_num_files;}
+            if (key == KEY_UP)  {sel--; sel = sel % dsk_num_files;}
+            WAITVBL;
+            if (last_sel != sel)
+            {
+                // ----------------------------------------------------
+                // Now display the files and let the user navigate...
+                // ----------------------------------------------------
+                for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
+                {
+                    sprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
+                    if (i < (MAX_FILES_PER_DSK/2)) AffChaine(5, 7+i, (i==sel)?2:0, tmpBuf);
+                    else AffChaine(18, 7+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
+                }
+                last_sel = sel;
+            }
+        }
+        strcpy(dsk_filename, dsk_listing[sel]);
     }
     else
     {
@@ -478,8 +546,8 @@ void ShowDiskListing(void)
     }
 
     // Wait for any press and release...
-    while (!keysCurrent()) WAITVBL; // While no key is pressed...
-    WAITVBL;WAITVBL;
+    while (keysCurrent()) WAITVBL; // While no key is pressed...
+    WAITVBL;
 }
 
 // ------------------------------------------------------------------------
@@ -494,11 +562,13 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
         DrawCleanBackground();
     }
     
-    AffChaine(8,7,6,                                                 " TI DISK MENU  ");
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " LIST    DISK  ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU  ");  cassete_menu_items++;
+    AffChaine(8,7,6,                                                 " TI DISK MENU ");
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " LIST    DISK ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " PASTE   DSK1.");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " PASTE   FILE ");  cassete_menu_items++;
+    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU ");  cassete_menu_items++;
 
     if (bDiskIsMounted) AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
     else AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS NOT MOUNTED");   
@@ -568,11 +638,18 @@ void CassetteMenu(void)
                   ShowDiskListing();
                   CassetteMenuShow(true, menuSelection);
             }
-            if (menuSelection == 3)
+            if (menuSelection == 3) // PASTE DSK1.FILENAME
             {
+                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_1);KeyPush(TMS_KEY_PERIOD);
+                  KeyPushFilename(dsk_filename);
                   break;
             }
-            if (menuSelection == 4)
+            if (menuSelection == 4) // PASTE FILENAME
+            {
+                  KeyPushFilename(dsk_filename);
+                  break;
+            }
+            if (menuSelection == 5) // EXIT
             {
                   break;
             }
@@ -883,6 +960,7 @@ void ds99_main_setup(void)
 // ------------------------------------------------------------------------
 ITCM_CODE void ds99_main(void) 
 {
+  u8 dampen = 0;
   u16 iTx,  iTy;
   u8 ResetNow  = 0;
 
@@ -973,6 +1051,15 @@ ITCM_CODE void ds99_main(void)
               case META_KEY_SHIFT:      tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
               case META_KEY_CONTROL:    tms9901.Keyboard[TMS_KEY_CONTROL]=1;   break;
               case META_KEY_FUNCTION:   tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
+          }
+      }
+      
+      if (!(++dampen & 3))
+      {
+          if (key_push_read != key_push_write) // There are keys to process in the Push buffer
+          {
+              tms9901.Keyboard[key_push[key_push_read]]=1;
+              key_push_read = (key_push_read+1) & 0x1F;
           }
       }
         

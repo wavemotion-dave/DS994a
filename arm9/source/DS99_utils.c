@@ -1197,7 +1197,7 @@ u8 display_options_list(bool bFullDisplay)
         }
     }
 
-    dsPrintValue(2,22, 0, (char *)"     B=EXIT, START=SAVE   ");
+    dsPrintValue(0,22, 0, (char *)"       B=EXIT, START=SAVE       ");
     return len;
 }
 
@@ -1331,7 +1331,7 @@ u8 display_global_options_list(bool bFullDisplay)
         }
     }
 
-    dsPrintValue(2,22, 0, (char *)"     B=EXIT, START=SAVE   ");
+    dsPrintValue(0,22, 0, (char *)"       B=EXIT, START=SAVE       ");
     return len;
 }
 
