@@ -638,9 +638,25 @@ void TMS9900_Reset(char *szGame)
         infile = fopen(tmpFilename, "rb");
         int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);
-        memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
         u16 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
         tms9900.bankMask = BankMasks[numBanks-1];
+        
+        if (numBanks > 1)
+        {
+            // If the image is inverted we need to swap 8K banks
+            if ((fileType == '3') || (fileType == '9'))
+            {
+                for (u16 i=0; i<numBanks/2; i++)
+                {
+                    // Swap 8k bank...
+                    memcpy(FastCartBuffer, MemCART + (i*0x2000), 0x2000);  
+                    memcpy(MemCART+(i*0x2000), MemCART + ((numBanks-i-1)*0x2000), 0x2000);
+                    memcpy(MemCART + ((numBanks-i-1)*0x2000), FastCartBuffer, 0x2000);
+                }
+            }
+        }
+        
+        memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
     }
 
     memcpy(FastCartBuffer, MemCPU+0x6000, 0x2000);

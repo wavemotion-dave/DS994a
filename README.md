@@ -7,7 +7,7 @@ See BIOS files further down for the ones you need.
 
 Features :
 -----------------------
-* Cart loads up to 512K Banked (+40K of GROM unbanked)
+* Cart loads up to 512K Banked (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion
 * SAMS 512K memory Expansion for the DS and 1MB for the DSi (and above)
 * Save and Load State
@@ -76,6 +76,14 @@ Known Issues :
 * Borzork has audio squealing during gameplay. Cause unknown.
 * Save and Load state do not yet work with SAMS expanded memory.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
+
+File Types Supported :
+-----------------------
+DS994a supports the following file types:
+* Files ending in C/D/G files also known as 'mixed mode' files. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
+* Files ending in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
+* All other files are considered '8' files which is a non-inverted banking up to 512K. 
+
 
 How do I play Adventure or Tunnels of Doom? :
 -----------------------
