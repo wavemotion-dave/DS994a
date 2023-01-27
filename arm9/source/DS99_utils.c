@@ -1026,8 +1026,8 @@ void MapPlayer2(void)
     myConfig.keymap[3]   = JOY2_RIGHT;   // NDS D-Pad RIGHT
     myConfig.keymap[4]   = JOY2_FIRE;    // NDS A Button
     myConfig.keymap[5]   = JOY2_FIRE;    // NDS B Button
-    myConfig.keymap[6]   = JOY2_FIRE;    // NDS X Button
-    myConfig.keymap[7]   = JOY2_FIRE;    // NDS Y Button
+    myConfig.keymap[6]   = KBD_1;        // NDS X Button
+    myConfig.keymap[7]   = KBD_2;        // NDS Y Button
 
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
     myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
@@ -1043,8 +1043,8 @@ void MapPlayer1(void)
     myConfig.keymap[3]   = JOY1_RIGHT;   // NDS D-Pad RIGHT
     myConfig.keymap[4]   = JOY1_FIRE;    // NDS A Button
     myConfig.keymap[5]   = JOY1_FIRE;    // NDS B Button
-    myConfig.keymap[6]   = JOY1_FIRE;    // NDS X Button
-    myConfig.keymap[7]   = JOY1_FIRE;    // NDS Y Button
+    myConfig.keymap[6]   = KBD_1;        // NDS X Button
+    myConfig.keymap[7]   = KBD_2;        // NDS Y Button
 
     myConfig.keymap[8]   = KBD_FNCT;     // NDS L
     myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
