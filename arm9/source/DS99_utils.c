@@ -46,6 +46,9 @@ struct Config_t AllConfigs[MAX_CONFIGS];
 struct Config_t myConfig __attribute((aligned(4))) __attribute__((section(".dtcm")));
 extern u32 file_crc;
 
+extern char myDskFile[];
+extern char myDskPath[];
+
 u8 option_table=0;
 
 const char szKeyName[MAX_KEY_OPTIONS][20] = {
@@ -709,7 +712,9 @@ char *TILoadDiskFile(void)
   // Returns the top screen to bitmap mode
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
 
-  return gpDsk[chosenDSK].szName;
+  // These need to be stashed away for the caller...
+  strcpy(myDskFile, gpDsk[chosenDSK].szName);
+  strcpy(myDskPath, currentDirDSKs);
 }
 
 // ----------------------------------------------------------------

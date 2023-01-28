@@ -13,6 +13,8 @@
 #include <nds.h>
 #include <string.h>
 
+#define MAX_CART_SIZE    (512*1024)     // 512K maximum cart size...
+
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
 enum

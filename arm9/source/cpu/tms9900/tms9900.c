@@ -22,13 +22,12 @@
 #include <fat.h>
 #include "tms9901.h"
 #include "tms9900.h"
+#include "../../DS99.h"
 #include "../../disk.h"
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
 #include "../sn76496/SN76496.h"
 extern SN76496 sncol;
-
-#define MAX_CART_SIZE    (512*1024)     // 512K maximum cart size...
 
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
@@ -38,7 +37,6 @@ u8           MemGROM[0x10000];           // 64K of GROM MemCPU Space
 u8           MemCART[MAX_CART_SIZE];     // Cart C/D/8 memory up to 512K banked at >6000
 u8           MemType[0x10000];           // Memory type for each address
 u8           DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
-u8           DiskImage[180*1024];        // The .DSK image up to 180K (Double Sided, Single Density)
 
 u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
 
@@ -48,8 +46,8 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
 #define MemSAMS_fast            ((u8*)0x06820000)    // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
 
-u16 SAMS_BANKS  = 128;   // 512K or 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
-u8 *MemSAMS     = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
+u16 SAMS_BANKS  = 256;                  // 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
+u8  MemSAMS[(1024*1024) - (128*1024)];  // We use 128K of VRAM and the rest comes from this memory pool (1MB total)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -373,6 +371,7 @@ void TMS9900_buildopcodes(void)
 void InitMemoryPoolSAMS(void)
 {
     // Only allocate the memory once...
+#if 0    
     if (MemSAMS == 0)
     {
         if (isDSiMode())
@@ -386,6 +385,7 @@ void InitMemoryPoolSAMS(void)
             MemSAMS = malloc((SAMS_BANKS-32) * 0x1000); // We can save 128K since we're getting the first 128K from our DS VRAM
         }
     }
+#endif    
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -573,12 +573,6 @@ void TMS9900_Reset(char *szGame)
     {
         memset(DiskDSR, 0xFF, 0x2000);
     }
-
-    // --------------------------------
-    // Start with no disk mounted...
-    // --------------------------------
-    bDiskIsMounted = false;
-    memset(DiskImage, 0xFF, (180*1024));
 
     // -----------------------------------------------------------------------------
     // We're going to be manipulating the filename a bit so copy it into a buffer

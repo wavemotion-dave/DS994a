@@ -51,6 +51,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fat.h>
+#include "DS99.h"
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/tms9918a/tms9918a.h"
@@ -60,14 +61,21 @@ u8 TICC_CRU[8] = {0,0,0,0,0,0,1,0};
 u8 TICC_REG[8] = {0,0,0,0,0,0,0,0};
 u8 TICC_DIR=0;   // 0 means towards 0
 
-u8 bDiskDeviceInstalled  __attribute__((section(".dtcm"))) = false;
-u8 bDiskIsMounted        __attribute__((section(".dtcm"))) = false;
+u8 bDiskDeviceInstalled  = 0;  // DSR installed or not installed... We don't do much with this yet.
 u8 diskSideSelected      = 0;  // Side 0 or Side 1
-u8 driveSelected         = 1;  // We only support DSK1 currently
-u8 driveReadCounter      = 0;  // Set to some non-zero value to show 'DISK READ' briefly on screen
-u8 driveWriteCounter     = 0;  // Set to some non-zero value to show 'DISK WRITE' briefly on screen (takes priority over READ display)
+u8 driveSelected         = 1;  // We support DSK1 and DSK2 currently
+
+_Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1 and DSK2
 
 #define ERR_DEVICEERROR     6
+
+void disk_init(void)
+{
+    // ------------------------------------------------------
+    // Start with no disk mounted and all image data clear
+    // ------------------------------------------------------
+    memset(Disk, 0x00, sizeof(Disk));
+}
 
 void disk_cru_write(u16 address, u8 data)
 {
@@ -210,10 +218,10 @@ void HandleTICCSector(void)
     bool success = true;
     extern u8 pVDPVidMem[];
     
-    if (driveSelected != 1) // We only support DSK1
+    if (driveSelected != 1 && driveSelected != 2) // We only support DSK1 or DSK2
     {
-        MemCPU[0x8350] = ERR_DEVICEERROR;  //tbd
-        tms9900.PC = 0x42a0;       // error 31 (not found)        
+        MemCPU[0x8350] = ERR_DEVICEERROR;  
+        tms9900.PC = 0x42a0;                // error 31 (not found)        
     }
     
     // 834A = sector number
@@ -226,24 +234,26 @@ void HandleTICCSector(void)
     u16 destVDP      = (MemCPU[0x834E]<<8) | MemCPU[0x834F];
     u32 index        = (sectorNumber * 256);
     
-    if (drive == 1)
+    if ((drive == 1) || (drive == 2))
     {
+        drive = drive-1;    // Zero based for struct array lookup
         if (isRead)
         {
             // -----------------------------------------------------------------
             // Move the 256 byte sector from the .DSK image to the VDP memory
             // -----------------------------------------------------------------
-            memcpy(&pVDPVidMem[destVDP], &DiskImage[index], 256);
+            memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
             *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
-            MemCPU[0x8350] = 0;                             // should still be 0 if no error occurred
-            driveReadCounter = 2;
+            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
+            Disk[drive].driveReadCounter = 2;            // briefly show that we are reading from the disk
         } 
         else  // Must be write
         {
-            memcpy(&DiskImage[index], &pVDPVidMem[destVDP],256);
+            memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
             *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
-            MemCPU[0x8350] = 0;                             // should still be 0 if no error occurred
-            driveWriteCounter = 2;
+            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
+            Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
+            Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
         } 
     } else success = false;
 
@@ -254,9 +264,54 @@ void HandleTICCSector(void)
     }
     else
     {
-        MemCPU[0x8350] = ERR_DEVICEERROR;  //tbd
-        tms9900.PC = 0x42a0;       // error 31 (not found)
+        MemCPU[0x8350] = ERR_DEVICEERROR; 
+        tms9900.PC = 0x42a0;                // error 31 (not found)
     }
 }
+
+void disk_mount(u8 drive, char *path, char *filename)
+{
+    Disk[drive].isMounted = true;
+    Disk[drive].isDirty = 0;
+    strcpy(Disk[drive].path, path);
+    strcpy(Disk[drive].filename, filename);
+    disk_read_from_sd(drive);
+}
+
+void disk_unmount(u8 drive)
+{
+    if (Disk[drive].isDirty) disk_write_to_sd(drive);
+    Disk[drive].isMounted = false;
+}
+
+void disk_read_from_sd(u8 drive)
+{
+    // Change into the last known DSKs directory for this file
+    chdir(Disk[drive].path);
+
+    FILE *infile = fopen(Disk[drive].filename, "rb");
+    if (infile)
+    {
+        fread(Disk[drive].image, MAX_DSK_SIZE, 1, infile);
+        fclose(infile);
+    }
+}
+
+void disk_write_to_sd(u8 drive)
+{
+    // Change into the last known DSKs directory for this file
+    chdir(Disk[drive].path);
+
+    FILE *outfile = fopen(Disk[drive].filename, "wb");
+    if (outfile)
+    {
+        u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
+        u32 diskSize = (numSectors*256);
+        fwrite(Disk[drive].image, diskSize, 1, outfile);
+        fclose(outfile);
+    }
+    Disk[drive].isDirty = 0;
+}
+
 
 // End of file

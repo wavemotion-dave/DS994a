@@ -83,10 +83,14 @@ char dsk_filename[16];
 u16 PAL_Timing[] = {656, 596, 546, 504};    // 100%, 110%, 120% and 130%
 u16 NTSC_Timing[] = {546, 496, 454, 420};   // 100%, 110%, 120% and 130%
 
+u8 cassette_menu_items = 0;
+u8 cassette_drive_sel  = 0; // Start with DSK1
+
 // The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
 
-char *myDskFile = NULL; // This will point to .DSK file on disk or NULL if no disk is mounted
+char myDskFile[MAX_PATH]; // This will be filled in with the full filename (including .DSK) of the disk file
+char myDskPath[MAX_PATH]; // This will point to the path where the .DSK file was loaded from (and will be written back to)s
 
 // --------------------------------------------------------------------
 // The key map for the TI... mapped into the NDS controller
@@ -339,6 +343,7 @@ void ResetTI(void)
   key_push_read  = 0;
   strcpy(dsk_filename,"");    
     
+  disk_init();
   memset(debug, 0x00, sizeof(debug));
 }
 
@@ -351,6 +356,9 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 {
     static u8 bShiftKeysBlanked = 0;
     
+    // ----------------------------------------------------------
+    // Show PAL or blanks (if NTSC) on screen
+    // ----------------------------------------------------------
     if (bForce) last_pal_mode = 98;
     if (last_pal_mode != myConfig.isPAL)
     {
@@ -358,25 +366,33 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
         AffChaine(29,0,6, myConfig.isPAL ? "PAL":"   ");
     }
 
-    if (driveWriteCounter)
+    // ----------------------------------------------------------
+    // Show a status indication for Disk Read/Write on screen...
+    // ----------------------------------------------------------
+    for (u8 drive=0; drive<MAX_DSKS; drive++)
     {
-        if (--driveWriteCounter) AffChaine(12,0,6, "DISK WRITE");
-        else
+        if (Disk[drive].driveWriteCounter)
         {
-            if (myDskFile != NULL)
+            Disk[drive].driveWriteCounter--;
+            if (Disk[drive].driveWriteCounter) AffChaine(12,0,6, "DISK WRITE");
+            else
             {
-                DiskSave(myDskFile);
+                // Persist the disk - write it back to the SD card
+                disk_write_to_sd(drive);
+                AffChaine(12,0,6, "          ");
             }
-            AffChaine(12,0,6, "          ");
+        }
+        else if (Disk[drive].driveReadCounter)
+        {
+            Disk[drive].driveReadCounter--;
+            if (Disk[drive].driveReadCounter) AffChaine(12,0,6, "DISK READ ");
+            else AffChaine(12,0,6, "          ");
         }
     }
-    else if (driveReadCounter)
-    {
-        if (--driveReadCounter) AffChaine(12,0,6, "DISK READ ");
-        else AffChaine(12,0,6, "          ");
-    }
-    
+
+    // ------------------------------------------
     // Show the keyboard shift/function/control
+    // ------------------------------------------
     if(tms9901.Keyboard[TMS_KEY_FUNCTION] == 1) 
     {
         AffChaine(0,0,6, "FCTN"); 
@@ -429,47 +445,6 @@ void KeyPushFilename(char *filename)
     }
 }
 
-// --------------------------------
-// Swap in a new .DSK Disk Image
-// --------------------------------
-void DiskMount(char *filename)
-{
-    FILE *infile = fopen(filename, "rb");
-    if (infile)
-    {
-        fread(DiskImage, (180*1024), 1, infile);
-        fclose(infile);
-        bDiskIsMounted = true;
-    }
-    else
-    {
-        memset(DiskImage, 0xFF, (180*1024));
-        bDiskIsMounted = false;
-    }
-}
-
-void DiskUnmount(void)
-{
-    memset(DiskImage, 0xFF, (180*1024));
-    bDiskIsMounted = false;
-    strcpy(dsk_filename, "");
-}
-
-void DiskSave(char *filename)
-{
-    // Change into the last known DSKs directory
-    chdir(currentDirDSKs);
-
-    FILE *outfile = fopen(filename, "wb");
-    if (outfile)
-    {
-        u16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
-        u32 diskSize = (numSectors*256);
-        fwrite(DiskImage, diskSize, 1, outfile);
-        fclose(outfile);
-    }
-}
-
 
 #define MAX_FILES_PER_DSK           32         // We allow 36 files shown per disk... that's enough for our purposes and it's what we can show on screen
 char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per file (really 10 but we keep it on an 16-byte boundary)
@@ -495,7 +470,7 @@ void ShowDiskListing(void)
     u8 idx=0;
     AffChaine(5,5,6,      "=== DISK CONTENTS ===");
     dsk_num_files = 0;
-    if (bDiskIsMounted && (myDskFile != NULL))
+    if (Disk[cassette_drive_sel].isMounted)
     {
         // --------------------------------------------------------
         // First find all files and store them into our array...
@@ -503,14 +478,14 @@ void ShowDiskListing(void)
         u16 sectorPtr = 0;
         for (u16 i=0; i<256; i += 2)
         {
-            sectorPtr = (DiskImage[256 + (i+0)] << 8) | (DiskImage[256 + (i+1)] << 0);
+            sectorPtr = (Disk[cassette_drive_sel].image[256 + (i+0)] << 8) | (Disk[cassette_drive_sel].image[256 + (i+1)] << 0);
             if (sectorPtr == 0) break;
             for (u8 j=0; j<10; j++) 
             {
-                dsk_listing[dsk_num_files][j] = DiskImage[(256*sectorPtr) + j];
+                dsk_listing[dsk_num_files][j] = Disk[cassette_drive_sel].image[(256*sectorPtr) + j];
             }
             dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
-            if (++dsk_num_files > MAX_FILES_PER_DSK) break;
+            if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
         }
         
         u16 key = 0; 
@@ -553,37 +528,41 @@ void ShowDiskListing(void)
 // ------------------------------------------------------------------------
 // Show the Cassette Menu text - highlight the selected row.
 // ------------------------------------------------------------------------
-u8 cassete_menu_items = 0;
 void CassetteMenuShow(bool bClearScreen, u8 sel)
 {
-    cassete_menu_items = 0;
+    cassette_menu_items = 0;
     if (bClearScreen)
     {
         DrawCleanBackground();
     }
     
-    AffChaine(8,7,6,                                                 " TI DISK MENU ");
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " MOUNT   DISK ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " UNMOUNT DISK ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " LIST    DISK ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " PASTE   DSK1.");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " PASTE   FILE ");  cassete_menu_items++;
-    AffChaine(8,9+cassete_menu_items,(sel==cassete_menu_items)?2:0,  " EXIT    MENU ");  cassete_menu_items++;
+    AffChaine(8,6,6,                                                 " TI DISK MENU ");
+    sprintf(tmpBuf, " MOUNT   DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    sprintf(tmpBuf, " UNMOUNT DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    sprintf(tmpBuf, " LIST    DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    sprintf(tmpBuf, " PASTE   DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    sprintf(tmpBuf, " PASTE   FILE%d", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  " EXIT    MENU ");  cassette_menu_items++;
 
-    if (bDiskIsMounted) AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS MOUNTED   ");
-    else AffChaine(8,9+cassete_menu_items+2,(sel==cassete_menu_items)?2:0," DISK IS NOT MOUNTED");   
-    
-    if (bDiskIsMounted && (myDskFile != NULL))
+    if (Disk[cassette_drive_sel].isMounted)
     {
-        u16 numSectors = (DiskImage[0x0A] << 8) | DiskImage[0x0B];
-        siprintf(tmpBuf, " DISK IS %s/%s %3dKB", (DiskImage[0x12] == 2 ? "DS":"SS"), (DiskImage[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
-        AffChaine(8,9+cassete_menu_items+3,(sel==cassete_menu_items)?2:0,tmpBuf);
+        u16 numSectors = (Disk[cassette_drive_sel].image[0x0A] << 8) | Disk[cassette_drive_sel].image[0x0B];
+        siprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", cassette_drive_sel+1, (Disk[cassette_drive_sel].image[0x12] == 2 ? "DS":"SS"), (Disk[cassette_drive_sel].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
+        AffChaine(4,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,tmpBuf);
         
         u8 col=0;
-        if (strlen(myDskFile) < 32) col=16-(strlen(myDskFile)/2);
-        if (strlen(myDskFile) & 1) col--;
-        AffChaine(col,9+cassete_menu_items+5,(sel==cassete_menu_items)?2:0,myDskFile);   
+        strncpy(tmpBuf, Disk[cassette_drive_sel].filename, 32);
+        tmpBuf[31] = 0;
+        if (strlen(tmpBuf) < 32) col=16-(strlen(tmpBuf)/2);
+        if (strlen(tmpBuf) & 1) col--;
+        AffChaine(col,9+cassette_menu_items+3,(sel==cassette_menu_items)?2:0,tmpBuf);   
+    } 
+    else
+    {
+        AffChaine(3,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,"      DISK NOT MOUNTED       ");
     }
+    
+    AffChaine(2,22,0, "A TO SELECT, X SWITCH DRIVES");
 }
 
 // ------------------------------------------------------------------------
@@ -605,22 +584,29 @@ void CassetteMenu(void)
     {
         if (nds_key & KEY_UP)  
         {
-            menuSelection = (menuSelection > 0) ? (menuSelection-1):(cassete_menu_items-1);
+            menuSelection = (menuSelection > 0) ? (menuSelection-1):(cassette_menu_items-1);
             CassetteMenuShow(false, menuSelection);
         }
         if (nds_key & KEY_DOWN)  
         {
-            menuSelection = (menuSelection+1) % cassete_menu_items;
+            menuSelection = (menuSelection+1) % cassette_menu_items;
             CassetteMenuShow(false, menuSelection);
+        }
+        if (nds_key & KEY_X)  
+        {
+            // Wait for keyrelease...
+            while (keysCurrent() & KEY_X) WAITVBL;
+            cassette_drive_sel = (cassette_drive_sel+1) & 0x01;
+            CassetteMenuShow(true, menuSelection);
         }
         if (nds_key & KEY_A)  
         {
             if (menuSelection == 0) // MOUNT .DSK FILE
             {
-                myDskFile = TILoadDiskFile();
+                TILoadDiskFile();   // Sets myDskFile[] and myDskPath[]
                 if (myDskFile != NULL)
                 {
-                    DiskMount(myDskFile);
+                    disk_mount(cassette_drive_sel, myDskPath, myDskFile);
                     CassetteMenuShow(true, menuSelection);
                 }
                 else
@@ -630,7 +616,7 @@ void CassetteMenu(void)
             }
             if (menuSelection == 1) // UNMOUNT .DSK FILE
             {
-                DiskUnmount();
+                disk_unmount(cassette_drive_sel);
                 CassetteMenuShow(true, menuSelection);
             }
             if (menuSelection == 2)
@@ -640,7 +626,7 @@ void CassetteMenu(void)
             }
             if (menuSelection == 3) // PASTE DSK1.FILENAME
             {
-                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_1);KeyPush(TMS_KEY_PERIOD);
+                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush((cassette_drive_sel == 0)?TMS_KEY_1:TMS_KEY_2);KeyPush(TMS_KEY_PERIOD);
                   KeyPushFilename(dsk_filename);
                   break;
             }
@@ -690,7 +676,7 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
         DrawCleanBackground();
     }
     
-    AffChaine(8,7,6,                                                 " TI MINI MENU  ");
+    AffChaine(8,7,6,                                           " TI MINI MENU  ");
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
     AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " LOAD   STATE  ");  mini_menu_items++;
