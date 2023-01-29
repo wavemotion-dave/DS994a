@@ -218,7 +218,7 @@ void HandleTICCSector(void)
     bool success = true;
     extern u8 pVDPVidMem[];
     
-    if (driveSelected != 1 && driveSelected != 2) // We only support DSK1 or DSK2
+    if (driveSelected != 1 && driveSelected != 2  && driveSelected != 3) // We only support DSK1, DSK2 or DSK3
     {
         MemCPU[0x8350] = ERR_DEVICEERROR;  
         tms9900.PC = 0x42a0;                // error 31 (not found)        
@@ -234,7 +234,7 @@ void HandleTICCSector(void)
     u16 destVDP      = (MemCPU[0x834E]<<8) | MemCPU[0x834F];
     u32 index        = (sectorNumber * 256);
     
-    if ((drive == 1) || (drive == 2))
+    if ((drive == 1) || (drive == 2) || (drive == 3))
     {
         drive = drive-1;    // Zero based for struct array lookup
         if (isRead)
@@ -282,6 +282,7 @@ void disk_unmount(u8 drive)
 {
     if (Disk[drive].isDirty) disk_write_to_sd(drive);
     Disk[drive].isMounted = false;
+    memset(Disk[drive].image, 0x00, MAX_DSK_SIZE);
 }
 
 void disk_read_from_sd(u8 drive)

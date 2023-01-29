@@ -13,7 +13,7 @@ Features :
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* Disk Support of 90K and 180K using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* Disk Support for DSK1 and DSK2 up to 360K each using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
 
 Copyright :
@@ -121,6 +121,13 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.8: 29-Jan-2023 by wavemotion-dave
+* Added DSK2 support and both drives now handle up to 360K disks. 
+* Improved default key mapping so X='1' and Y='2' allowing faster game startup.
+* Inverted .bin files now supported with the filenames ending in '3' or '9'.
+* Added ability to paste in DSKx.FILENAME from the Disk menu
+* Other cleanups as time permitted.
+
 V0.7: 24-Jan-2023 by wavemotion-dave
 * New TI99 Keyboard Layout - select in Global Options or on a Per-Game basis.
 * Better DSK vs ROM handling - remembers last directory for each.

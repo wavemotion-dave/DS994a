@@ -331,9 +331,9 @@ void ResetTI(void)
   timingFrames  = 0;
   emuFps=0;
     
-  XBuf = XBuf_A;                      // Set the initial screen ping-pong buffer to A
+  XBuf = XBuf_A;            // Set the initial screen ping-pong buffer to A
     
-  ResetStatusFlags();   // Some static status flags for the UI mostly
+  ResetStatusFlags();       // Some static status flags for the UI mostly
     
   alpha_lock = myConfig.capsLock;  
   meta_next_key    = 0;
@@ -442,6 +442,7 @@ void KeyPushFilename(char *filename)
         else if (filename[i] >= 'a' && filename[i] <= 'z')  KeyPush(TMS_KEY_A + (filename[i]-'a'));
         else if (filename[i] >= '1' && filename[i] <= '9')  KeyPush(TMS_KEY_1 + (filename[i]-'1'));
         else if (filename[i] == '0')                        KeyPush(TMS_KEY_0);
+        else if (filename[i] == '-')                        KeyPush(KBD_MINUS);
     }
 }
 
@@ -596,7 +597,7 @@ void CassetteMenu(void)
         {
             // Wait for keyrelease...
             while (keysCurrent() & KEY_X) WAITVBL;
-            cassette_drive_sel = (cassette_drive_sel+1) & 0x01;
+            cassette_drive_sel = (cassette_drive_sel+1) % MAX_DSKS;
             CassetteMenuShow(true, menuSelection);
         }
         if (nds_key & KEY_A)  
@@ -626,7 +627,7 @@ void CassetteMenu(void)
             }
             if (menuSelection == 3) // PASTE DSK1.FILENAME
             {
-                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush((cassette_drive_sel == 0)?TMS_KEY_1:TMS_KEY_2);KeyPush(TMS_KEY_PERIOD);
+                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_1+cassette_drive_sel);KeyPush(TMS_KEY_PERIOD);
                   KeyPushFilename(dsk_filename);
                   break;
             }
