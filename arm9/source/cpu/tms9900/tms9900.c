@@ -994,23 +994,59 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
         }
         else // We are dealing with the DSR enabled bit
         {
-            if (dataBit == 1) // Mapping DSR in
-            {
-                for (u16 address = 0x4000; address < 0x4020; address += 2)
-                {
-                    MemType[address] = MF_SAMS;    // SAMS expanded memory handling
-                }
-            }
-            else // Mapping DSR out
-            {
-                for (u16 address = 0x4000; address < 0x4020; address += 2)
-                {
-                    MemType[address] = MF_UNUSED;    // Map back to original handling (disk controller sits here by default)
-                }
-            }
+            SAMS_MapDSR(dataBit);
         }
     }
 }
+
+void SAMS_MapDSR(u8 dataBit)
+{
+    if (dataBit == 1) // Mapping DSR in
+    {
+        for (u16 address = 0x4000; address < 0x4020; address += 2)
+        {
+            MemType[address] = MF_SAMS;    // SAMS expanded memory handling
+        }
+    }
+    else // Mapping DSR out
+    {
+        for (u16 address = 0x4000; address < 0x4020; address += 2)
+        {
+            MemType[address] = MF_UNUSED;    // Map back to original handling (disk controller sits here by default)
+        }
+    }
+}
+
+u32 SAMS_Read32(u32 address)
+{
+    if (address < (128 * 1024))
+    {
+        u32* ptr = (u32*)MemSAMS_fast;
+        return ptr[address>>2];
+    }
+    else
+    {
+        address -= (128 * 1024);
+        u32* ptr = (u32*)MemSAMS;
+        return ptr[address>>2];
+    }
+}
+
+void SAMS_Write32(u32 address, u32 data)
+{
+    if (address < (128 * 1024))
+    {
+        u32* ptr = (u32*)MemSAMS_fast;
+        ptr[address>>2] = data;
+    }
+    else
+    {
+        address -= (128 * 1024);
+        u32* ptr = (u32*)MemSAMS;
+        ptr[address>>2] = data;
+    }
+}
+
 
 // ------------------------------------------------------------------------------------------------------------------------
 // When we know we're reading RAM from the use of the Workspace Pointer (WP) and register access, we can just do this

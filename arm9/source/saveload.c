@@ -36,16 +36,7 @@ void TI99SaveState()
 {
   u32 uNbO;
   long pSvg;
-    
-  if (myConfig.machineType == MACH_TYPE_SAMS)
-  {
-    DS_Print(6,0,0,"SAMS SAVE NOT SUPPORTED");
-    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    DS_Print(6,0,0,"                       "); 
-    return;  
-  }
-    
+
   // Change into the last known ROMs directory
   chdir(currentDirROMs);
     
@@ -125,6 +116,32 @@ void TI99SaveState()
       
     // Some spare memory we can eat into...
     if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
+    
+    // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
+    u32 i=0;
+    u32 zero=0x00000000;
+    while (i < (SAMS_BANKS * (4*1024)))
+    {
+        if (SAMS_Read32(i) == zero) 
+        {
+            u32 count=0;
+            u32 data32 = SAMS_Read32(i);
+            while ((data32 == zero) && (i < (SAMS_BANKS * (4*1024))))
+            {
+                count++;
+                i+=4;
+                data32 = SAMS_Read32(i);
+            }
+            if (uNbO) uNbO = fwrite(&zero,  sizeof(zero),  1, handle); 
+            if (uNbO) uNbO = fwrite(&count, sizeof(count), 1, handle);            
+        }
+        else
+        {
+            u32 data32 = SAMS_Read32(i);
+            if (uNbO) uNbO = fwrite(&data32, sizeof(data32), 1, handle); 
+            i+=4;
+        }
+    }
       
     // And finally the 'special' memory layout carts...
     if (myConfig.cartType == CART_TYPE_SUPERCART)
@@ -249,6 +266,30 @@ void TI99LoadState()
             // Load spare memory for future use
             if (uNbO) uNbO = fread(&spare, 512,1, handle); 
             
+            // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
+            u32 i=0;
+            u32 zero=0x00000000;
+            while (i < (SAMS_BANKS * (4*1024)))
+            {
+                u32 data32;
+                if (uNbO) uNbO = fread(&data32, sizeof(data32),1, handle); 
+                if (data32 == zero) 
+                {
+                    u32 count=0;
+                    if (uNbO) uNbO = fread(&count, sizeof(count),1, handle); 
+                    while (count--) 
+                    {
+                        SAMS_Write32(i, 0x00000000);
+                        i+=4;
+                    }
+                }
+                else
+                {
+                    SAMS_Write32(i, data32);
+                    i+=4;
+                }
+            }
+            
             // And finally the 'special' memory layout carts...
             if (myConfig.cartType == CART_TYPE_SUPERCART)
             {
@@ -262,6 +303,9 @@ void TI99LoadState()
             {
                 if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
             }
+            
+            // Make sure our DSR is installed propery
+            SAMS_MapDSR(tms9900.cruSAMS[0]);
             
             // Fix up transparency
             if (BGColor)

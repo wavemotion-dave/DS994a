@@ -210,6 +210,11 @@ enum _MEM_TYPE
 };
 
 
+extern u16 SAMS_BANKS;
+extern u32 SAMS_Read32(u32 address);
+extern void SAMS_Write32(u32 address, u32 data);
+extern void SAMS_MapDSR(u8 dataBit);
+
 extern void TMS9900_Reset(char *szGame);
 extern void TMS9900_Run(void);
 extern void TMS9900_RaiseInterrupt(void);
