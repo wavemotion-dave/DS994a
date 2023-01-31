@@ -39,10 +39,10 @@ void TI99SaveState()
     
   if (myConfig.machineType == MACH_TYPE_SAMS)
   {
-    AffChaine(6,0,0,"SAMS SAVE NOT SUPPORTED");
+    DS_Print(6,0,0,"SAMS SAVE NOT SUPPORTED");
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    AffChaine(6,0,0,"                       "); 
+    DS_Print(6,0,0,"                       "); 
     return;  
   }
     
@@ -71,7 +71,7 @@ void TI99SaveState()
   }
   
   strcpy(szCh1,"SAVING...");
-  AffChaine(10,0,0,szCh1);
+  DS_Print(10,0,0,szCh1);
   
   FILE *handle = fopen(szFile, "wb+");  
   if (handle != NULL) 
@@ -146,9 +146,9 @@ void TI99SaveState()
       strcpy(szCh1,"OK ");
     else
       strcpy(szCh1,"ERR");
-     AffChaine(19,0,0,szCh1);
+     DS_Print(19,0,0,szCh1);
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    AffChaine(10,0,0,"             "); 
+    DS_Print(10,0,0,"             "); 
     DisplayStatusLine(true);
   }
   else 
@@ -189,7 +189,7 @@ void TI99LoadState()
     if (handle != NULL) 
     {    
          strcpy(szCh1,"LOADING...");
-         AffChaine(10,0,0,szCh1);
+         DS_Print(10,0,0,szCh1);
        
         // Read Version
         u16 save_ver = 0xBEEF;
@@ -282,17 +282,17 @@ void TI99LoadState()
           strcpy(szCh1,"OK ");
         else
           strcpy(szCh1,"ERR");
-         AffChaine(19,0,0,szCh1);
+         DS_Print(19,0,0,szCh1);
         
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        AffChaine(10,0,0,"              ");  
+        DS_Print(10,0,0,"              ");  
         DisplayStatusLine(true);
       }
       else
       {
-        AffChaine(10,0,0,"NO SAVED GAME");
+        DS_Print(10,0,0,"NO SAVED GAME");
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        AffChaine(10,0,0,"             ");  
+        DS_Print(10,0,0,"             ");  
       }
 
     fclose(handle);

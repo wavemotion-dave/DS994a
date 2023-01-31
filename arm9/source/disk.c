@@ -63,9 +63,9 @@ u8 TICC_DIR=0;   // 0 means towards 0
 
 u8 bDiskDeviceInstalled  = 0;  // DSR installed or not installed... We don't do much with this yet.
 u8 diskSideSelected      = 0;  // Side 0 or Side 1
-u8 driveSelected         = 1;  // We support DSK1 and DSK2 currently
+u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 
-_Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1 and DSK2
+_Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 
 #define ERR_DEVICEERROR     6
 

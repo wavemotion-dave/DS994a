@@ -347,11 +347,6 @@ void ResetTI(void)
   memset(debug, 0x00, sizeof(debug));
 }
 
-// ------------------------------------------------------------
-// The status line shows the status of the Super Game Moudle,
-// AY sound chip support and MegaCart support.  Game players
-// probably don't care, but it's really helpful for devs.
-// ------------------------------------------------------------
 void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 {
     static u8 bShiftKeysBlanked = 0;
@@ -363,7 +358,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
     if (last_pal_mode != myConfig.isPAL)
     {
         last_pal_mode = myConfig.isPAL;
-        AffChaine(29,0,6, myConfig.isPAL ? "PAL":"   ");
+        DS_Print(29,0,6, myConfig.isPAL ? "PAL":"   ");
     }
 
     // ----------------------------------------------------------
@@ -374,19 +369,19 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
         if (Disk[drive].driveWriteCounter)
         {
             Disk[drive].driveWriteCounter--;
-            if (Disk[drive].driveWriteCounter) AffChaine(12,0,6, "DISK WRITE");
+            if (Disk[drive].driveWriteCounter) DS_Print(12,0,6, "DISK WRITE");
             else
             {
                 // Persist the disk - write it back to the SD card
                 disk_write_to_sd(drive);
-                AffChaine(12,0,6, "          ");
+                DS_Print(12,0,6, "          ");
             }
         }
         else if (Disk[drive].driveReadCounter)
         {
             Disk[drive].driveReadCounter--;
-            if (Disk[drive].driveReadCounter) AffChaine(12,0,6, "DISK READ ");
-            else AffChaine(12,0,6, "          ");
+            if (Disk[drive].driveReadCounter) DS_Print(12,0,6, "DISK READ ");
+            else DS_Print(12,0,6, "          ");
         }
     }
 
@@ -395,28 +390,28 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
     // ------------------------------------------
     if(tms9901.Keyboard[TMS_KEY_FUNCTION] == 1) 
     {
-        AffChaine(0,0,6, "FCTN"); 
+        DS_Print(0,0,6, "FCTN"); 
         bShiftKeysBlanked = 0;
     }
     else 
     {
         if(tms9901.Keyboard[TMS_KEY_SHIFT] == 1)
         {
-            AffChaine(0,0,6, "SHIFT");
+            DS_Print(0,0,6, "SHIFT");
             bShiftKeysBlanked = 0;
         }
         else 
         {
             if(tms9901.Keyboard[TMS_KEY_CONTROL] == 1)
             {
-                AffChaine(0,0,6, "CTRL");
+                DS_Print(0,0,6, "CTRL");
                 bShiftKeysBlanked = 0;
             }
             else
             {
                 if (!bShiftKeysBlanked)
                 {
-                    AffChaine(0,0,6, "     ");
+                    DS_Print(0,0,6, "     ");
                     bShiftKeysBlanked = 1;
                 }
             }
@@ -455,7 +450,7 @@ void ShowDiskListing(void)
     // Clear the screen...
     for (u8 i=0; i<20; i++)
     {
-        AffChaine(1,4+i,6, "                                ");
+        DS_Print(1,4+i,6, "                                ");
     }
 
     while (keysCurrent()) WAITVBL; // While any key is pressed...
@@ -469,7 +464,7 @@ void ShowDiskListing(void)
     }
 
     u8 idx=0;
-    AffChaine(5,5,6,      "=== DISK CONTENTS ===");
+    DS_Print(5,5,6,      "=== DISK CONTENTS ===");
     dsk_num_files = 0;
     if (Disk[cassette_drive_sel].isMounted)
     {
@@ -506,9 +501,9 @@ void ShowDiskListing(void)
                 // ----------------------------------------------------
                 for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
                 {
-                    sprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
-                    if (i < (MAX_FILES_PER_DSK/2)) AffChaine(5, 7+i, (i==sel)?2:0, tmpBuf);
-                    else AffChaine(18, 7+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
+                    siprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
+                    if (i < (MAX_FILES_PER_DSK/2)) DS_Print(5, 7+i, (i==sel)?2:0, tmpBuf);
+                    else DS_Print(18, 7+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
                 }
                 last_sel = sel;
             }
@@ -518,7 +513,7 @@ void ShowDiskListing(void)
     else
     {
         idx++;idx++;
-        AffChaine(9,9+idx,0,  "NO DISK MOUNTED"); idx++;
+        DS_Print(9,9+idx,0,  "NO DISK MOUNTED"); idx++;
     }
 
     // Wait for any press and release...
@@ -537,33 +532,33 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
         DrawCleanBackground();
     }
     
-    AffChaine(8,6,6,                                                 " TI DISK MENU ");
-    sprintf(tmpBuf, " MOUNT   DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    sprintf(tmpBuf, " UNMOUNT DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    sprintf(tmpBuf, " LIST    DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    sprintf(tmpBuf, " PASTE   DSK%d ", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    sprintf(tmpBuf, " PASTE   FILE%d", cassette_drive_sel+1); AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    AffChaine(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  " EXIT    MENU ");  cassette_menu_items++;
+    DS_Print(8,6,6,                                                 " TI DISK MENU ");
+    siprintf(tmpBuf, " MOUNT   DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    siprintf(tmpBuf, " UNMOUNT DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    siprintf(tmpBuf, " LIST    DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    siprintf(tmpBuf, " PASTE   DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    siprintf(tmpBuf, " PASTE   FILE%d", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  " EXIT    MENU ");  cassette_menu_items++;
 
     if (Disk[cassette_drive_sel].isMounted)
     {
         u16 numSectors = (Disk[cassette_drive_sel].image[0x0A] << 8) | Disk[cassette_drive_sel].image[0x0B];
         siprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", cassette_drive_sel+1, (Disk[cassette_drive_sel].image[0x12] == 2 ? "DS":"SS"), (Disk[cassette_drive_sel].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
-        AffChaine(4,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,tmpBuf);
+        DS_Print(4,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,tmpBuf);
         
         u8 col=0;
         strncpy(tmpBuf, Disk[cassette_drive_sel].filename, 32);
         tmpBuf[31] = 0;
         if (strlen(tmpBuf) < 32) col=16-(strlen(tmpBuf)/2);
         if (strlen(tmpBuf) & 1) col--;
-        AffChaine(col,9+cassette_menu_items+3,(sel==cassette_menu_items)?2:0,tmpBuf);   
+        DS_Print(col,9+cassette_menu_items+3,(sel==cassette_menu_items)?2:0,tmpBuf);   
     } 
     else
     {
-        AffChaine(3,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,"      DISK NOT MOUNTED       ");
+        DS_Print(3,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,"      DISK NOT MOUNTED       ");
     }
     
-    AffChaine(2,22,0, "A TO SELECT, X SWITCH DRIVES");
+    DS_Print(2,22,0, "A TO SELECT, X SWITCH DRIVES");
 }
 
 // ------------------------------------------------------------------------
@@ -677,13 +672,13 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
         DrawCleanBackground();
     }
     
-    AffChaine(8,7,6,                                           " TI MINI MENU  ");
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " LOAD   STATE  ");  mini_menu_items++;
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " DISK   MENU   ");  mini_menu_items++;
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
-    AffChaine(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " EXIT   MENU   ");  mini_menu_items++;
+    DS_Print(8,7,6,                                           " TI MINI MENU  ");
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " LOAD   STATE  ");  mini_menu_items++;
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " DISK   MENU   ");  mini_menu_items++;
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " EXIT   MENU   ");  mini_menu_items++;
 }
 
 // ------------------------------------------------------------------------
@@ -992,7 +987,7 @@ ITCM_CODE void ds99_main(void)
                 szChai[1] = '0' + (emuFps%100) / 10;
                 szChai[2] = '0' + (emuFps%100) % 10;
                 szChai[3] = 0;
-                AffChaine(0,0,6,szChai);
+                DS_Print(0,0,6,szChai);
             }
             DisplayStatusLine(false);
             emuActFrames = 0;
@@ -1000,7 +995,7 @@ ITCM_CODE void ds99_main(void)
             if (bShowDebug)
             {
                 siprintf(szChai, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
-                AffChaine(5,0,6,szChai);
+                DS_Print(5,0,6,szChai);
             }
         }
         emuActFrames++;
@@ -1240,43 +1235,47 @@ ITCM_CODE void ds99_main(void)
                       case JOY2_RIGHT:      tms9901.Keyboard[TMS_KEY_JOY2_RIGHT]=1; break;
                       case JOY2_FIRE:       tms9901.Keyboard[TMS_KEY_JOY2_FIRE]=1;  break;
 
-                      case KBD_A:           tms9901.Keyboard[TMS_KEY_A]=1;         break;
-                      case KBD_B:           tms9901.Keyboard[TMS_KEY_B]=1;         break;
-                      case KBD_C:           tms9901.Keyboard[TMS_KEY_C]=1;         break;
-                      case KBD_D:           tms9901.Keyboard[TMS_KEY_D]=1;         break;
-                      case KBD_E:           tms9901.Keyboard[TMS_KEY_E]=1;         break;
-                      case KBD_F:           tms9901.Keyboard[TMS_KEY_F]=1;         break;
-                      case KBD_G:           tms9901.Keyboard[TMS_KEY_G]=1;         break;
-                      case KBD_H:           tms9901.Keyboard[TMS_KEY_H]=1;         break;
-                      case KBD_I:           tms9901.Keyboard[TMS_KEY_I]=1;         break;
-                      case KBD_J:           tms9901.Keyboard[TMS_KEY_J]=1;         break;
-                      case KBD_K:           tms9901.Keyboard[TMS_KEY_K]=1;         break;
-                      case KBD_L:           tms9901.Keyboard[TMS_KEY_L]=1;         break;
-                      case KBD_M:           tms9901.Keyboard[TMS_KEY_M]=1;         break;
-                      case KBD_N:           tms9901.Keyboard[TMS_KEY_N]=1;         break;
-                      case KBD_O:           tms9901.Keyboard[TMS_KEY_O]=1;         break;
-                      case KBD_P:           tms9901.Keyboard[TMS_KEY_P]=1;         break;
-                      case KBD_Q:           tms9901.Keyboard[TMS_KEY_Q]=1;         break;
-                      case KBD_R:           tms9901.Keyboard[TMS_KEY_R]=1;         break;
-                      case KBD_S:           tms9901.Keyboard[TMS_KEY_S]=1;         break;
-                      case KBD_T:           tms9901.Keyboard[TMS_KEY_T]=1;         break;
-                      case KBD_U:           tms9901.Keyboard[TMS_KEY_U]=1;         break;
-                      case KBD_V:           tms9901.Keyboard[TMS_KEY_V]=1;         break;
-                      case KBD_W:           tms9901.Keyboard[TMS_KEY_W]=1;         break;
-                      case KBD_X:           tms9901.Keyboard[TMS_KEY_X]=1;         break;
-                      case KBD_Y:           tms9901.Keyboard[TMS_KEY_Y]=1;         break;
-                      case KBD_Z:           tms9901.Keyboard[TMS_KEY_Z]=1;         break;
+                      case KBD_A:
+                      case KBD_B:
+                      case KBD_C:
+                      case KBD_D:
+                      case KBD_E:
+                      case KBD_F:
+                      case KBD_G:
+                      case KBD_H:
+                      case KBD_I:
+                      case KBD_J:
+                      case KBD_K:
+                      case KBD_L:
+                      case KBD_M:
+                      case KBD_N:
+                      case KBD_O:
+                      case KBD_P:
+                      case KBD_Q:
+                      case KBD_R:
+                      case KBD_S:
+                      case KBD_T:
+                      case KBD_U:
+                      case KBD_V:
+                      case KBD_W:
+                      case KBD_X:
+                      case KBD_Y:
+                      case KBD_Z:
+                          tms9901.Keyboard[TMS_KEY_A+(map-KBD_A)]=1;         
+                          break;
 
-                      case KBD_1:           tms9901.Keyboard[TMS_KEY_1]=1;         break;
-                      case KBD_2:           tms9901.Keyboard[TMS_KEY_2]=1;         break;
-                      case KBD_3:           tms9901.Keyboard[TMS_KEY_3]=1;         break;
-                      case KBD_4:           tms9901.Keyboard[TMS_KEY_4]=1;         break;
-                      case KBD_5:           tms9901.Keyboard[TMS_KEY_5]=1;         break;
-                      case KBD_6:           tms9901.Keyboard[TMS_KEY_6]=1;         break;
-                      case KBD_7:           tms9901.Keyboard[TMS_KEY_7]=1;         break;
-                      case KBD_8:           tms9901.Keyboard[TMS_KEY_8]=1;         break;
-                      case KBD_9:           tms9901.Keyboard[TMS_KEY_9]=1;         break;
-                      case KBD_0:           tms9901.Keyboard[TMS_KEY_0]=1;         break;
+                      case KBD_1:
+                      case KBD_2:
+                      case KBD_3:
+                      case KBD_4:
+                      case KBD_5:
+                      case KBD_6:
+                      case KBD_7:
+                      case KBD_8:
+                      case KBD_9:
+                      case KBD_0:
+                          tms9901.Keyboard[TMS_KEY_1+(map-KBD_1)]=1;         
+                          break;
                           
                       case KBD_SPACE:       tms9901.Keyboard[TMS_KEY_SPACE]=1;     break;
                       case KBD_ENTER:       tms9901.Keyboard[TMS_KEY_ENTER]=1;     break;
@@ -1537,12 +1536,12 @@ int main(int argc, char **argv)
         if (globalConfig.skipBIOS == 0)
         {
             u8 idx = 6;
-            AffChaine(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
-            if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
-            if (bTIBIOSFound)          {AffChaine(2,idx++,0,"994aGROM.bin  GROM FOUND"); }
-            if (bTIDISKFound)          {AffChaine(2,idx++,0,"994aDISK.bin  DSR  FOUND"); }
+            DS_Print(2,idx++,0,"LOADING BIOS FILES ..."); idx++;
+            if (bTIBIOSFound)          {DS_Print(2,idx++,0,"994aROM.bin   BIOS FOUND"); }
+            if (bTIBIOSFound)          {DS_Print(2,idx++,0,"994aGROM.bin  GROM FOUND"); }
+            if (bTIDISKFound)          {DS_Print(2,idx++,0,"994aDISK.bin  DSR  FOUND"); }
             idx++;
-            AffChaine(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
+            DS_Print(2,idx++,0,"TOUCH SCREEN / KEY TO BEGIN"); idx++;
 
             while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))!=0);
             while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_DOWN | KEY_UP | KEY_A | KEY_B | KEY_L | KEY_R))==0);
@@ -1551,9 +1550,9 @@ int main(int argc, char **argv)
     }
     else
     {
-        AffChaine(2,10,0,"ERROR: TI99 BIOS NOT FOUND");
-        AffChaine(2,12,0,"ERROR: CANT RUN WITHOUT BIOS");
-        AffChaine(3,12,0,"ERROR: SEE README FILE");
+        DS_Print(2,10,0,"ERROR: TI99 BIOS NOT FOUND");
+        DS_Print(2,12,0,"ERROR: CANT RUN WITHOUT BIOS");
+        DS_Print(3,12,0,"ERROR: SEE README FILE");
         while(1) ;  // We're done... Need a TI99 bios to run this emulator
     }
   

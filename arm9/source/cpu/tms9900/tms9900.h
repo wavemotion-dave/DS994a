@@ -202,8 +202,8 @@ enum _MEM_TYPE
     MF_CART_NB,     // This is non-banked TI Cart access at >6000
     MF_VDP,         // This is the TMS9918a Video chip access
     MF_DISK,        // This is the TI Disk Controller
-    MF_GROMR,       // This is the TMS9918a GROM access
-    MF_GROMW,       // This is the TMS9918a GROM access
+    MF_GROMR,       // This is the TMS9918a GROM read access
+    MF_GROMW,       // This is the TMS9918a GROM write access
     MF_SAMS,        // This is the SAMS memory expanded access registers at >4000
     MF_MBX,         // This is the MBX register that causes a bank switch at >7000
     MF_UNUSED,      // This is some unused memory space... will return 0xFF

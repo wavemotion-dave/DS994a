@@ -224,19 +224,19 @@ void highscore_showoptions(u16 options)
 {
     if ((options & HS_OPT_SORTMASK) == HS_OPT_SORTLOW)
     {
-        dsPrintValue(22,5,0, (char*)"[LOWSC]");
+        DS_Print(22,5,0, (char*)"[LOWSC]");
     }
     else if ((options & HS_OPT_SORTMASK) == HS_OPT_SORTTIME)
     {
-        dsPrintValue(22,5,0, (char*)"[TIME] ");
+        DS_Print(22,5,0, (char*)"[TIME] ");
     }
     else if ((options & HS_OPT_SORTMASK) == HS_OPT_SORTASCII)
     {
-        dsPrintValue(22,5,0, (char*)"[ALPHA]");
+        DS_Print(22,5,0, (char*)"[ALPHA]");
     }
     else
     {   
-        dsPrintValue(22,5,0, (char*)"       ");    
+        DS_Print(22,5,0, (char*)"       ");    
     }
 }
 
@@ -245,7 +245,7 @@ void highscore_showoptions(u16 options)
 // -----------------------------------------------------
 void show_scores(short foundIdx, bool bShowLegend)
 {
-    dsPrintValue(3,5,0, (char*)highscores.highscore_table[foundIdx].notes);
+    DS_Print(3,5,0, (char*)highscores.highscore_table[foundIdx].notes);
     for (int i=0; i<10; i++)
     {
         if ((highscores.highscore_table[foundIdx].options & HS_OPT_SORTMASK) == HS_OPT_SORTTIME)
@@ -260,16 +260,16 @@ void show_scores(short foundIdx, bool bShowLegend)
             siprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s  ", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
                                                                highscores.highscore_table[foundIdx].scores[i].initials, highscores.highscore_table[foundIdx].scores[i].score);
         }
-        dsPrintValue(3,6+i, 0, hs_line);
+        DS_Print(3,6+i, 0, hs_line);
     }
     
     if (bShowLegend)
     {
-        dsPrintValue(2,16,0, (char*)"                             ");
-        dsPrintValue(2,18,0, (char*)"PRESS X FOR NEW HI SCORE     ");
-        dsPrintValue(2,19,0, (char*)"PRESS Y FOR NOTES/OPTIONS    ");
-        dsPrintValue(2,20,0, (char*)"PRESS B TO EXIT              ");
-        dsPrintValue(2,21,0, (char*)"SCORES AUTO SORT AFTER ENTRY ");
+        DS_Print(2,16,0, (char*)"                             ");
+        DS_Print(2,18,0, (char*)"PRESS X FOR NEW HI SCORE     ");
+        DS_Print(2,19,0, (char*)"PRESS Y FOR NOTES/OPTIONS    ");
+        DS_Print(2,20,0, (char*)"PRESS B TO EXIT              ");
+        DS_Print(2,21,0, (char*)"SCORES AUTO SORT AFTER ENTRY ");
     }
     highscore_showoptions(highscores.highscore_table[foundIdx].options);
 }
@@ -354,10 +354,10 @@ void highscore_entry(short foundIdx, u32 crc)
     time_t unixTime = time(NULL);
     struct tm* timeStruct = gmtime((const time_t *)&unixTime);
     
-    dsPrintValue(2,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER SCORE");
-    dsPrintValue(2,20,0, (char*)"PRESS START TO SAVE SCORE   ");
-    dsPrintValue(2,21,0, (char*)"PRESS SELECT TO CANCEL      ");
-    dsPrintValue(2,22,0, (char*)"                            ");
+    DS_Print(2,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER SCORE");
+    DS_Print(2,20,0, (char*)"PRESS START TO SAVE SCORE   ");
+    DS_Print(2,21,0, (char*)"PRESS SELECT TO CANCEL      ");
+    DS_Print(2,22,0, (char*)"                            ");
 
     strcpy(score_entry.score, "000000");
     strcpy(score_entry.initials, highscores.last_initials);
@@ -472,7 +472,7 @@ void highscore_entry(short foundIdx, u32 crc)
             else
                 hs_line[16+entry_idx] = '_';
         }
-        dsPrintValue(3,16, 0, (char*)hs_line);
+        DS_Print(3,16, 0, (char*)hs_line);
     }
     
     show_scores(foundIdx, true);
@@ -490,11 +490,11 @@ void highscore_options(short foundIdx, u32 crc)
     unsigned short entry_idx=0;
     char dampen=0;
     
-    dsPrintValue(3,16,0, (char*)"NOTE: ");
-    dsPrintValue(3,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER NOTES");
-    dsPrintValue(3,20,0, (char*)"X=TOGGLE SORT, L+R=CLR SCORE");
-    dsPrintValue(3,21,0, (char*)"PRESS START TO SAVE OPTIONS ");
-    dsPrintValue(3,22,0, (char*)"PRESS SELECT TO CANCEL      ");
+    DS_Print(3,16,0, (char*)"NOTE: ");
+    DS_Print(3,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER NOTES");
+    DS_Print(3,20,0, (char*)"X=TOGGLE SORT, L+R=CLR SCORE");
+    DS_Print(3,21,0, (char*)"PRESS START TO SAVE OPTIONS ");
+    DS_Print(3,22,0, (char*)"PRESS SELECT TO CANCEL      ");
 
     strcpy(notes, highscores.highscore_table[foundIdx].notes);
     options = highscores.highscore_table[foundIdx].options;
@@ -610,7 +610,7 @@ void highscore_options(short foundIdx, u32 crc)
         {
             hs_line[entry_idx] = '_';
         }
-        dsPrintValue(9,16, 0, (char*)hs_line);
+        DS_Print(9,16, 0, (char*)hs_line);
     }
     
     show_scores(foundIdx, true);

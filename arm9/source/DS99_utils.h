@@ -112,8 +112,7 @@ extern void TI99FindFiles(void);
 extern void tiDSChangeOptions(void);
 extern void DrawCleanBackground(void);
 
-extern void AffChaine(int iX,int iY,int iScr,char *szMessage);
-extern void dsPrintValue(int iX,int iY,int iScr,char *szMessage);
+extern void DS_Print(int iX,int iY,int iScr,char *szMessage);
 extern unsigned int crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
 
 extern char *TILoadDiskFile(void);

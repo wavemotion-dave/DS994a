@@ -33,7 +33,7 @@
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
-	.section .text
+	.section .itcm
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------

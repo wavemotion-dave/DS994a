@@ -4,11 +4,12 @@
 
 #define MAX_DSK_SIZE    (360*1024)     // 360K maximum .dsk size
 
+// For now just two disks supported.. that should be fine for just about anything
 enum
 {
     DSK1=0,
     DSK2,
-    //DSK3,
+    DSK3,
     MAX_DSKS
 };
 

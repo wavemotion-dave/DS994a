@@ -44,10 +44,10 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
-#define MemSAMS_fast            ((u8*)0x06820000)    // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
+#define MemSAMS_fast            ((u8*) 0x06820000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
 
-u16 SAMS_BANKS  = 128;   // 512K or 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
-u8 *MemSAMS     = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
+u16 SAMS_BANKS  __attribute__((section(".dtcm"))) = 128;   // 512K or 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
+u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -56,7 +56,7 @@ u16 MemoryRead16(u16 address);
 char tmpFilename[256];
 
 // Supporting banking up to the full 2MB (256 x 8KB = 2048KB)
-u8 BankMasks[256];
+u8 BankMasks[256] __attribute__((section(".dtcm")));
 
 // Pre-fill the parity table for fast look-up based on Classic99 'black magic'
 u16 ParityTable[256]     __attribute__((section(".dtcm")));
@@ -849,14 +849,14 @@ void WriteBankMBX(u8 bank)
 
 // ----------------------------------------------------------------------------------------------------------------------------------------
 // SAMS memory bank swapping is not at all optmized... we don't want to disrupt the normal fast memory read handling for non SAMS games
-// which is 99.9% of the library. So we do this the 'hard way' but moving the 4K chunks in and out of actual mapped memory rather than
+// which is 99% of the library. So we do this the 'hard way' but moving the 4K chunks in and out of actual mapped memory rather than
 // just tracking a bank number and handling it on the READ like Classic99 or MAME would do.  This works... is slow but so far has been
 // fine for the few SAMS enabled games I've tried:  texcast, Dungeons of Asgard, etc.
 // ----------------------------------------------------------------------------------------------------------------------------------------
 const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
-ITCM_CODE void SwapBankSAMS(u16 address, u8 oldBank, u8 newBank)
+ITCM_CODE void SwapBankSAMS(u16 memory_region, u8 oldBank, u8 newBank)
 {
-    u32 *oldA = (u32*) (MemCPU + ((address & 0xF) * 0x1000));
+    u32 *oldA = (u32*) (MemCPU + ((memory_region & 0xF) * 0x1000));
     u32 *newC = (u32*) oldA;
     u32 *oldB;
     u32 *newD;
@@ -876,10 +876,10 @@ ITCM_CODE void SwapBankSAMS(u16 address, u8 oldBank, u8 newBank)
     }
     else
     {
-        newD = (u32*) (MemSAMS + (newBank * 0x1000)  - (128 * 1024));
+        newD = (u32*) (MemSAMS + (newBank * 0x1000) - (128 * 1024));
     }
 
-    if (!IsSwappableSAMS[(address&0xF)]) return;    // Make sure this is an area we allow swapping...
+    if (!IsSwappableSAMS[(memory_region&0xF)]) return;    // Make sure this is an area we allow swapping...
 
     // -----------------------------------------------------
     // If the new bank is within our SAMS memory range...
@@ -899,7 +899,7 @@ ITCM_CODE void SwapBankSAMS(u16 address, u8 oldBank, u8 newBank)
             // Else we need to re-enable the RAM8 at this bank
             for (u16 i=0; i<0x1000; i++)
             {
-                MemType[((address&0xF)<<12) | i] = MF_RAM8;   // RAM is enabled
+                MemType[((memory_region&0xF)<<12) | i] = MF_RAM8;   // RAM is enabled
             }
         }
 
@@ -923,7 +923,7 @@ ITCM_CODE void SwapBankSAMS(u16 address, u8 oldBank, u8 newBank)
         memset(newC, 0xFF, 0x1000);
         for (u16 i=0; i<0x1000; i++)
         {
-            MemType[((address&0xF)<<12) | i] = MF_UNUSED;   // Expanded 32K RAM (low area)
+            MemType[((memory_region&0xF)<<12) | i] = MF_UNUSED;   // RAM is disabled
         }
     }
 }
@@ -935,15 +935,15 @@ void WriteBankSAMS(u16 address, u8 data)
 {
     if (tms9900.cruSAMS[0] == 1)    // Do we have access to the registers?
     {
-        address = address >> 1;
+        u8 memory_region = (address >> 1) & 0xF;
 
         if (tms9900.cruSAMS[1] == 1)    // If the mapper is enabled, swap banks
         {
-            SwapBankSAMS(address, tms9900.dataSAMS[address&0xF], data);
+            SwapBankSAMS(memory_region, tms9900.dataSAMS[memory_region], data);
         }
 
         // Set this as the new bank
-        tms9900.dataSAMS[address&0xF] = data;
+        tms9900.dataSAMS[memory_region] = data;
     }
 }
 
@@ -960,6 +960,8 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
     // -----------------------------------------------------------
     if (myConfig.machineType == MACH_TYPE_SAMS)
     {
+        if ((cruAddress&0xFF) > 1) return;
+        
         u8 oldEnable = tms9900.cruSAMS[1];
         tms9900.cruSAMS[cruAddress & 1] = dataBit;
         if (cruAddress & 1)    // If we are writing the mapper enabled bit...
@@ -977,10 +979,10 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
                     SwapBankSAMS(0x000E, 0x0E, tms9900.dataSAMS[0xE]);
                     SwapBankSAMS(0x000F, 0x0F, tms9900.dataSAMS[0xF]);
                 }
-                else    // Pass-thru mode - map the lower 32K in...
+                else    // Pass-thru mode - map the lower 32K in transparently...
                 {
-                    SwapBankSAMS(0x0002, tms9900.dataSAMS[0x2], 0x02);
-                    SwapBankSAMS(0x0003, tms9900.dataSAMS[0x3], 0x03);
+                    SwapBankSAMS(0x0002, tms9900.dataSAMS[0x2], 0x2);
+                    SwapBankSAMS(0x0003, tms9900.dataSAMS[0x3], 0x3);
                     SwapBankSAMS(0x000A, tms9900.dataSAMS[0xA], 0xA);
                     SwapBankSAMS(0x000B, tms9900.dataSAMS[0xB], 0xB);
                     SwapBankSAMS(0x000C, tms9900.dataSAMS[0xC], 0xC);
@@ -1096,10 +1098,13 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return retVal;
                 break;
             case MF_SPEECH:
-                return (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                return (0x40 | 0x20) << 8;   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
                 break;
             case MF_DISK:
-                return ReadTICCRegister(address);
+                return ReadTICCRegister(address) << 8;
+                break;
+            case MF_SAMS:
+                return (tms9900.dataSAMS[(address & 0x1E) >> 1] << 8);
                 break;
             default:
                 retVal = *((u16*)(MemCPU+address));
@@ -1190,7 +1195,6 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 break;
             case MF_MBX:
                 WriteBankMBX(data>>8);
-                WriteBankMBX(data);
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) MemCPU[address] = data>>8;
                 break;
             case MF_RAM8:

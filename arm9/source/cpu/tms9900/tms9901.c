@@ -168,7 +168,7 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
             
             if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)    // We are only handling bit 0 and bit 15
             {
-                    switch (cruAddress)
+                switch (cruAddress)
                 {
                     case 0:     bitState = 1;                                           break;     // Bit 0 in timer mode always returns '1'
                     case 15:    bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;     // Bit 15 in timer mode returns the state of the Interupt request

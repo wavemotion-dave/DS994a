@@ -668,8 +668,8 @@ ITCM_CODE byte RdData9918(void)
   byte data;
 
   data      = VDPDlatch;
-  VDPDlatch = pVDPVidMem[VAddr++];
-  //VAddr     = (VAddr+1)&0x3FFF;
+  VDPDlatch = pVDPVidMem[VAddr];
+  VAddr     = (VAddr+1)&0x3FFF;
   VDPCtrlLatch = 0;
 
   return(data);
@@ -681,8 +681,8 @@ ITCM_CODE byte RdData9918(void)
 /*************************************************************/
 ITCM_CODE void WrData9918(byte value)
 {
-    VDPDlatch = pVDPVidMem[VAddr++] = value;
-    //VAddr     = (VAddr+1)&0x3FFF;
+    VDPDlatch = pVDPVidMem[VAddr] = value;
+    VAddr     = (VAddr+1)&0x3FFF;
     VDPCtrlLatch = 0;
 }
 
