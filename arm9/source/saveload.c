@@ -22,9 +22,10 @@
 #include "cpu/tms9900/tms9900.h"
 #include "DS99mngt.h"
 #include "DS99_utils.h"
+#include "SAMS.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0005        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0006        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -75,6 +76,9 @@ void TI99SaveState()
     uNbO = fwrite(&tms9900, sizeof(tms9900), 1, handle);
     uNbO = fwrite(&tms9901, sizeof(tms9901), 1, handle);
       
+    // Write SAMS memory
+    if (uNbO) uNbO = fwrite(&theSAMS, sizeof(theSAMS),1, handle); 
+      
     // Save TI Memory that might possibly be volatile (RAM areas mostly)
     if (uNbO) uNbO = fwrite(MemCPU+0x2000, 0x2000, 1, handle); 
     if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
@@ -120,13 +124,13 @@ void TI99SaveState()
     // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
     u32 i=0;
     u32 zero=0x00000000;
-    while (i < (SAMS_BANKS * (4*1024)))
+    while (i < (theSAMS.numBanks * (4*1024)))
     {
         if (SAMS_Read32(i) == zero) 
         {
             u32 count=0;
             u32 data32 = SAMS_Read32(i);
-            while ((data32 == zero) && (i < (SAMS_BANKS * (4*1024))))
+            while ((data32 == zero) && (i < (theSAMS.numBanks * (4*1024))))
             {
                 count++;
                 i+=4;
@@ -142,6 +146,9 @@ void TI99SaveState()
             i+=4;
         }
     }
+    // Restore the memory banks as they were...
+    SAMS_cru_write(0x0000, theSAMS.cruSAMS[0]);
+    SAMS_cru_write(0x0001, theSAMS.cruSAMS[1]);
       
     // And finally the 'special' memory layout carts...
     if (myConfig.cartType == CART_TYPE_SUPERCART)
@@ -218,6 +225,9 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&tms9900, sizeof(tms9900), 1, handle);
             if (uNbO) uNbO = fread(&tms9901, sizeof(tms9901), 1, handle);
             
+            // Load SAMS memory
+            if (uNbO) uNbO = fread(&theSAMS, sizeof(theSAMS),1, handle); 
+            
             // Ensure we are pointing to the right cart bank in memory
             if (tms9900.bankOffset == 0) tms9900.cartBankPtr = FastCartBuffer;
             else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;
@@ -269,7 +279,7 @@ void TI99LoadState()
             // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
             u32 i=0;
             u32 zero=0x00000000;
-            while (i < (SAMS_BANKS * (4*1024)))
+            while (i < (theSAMS.numBanks * (4*1024)))
             {
                 u32 data32;
                 if (uNbO) uNbO = fread(&data32, sizeof(data32),1, handle); 
@@ -304,8 +314,8 @@ void TI99LoadState()
                 if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
             }
             
-            // Make sure our DSR is installed propery
-            SAMS_MapDSR(tms9900.cruSAMS[0]);
+            // Make sure our DSR is installed propery and the right memory region is mapped in
+            SAMS_MapDSR(theSAMS.cruSAMS[0]);
             
             // Fix up transparency
             if (BGColor)

@@ -15,7 +15,7 @@
 #define MAX_PATH                255
 
 #define MAX_CONFIGS             750
-#define CONFIG_VER              0x0004
+#define CONFIG_VER              0x0005
 
 #define TI99ROM                 0x01
 #define DIRECT                  0x02

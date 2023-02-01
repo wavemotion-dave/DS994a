@@ -23,6 +23,7 @@
 #include "tms9901.h"
 #include "tms9900.h"
 #include "../../DS99.h"
+#include "../../SAMS.h"
 #include "../../disk.h"
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
@@ -44,10 +45,6 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
-#define MemSAMS_fast            ((u8*) 0x06820000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
-
-u16 SAMS_BANKS  __attribute__((section(".dtcm"))) = 128;   // 512K or 1MB of SAMS memory depending on DS vs DSi. See main() for allocation details.
-u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -55,7 +52,7 @@ u16 MemoryRead16(u16 address);
 
 char tmpFilename[256];
 
-// Supporting banking up to the full 2MB (256 x 8KB = 2048KB)
+// Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer is smaller
 u8 BankMasks[256] __attribute__((section(".dtcm")));
 
 // Pre-fill the parity table for fast look-up based on Classic99 'black magic'
@@ -365,27 +362,6 @@ void TMS9900_buildopcodes(void)
 }
 
 
-// ---------------------------------------------------------
-// Allocate enough memory for a SAMS 512K (DS) or 1MB (DSi)
-// ---------------------------------------------------------
-void InitMemoryPoolSAMS(void)
-{
-    // Only allocate the memory once...
-    if (MemSAMS == 0)
-    {
-        if (isDSiMode())
-        {
-            SAMS_BANKS = 256;                           // 256 * 4K = 1024K
-            MemSAMS = malloc((SAMS_BANKS-32) * 0x1000); // We can save 128K since we're getting the first 128K from our DS VRAM
-        }
-        else
-        {
-            SAMS_BANKS = 128;                           // 128 * 4K = 512K
-            MemSAMS = malloc((SAMS_BANKS-32) * 0x1000); // We can save 128K since we're getting the first 128K from our DS VRAM
-        }
-    }
-}
-
 // ----------------------------------------------------------------------------------------------------
 // Called when a new CART is loaded and the game system needs to be started at a RESET condition.
 // Caller passes in the game filename (ROM) they wish to load... C/D/G files will find their siblings.
@@ -416,17 +392,6 @@ void TMS9900_Reset(char *szGame)
         else if (numBanks <= 64)   BankMasks[numBanks-1] = 0x3F;
         else if (numBanks <= 128)  BankMasks[numBanks-1] = 0x7F;
         else                       BankMasks[numBanks-1] = 0xFF;
-    }
-
-    // --------------------------------------------------------------
-    // For SAMS memory, ensure everything points to the right banks
-    // and default the system to pass-thru mode...
-    // --------------------------------------------------------------
-    tms9900.cruSAMS[0] = 0;
-    tms9900.cruSAMS[1] = 0;
-    for (u8 i=0; i<16; i++)
-    {
-        tms9900.dataSAMS[i] = i;
     }
 
     // ---------------------------------------------------------------------------
@@ -503,12 +468,12 @@ void TMS9900_Reset(char *szGame)
 
     for (u16 address = 0x2000; address < 0x4000; address++)
     {
-        MemType[address] = MF_RAM8;   // Expanded 32K RAM (low area)
+        MemType[address] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (low area) - could be SAMS mapped
     }
 
     for (u32 address = 0xA000; address < 0x10000; address++)
     {
-        MemType[address] = MF_RAM8;   // Expanded 32K RAM (high area)
+        MemType[address] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (high area) - could be SAMS mapped
     }
 
     // ---------------------------------------------------------
@@ -703,14 +668,7 @@ void TMS9900_Reset(char *szGame)
     // -------------------------------------------------
     // SAMS support... 512K for DS and 1MB for DSi
     // -------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS)
-    {
-        InitMemoryPoolSAMS();   // Make sure we have the memory...
-        
-        // We don't map the MemType[] here.. only when CRU bit is written
-        memset(MemSAMS,         0x00, ((SAMS_BANKS-32) * 0x1000));
-        memset(MemSAMS_fast,    0x00, (128 * 1024));
-    }
+    SAMS_Initialize();   // Make sure we have the memory... and map in SAMS if enabled globally
 
     // Ensure we're in the first bank...
     tms9900.cartBankPtr = FastCartBuffer;
@@ -727,17 +685,17 @@ void TMS9900_Reset(char *szGame)
 // -----------------------------------------------------------------------------------------------
 // We only handle the VDP interrupt so we only need to track that we have an interrupt request...
 // -----------------------------------------------------------------------------------------------
-void TMS9900_RaiseInterrupt(void)
+void TMS9900_RaiseInterrupt(u16 iMask)
 {
-    tms9900.cpuInt = 2; // The only interrupt we support is the VDP
+    tms9900.cpuInt |= iMask; // The only interrupt we support is the VDP
 }
 
 // -----------------------------------------------------------------------------------------------
 // We only handle the VDP interrupt so we only need to track that we have an interrupt request...
 // -----------------------------------------------------------------------------------------------
-void TMS9900_ClearInterrupt(void)
+void TMS9900_ClearInterrupt(u16 iMask)
 {
-    tms9900.cpuInt = 0; // We only handle one level of interrupts
+    tms9900.cpuInt &= ~iMask; // We only handle one level of interrupts
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -847,207 +805,6 @@ void WriteBankMBX(u8 bank)
     memcpy(MemCPU+0x7000, MemCART+(bank*0x1000), 0x1000);
 }
 
-// ----------------------------------------------------------------------------------------------------------------------------------------
-// SAMS memory bank swapping is not at all optmized... we don't want to disrupt the normal fast memory read handling for non SAMS games
-// which is 99% of the library. So we do this the 'hard way' but moving the 4K chunks in and out of actual mapped memory rather than
-// just tracking a bank number and handling it on the READ like Classic99 or MAME would do.  This works... is slow but so far has been
-// fine for the few SAMS enabled games I've tried:  texcast, Dungeons of Asgard, etc.
-// ----------------------------------------------------------------------------------------------------------------------------------------
-const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
-ITCM_CODE void SwapBankSAMS(u16 memory_region, u8 oldBank, u8 newBank)
-{
-    u32 *oldA = (u32*) (MemCPU + ((memory_region & 0xF) * 0x1000));
-    u32 *newC = (u32*) oldA;
-    u32 *oldB;
-    u32 *newD;
-
-    if (oldBank < 32)
-    {
-        oldB = (u32*) (MemSAMS_fast + (oldBank * 0x1000));
-    }
-    else
-    {
-        oldB = (u32*) (MemSAMS + (oldBank * 0x1000) - (128 * 1024));
-    }
-
-    if (newBank < 32)
-    {
-        newD = (u32*) (MemSAMS_fast + (newBank * 0x1000));
-    }
-    else
-    {
-        newD = (u32*) (MemSAMS + (newBank * 0x1000) - (128 * 1024));
-    }
-
-    if (!IsSwappableSAMS[(memory_region&0xF)]) return;    // Make sure this is an area we allow swapping...
-
-    // -----------------------------------------------------
-    // If the new bank is within our SAMS memory range...
-    // -----------------------------------------------------
-    if (newBank < SAMS_BANKS)
-    {
-        if (oldBank < SAMS_BANKS)
-        {
-            // Move 4K out of main memory to the banked memory...
-            for (u16 i=0; i<0x1000; i+=4)
-            {
-                *oldB++ = *oldA++;
-            }
-        }
-        else
-        {
-            // Else we need to re-enable the RAM8 at this bank
-            for (u16 i=0; i<0x1000; i++)
-            {
-                MemType[((memory_region&0xF)<<12) | i] = MF_RAM8;   // RAM is enabled
-            }
-        }
-
-        // Move 4K out of banked memory to main memory...
-        for (u16 i=0; i<0x1000; i+=4)
-        {
-            *newC++ = *newD++;
-        }
-    }
-    else // Turn off access to that memory... need to return 0xFF
-    {
-        if (oldBank < SAMS_BANKS)
-        {
-            // Move 4K out of main memory to the banked memory...
-            for (u16 i=0; i<0x1000; i+=4)
-            {
-                *oldB++ = *oldA++;
-            }
-        }
-
-        memset(newC, 0xFF, 0x1000);
-        for (u16 i=0; i<0x1000; i++)
-        {
-            MemType[((memory_region&0xF)<<12) | i] = MF_UNUSED;   // RAM is disabled
-        }
-    }
-}
-
-// -------------------------------------------------------------------------------------------
-// The SAMS banks are 4K and we only allow mapping of the banks at >2000-3FFF and >A000-FFFF
-// -------------------------------------------------------------------------------------------
-void WriteBankSAMS(u16 address, u8 data)
-{
-    if (tms9900.cruSAMS[0] == 1)    // Do we have access to the registers?
-    {
-        u8 memory_region = (address >> 1) & 0xF;
-
-        if (tms9900.cruSAMS[1] == 1)    // If the mapper is enabled, swap banks
-        {
-            SwapBankSAMS(memory_region, tms9900.dataSAMS[memory_region], data);
-        }
-
-        // Set this as the new bank
-        tms9900.dataSAMS[memory_region] = data;
-    }
-}
-
-// ---------------------------------------------------------------------
-// The SAMS CRU is at CRU base >1E00 and has only 2 bits.. the first
-// turns on the DSR at >4000 and the second enables the mapping vs
-// "pass-thru" of the memory. In "pass-thru" we end up looking just
-// like a normal 32K expanded memory system.
-// ---------------------------------------------------------------------
-void SAMS_cru_write(u16 cruAddress, u8 dataBit)
-{
-    // -----------------------------------------------------------
-    // If the machine has been configured for SAMS operation...
-    // -----------------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS)
-    {
-        if ((cruAddress&0xFF) > 1) return;
-        
-        u8 oldEnable = tms9900.cruSAMS[1];
-        tms9900.cruSAMS[cruAddress & 1] = dataBit;
-        if (cruAddress & 1)    // If we are writing the mapper enabled bit...
-        {
-            if (oldEnable != tms9900.cruSAMS[1])    // Did this bit change?!
-            {
-                if (tms9900.cruSAMS[1] == 1)  // If the mapper was just enabled...
-                {
-                    SwapBankSAMS(0x0002, 0x02, tms9900.dataSAMS[0x2]);
-                    SwapBankSAMS(0x0003, 0x03, tms9900.dataSAMS[0x3]);
-                    SwapBankSAMS(0x000A, 0x0A, tms9900.dataSAMS[0xA]);
-                    SwapBankSAMS(0x000B, 0x0B, tms9900.dataSAMS[0xB]);
-                    SwapBankSAMS(0x000C, 0x0C, tms9900.dataSAMS[0xC]);
-                    SwapBankSAMS(0x000D, 0x0D, tms9900.dataSAMS[0xD]);
-                    SwapBankSAMS(0x000E, 0x0E, tms9900.dataSAMS[0xE]);
-                    SwapBankSAMS(0x000F, 0x0F, tms9900.dataSAMS[0xF]);
-                }
-                else    // Pass-thru mode - map the lower 32K in transparently...
-                {
-                    SwapBankSAMS(0x0002, tms9900.dataSAMS[0x2], 0x2);
-                    SwapBankSAMS(0x0003, tms9900.dataSAMS[0x3], 0x3);
-                    SwapBankSAMS(0x000A, tms9900.dataSAMS[0xA], 0xA);
-                    SwapBankSAMS(0x000B, tms9900.dataSAMS[0xB], 0xB);
-                    SwapBankSAMS(0x000C, tms9900.dataSAMS[0xC], 0xC);
-                    SwapBankSAMS(0x000D, tms9900.dataSAMS[0xD], 0xD);
-                    SwapBankSAMS(0x000E, tms9900.dataSAMS[0xE], 0xE);
-                    SwapBankSAMS(0x000F, tms9900.dataSAMS[0xF], 0xF);
-                }
-            }
-        }
-        else // We are dealing with the DSR enabled bit
-        {
-            SAMS_MapDSR(dataBit);
-        }
-    }
-}
-
-void SAMS_MapDSR(u8 dataBit)
-{
-    if (dataBit == 1) // Mapping DSR in
-    {
-        for (u16 address = 0x4000; address < 0x4020; address += 2)
-        {
-            MemType[address] = MF_SAMS;    // SAMS expanded memory handling
-        }
-    }
-    else // Mapping DSR out
-    {
-        for (u16 address = 0x4000; address < 0x4020; address += 2)
-        {
-            MemType[address] = MF_UNUSED;    // Map back to original handling (disk controller sits here by default)
-        }
-    }
-}
-
-u32 SAMS_Read32(u32 address)
-{
-    if (address < (128 * 1024))
-    {
-        u32* ptr = (u32*)MemSAMS_fast;
-        return ptr[address>>2];
-    }
-    else
-    {
-        address -= (128 * 1024);
-        u32* ptr = (u32*)MemSAMS;
-        return ptr[address>>2];
-    }
-}
-
-void SAMS_Write32(u32 address, u32 data)
-{
-    if (address < (128 * 1024))
-    {
-        u32* ptr = (u32*)MemSAMS_fast;
-        ptr[address>>2] = data;
-    }
-    else
-    {
-        address -= (128 * 1024);
-        u32* ptr = (u32*)MemSAMS;
-        ptr[address>>2] = data;
-    }
-}
-
-
 // ------------------------------------------------------------------------------------------------------------------------
 // When we know we're reading RAM from the use of the Workspace Pointer (WP) and register access, we can just do this
 // quickly. In theory the WP can point to 8-bit expanded RAM with a pentalty but it's so uncommon that we will not
@@ -1066,11 +823,71 @@ inline void WriteRAM16(u16 address, u16 data)
     *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
 }
 
+// ------------------------------------------------------------------------------------------------------------------------
+// When we know we're reading RAM from the use of the Workspace Pointer (WP) and register access, we can just do this
+// quickly. In theory the WP can point to 8-bit expanded RAM with a pentalty but it's so uncommon that we will not
+// incur the pentaly. This means the emulation will not be cycle accurate but it's good enough to play classic TI games...
+// ------------------------------------------------------------------------------------------------------------------------
+inline u16 ReadRAM16a(u16 address)
+{
+    if (MemType[address] == MF_SAMS8)
+    {
+        u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
+        return (data16 << 8) | (data16 >> 8);
+    }        
+    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
+}
+
+// ----------------------------------------------------------------------------------------
+// See comment above for ReadRAM16() - not cycle accurate but good enough for WP use...
+// ----------------------------------------------------------------------------------------
+inline void WriteRAM16a(u16 address, u16 data)
+{
+    if (MemType[address] == MF_SAMS8)
+    {
+        u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
+        *ptr++ = (data>>8);
+        *ptr = (data & 0xFF);
+    }        
+    else
+    {
+        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+    }
+}
+
 // -----------------------------------------------------------------------------------------------
 // A PC fetch is always from main memory and won't trigger anything like VDP or GROM access...
 // so we can be a little smarter/faster in getting the memory here.
 // -----------------------------------------------------------------------------------------------
 ITCM_CODE u16 ReadPC16(void)
+{
+    u16 address = tms9900.PC; tms9900.PC+=2;
+
+    // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
+    if (address & 0xE000)
+    {
+        u8 memType = MemType[address];
+        if (memType)
+        {
+            AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
+            if (memType == MF_CART)
+            {
+                u16 data16 = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
+                return (data16 << 8) | (data16 >> 8);
+
+            }
+            else if (memType == MF_SAMS8)
+            {
+                u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
+                return (data16 << 8) | (data16 >> 8);
+            }
+        }
+    }
+    u16 data16 = *((u16*)(MemCPU+address));
+    return (data16 << 8) | (data16 >> 8);
+}
+
+ITCM_CODE u16 ReadPC16_Fast(void)
 {
     u16 address = tms9900.PC; tms9900.PC+=2;
 
@@ -1103,7 +920,6 @@ inline void MemoryReadHidden(u16 address)
     if (MemType[address]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
 }
 
-
 // -------------------------------------------------------------------------------------------
 // Technically everything in the system is a 16-bit read with an 8-bit multiplexer... but
 // we can be a little smarter and not waste the same time that an actual TI-99/4a does.
@@ -1124,6 +940,10 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 retVal = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
                 return (retVal << 8) | (retVal >> 8);
                 break;
+            case MF_SAMS8:
+                retVal = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
+                return (retVal << 8) | (retVal >> 8);
+                break;
             case MF_VDP:
                 if (address & 2) retVal = (u16)RdCtrl9918()<<8; else retVal = (u16)RdData9918()<<8;
                 return retVal;
@@ -1140,7 +960,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return ReadTICCRegister(address) << 8;
                 break;
             case MF_SAMS:
-                return (tms9900.dataSAMS[(address & 0x1E) >> 1] << 8);
+                return (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] << 8);
                 break;
             default:
                 retVal = *((u16*)(MemCPU+address));
@@ -1165,6 +985,9 @@ ITCM_CODE u8 MemoryRead8(u16 address)
 
         switch (memType)
         {
+            case MF_SAMS8:
+                return *((u8*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
+                break;
             case MF_VDP:
                 if (address & 2) return (u8)RdCtrl9918();
                 else return (u8)RdData9918();
@@ -1183,7 +1006,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return ReadTICCRegister(address);
                 break;
             case MF_SAMS:
-                return tms9900.dataSAMS[(address & 0x1E) >> 1];
+                return theSAMS.bankMapSAMS[(address & 0x1E) >> 1];
                 break;
             default:
                 return MemCPU[address];
@@ -1227,11 +1050,18 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 WriteBank(address);
                 break;
             case MF_SAMS:
-                WriteBankSAMS(address, data>>8);
+                SAMS_WriteBank(address, data>>8);
                 break;
             case MF_MBX:
                 WriteBankMBX(data>>8);
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) MemCPU[address] = data>>8;
+                break;
+            case MF_SAMS8:
+                {
+                    u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
+                    *ptr++ = (data>>8);
+                    *ptr = (data & 0xFF);
+                }
                 break;
             case MF_RAM8:
                 MemCPU[address] = (data>>8);
@@ -1285,7 +1115,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 // Not yet
                 break;
             case MF_SAMS:
-                WriteBankSAMS(address, data);
+                SAMS_WriteBank(address, data);
                 break;
             case MF_MBX:
                 WriteBankMBX(data);
@@ -1293,6 +1123,12 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 break;
             case MF_DISK:
                 WriteTICCRegister(address, data);  // Disk Controller
+                break;
+            case MF_SAMS8:
+                {
+                    u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
+                    *ptr = data;
+                }
                 break;
             case MF_RAM8:
                 MemCPU[address] = data;    // Expanded 32K RAM
@@ -1316,6 +1152,44 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+// Source Address extracted from the Opcode. For this addressing mode the opcode is in the format:
+// 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
+// [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
+// The [B] bit tells us if this is a byte addressing (0 implies word addressing)
+// ------------------------------------------------------------------------------------------------
+void Ts_Accurate(u16 bytes)
+{
+    u16 rData = REG_GET_FROM_OPCODE();
+
+    switch ((tms9900.currentOp >> 4) & 0x03)
+    {
+        case 0: // Rx  2c
+            tms9900.srcAddress = WP_REG(rData);
+            break;
+
+        case 1: // *Rx  6c
+            tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
+            AddCycleCount(4);
+            break;
+
+        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+            tms9900.srcAddress = ReadPC16();
+            if (rData) tms9900.srcAddress += ReadRAM16a(WP_REG(rData));
+            AddCycleCount(8);
+            break;
+
+        default: // *Rx+   10c
+            tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
+            WriteRAM16a(WP_REG(rData), (tms9900.srcAddress + bytes));
+            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            break;
+    }
+
+    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+}
+
 
 // ------------------------------------------------------------------------------------------------
 // Source Address extracted from the Opcode. For this addressing mode the opcode is in the format:
@@ -1354,6 +1228,44 @@ inline void Ts(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
+
+// ------------------------------------------------------------------------------------------------------
+// Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
+// 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
+// [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
+// The [B] bit tells us if this is a byte addressing (0 implies word addressing)
+// ------------------------------------------------------------------------------------------------------
+void Td_Accurate(u16 bytes)
+{
+    u16 rData = (tms9900.currentOp>>6) & 0x0F;
+
+    switch ((tms9900.currentOp >> 10) & 0x03)
+    {
+        case 0: // Rx  2c
+            tms9900.dstAddress = WP_REG(rData);
+            break;
+
+        case 1: // *Rx  6c
+            tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
+            AddCycleCount(4);
+            break;
+
+        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+            tms9900.dstAddress = ReadPC16();
+            if (rData) tms9900.dstAddress += ReadRAM16a(WP_REG(rData));
+            AddCycleCount(8);
+            break;
+
+        default: // *Rx+   10c
+            tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
+            // Post increment should happen LATER - unsure what this will cause... see Classic99 to improve but don't want the complexity yet...
+            WriteRAM16a(WP_REG(rData), (tms9900.dstAddress + bytes));
+            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            break;
+    }
+
+    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+}
 
 // ------------------------------------------------------------------------------------------------------
 // Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
@@ -1414,6 +1326,16 @@ ITCM_CODE void TsTd(void)
     Ts(bytes); Td(bytes);
 }
 
+// ----------------------------------------------------------
+// Many opcodes want both a source and destination address
+// and for this decoding mode, we will look at the current
+// opcode to determine if this is byte or word addressing...
+// ----------------------------------------------------------
+ITCM_CODE void TsTd_Accurate(void)
+{
+    u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
+    Ts_Accurate(bytes); Td_Accurate(bytes);
+}
 
 // --------------------------------------------------------------------------------------
 // The context switch saves the WP, PC and Status and sets up for the new workspace.
@@ -1443,10 +1365,11 @@ ITCM_CODE void TMS9900_HandlePendingInterrupts(void)
     // Literally any level except 0 will allow VDP interrupt.
     // Someday we might be more sophisticated than this... but that day is not today.
     // --------------------------------------------------------------------------------
-    if (tms9900.cpuInt && (tms9900.ST & ST_INTMASK))
+    if ((tms9900.cpuInt & (INT_VDP | INT_TIMER)) && (tms9900.ST & ST_INTMASK))
     {
-        TMS9900_ContextSwitch(1<<2);        // We are only supporting the VDP
+        TMS9900_ContextSwitch(1<<2);        // The TI99/4a only supports one level of interupts
         tms9900.ST &= ~ST_INTMASK;          // De-escalate the interrupt. Since we only support one level we can clear it all...
+        tms9900.ST |= 1;                    // Keep the level 2 interrupt alive
         tms9900.idleReq=0;                  // And if we were waiting on IDLE, this will start the CPU back up
     }
 }
@@ -1465,7 +1388,17 @@ void ExecuteOneInstruction(u16 opcode)
     u8 op8 = (u8)OpcodeLookup[opcode];
     switch (op8)
     {
+#define Ts Ts_Accurate
+#define Td Td_Accurate
+#define TsTd TsTd_Accurate
+#define ReadRAM16 ReadRAM16a
+#define WriteRAM16 WriteRAM16a
     #include "tms9900.inc"
+#undef Ts
+#undef Td            
+#undef TsTd
+#undef ReadRAM16
+#undef WriteRAM16
     }
 }
 
@@ -1490,6 +1423,19 @@ ITCM_CODE void TMS9900_Run(void)
     {
         do
         {
+            if (tms9901.TimerCounter)   // Has a timer been programmed?
+            {
+                if (tms9901.PinState[PIN_TIMER_OR_IO] == IO_MODE)   // Timer only runs when we are in IO Mode
+                {
+                    // This is a gross misrepresentation of how the timer works... needs to be more accurate but good enough for now
+                    tms9901.TimerCounter--;
+                    if (tms9901.TimerCounter == 0)
+                    {
+                        TMS9901_RaiseTimerInterrupt();
+                        tms9901.TimerCounter = tms9901.TimerStart;
+                    }
+                }
+            }
             if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
             if (tms9900.idleReq)
             {
@@ -1512,7 +1458,7 @@ ITCM_CODE void TMS9900_Run(void)
             u16 data16;
             if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
             if (tms9900.PC == 0x40e8) HandleTICCSector();
-            tms9900.currentOp = ReadPC16();
+            tms9900.currentOp = ReadPC16_Fast();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
             switch (op8)
             {

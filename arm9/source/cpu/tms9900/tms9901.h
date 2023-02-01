@@ -40,14 +40,15 @@ enum PIN_STATE
     PIN_HIGH           // Pins can either be high or low...
 };
 
-#define TIMER_ACTIVE    PIN_HIGH
-#define TIMER_INACTIVE  PIN_LOW
+#define TIMER_MODE    PIN_HIGH
+#define IO_MODE       PIN_LOW
 
 // ---------------------------------------------------------
 // Some special pins useful for keyboard decoding logic...
 // ---------------------------------------------------------
 #define PIN_TIMER_OR_IO     0
 #define PIN_VDP_INT         2
+#define PIN_TIMER_INT       3
 #define PIN_COL1            18
 #define PIN_COL2            19
 #define PIN_COL3            20
@@ -59,6 +60,9 @@ typedef struct _TMS9901
     u8      PinState[MAX_PINS];         // The state of the 32 PINs
     u8      CapsLock;                   // Set to '1' if the Caps Lock is active
     u8      VDPIntteruptInProcess;      // Set to '1' if the VDP interrupt is in process
+    u8      TimerIntteruptInProcess;    // Set to '1' if the Timer interrupt is in process
+    u32     TimerStart;                 // The Starting value
+    u32     TimerCounter;               // The 14-bit Timer Counter 
 } TMS9901;
 
 extern TMS9901 tms9901;
@@ -69,5 +73,7 @@ extern u16      TMS9901_ReadCRU(u16 cruAddress, u8 num);
 extern void     TMS9901_ClearJoyKeyData(void);
 extern void     TMS9901_RaiseVDPInterrupt(void);
 extern void     TMS9901_ClearVDPInterrupt(void);
+extern void     TMS9901_RaiseTimerInterrupt(void);
+extern void     TMS9901_ClearTimerInterrupt(void);
 
 #endif //TMS9901_H_

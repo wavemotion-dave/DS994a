@@ -102,6 +102,7 @@ extern u8   MemGROM[];
 extern u8   MemCART[];
 extern u8   DiskDSR[];
 extern u8   FastCartBuffer[];
+extern u8   MemType[];
 
 // ----------------------------------------------------------------------------
 // The entire state of the TMS9900 so we can easily save/load for save states.
@@ -125,8 +126,6 @@ typedef struct _TMS9900
     u16     accurateEmuFlags;
     u16     gromWriteLoHi;
     u16     gromReadLoHi;
-    u8      cruSAMS[2];
-    u8      dataSAMS[16];
 } TMS9900;
 
 extern TMS9900 tms9900;
@@ -182,7 +181,15 @@ enum _STATUS_FLAGS
 // The accurate emulation flags.... either of these will put the emulator into a more accurate mode
 // but it will come at the cost of some slowdown... mostly of relevance to the old DS hardware.
 // --------------------------------------------------------------------------------------------------
-#define EMU_IDLE       0x01
+#define ACCURATE_EMU_IDLE       0x01
+#define ACCURATE_EMU_TIMER      0x02
+#define ACCURATE_EMU_SAMS       0x04
+
+// --------------------------------------------------------
+// Interrupt Masks... we only handle VDP and Timer
+// --------------------------------------------------------
+#define INT_VDP        2
+#define INT_TIMER      1
 
 // -------------------------------------------------------------------------------------------------
 // The memory type tell us what's in a particular memory location. Be careful to keep MF_MEM16
@@ -195,7 +202,7 @@ enum _STATUS_FLAGS
 enum _MEM_TYPE
 {
     MF_MEM16 = 0,   // This is the 2000h byte console ROM or the 16-bit Scratchpad RAM... Actung!! Must be zero as we want to make a fast determination at run-time.
-    MF_RAM8,        // This is the 32K of expanded 8-bit RAM 
+    MF_RAM8,        // This is the 32K of expanded 8-bit RAM (no banking... MF_SAMS8 is used for that)
     MF_SOUND,       // This is normal TI sound chip access
     MF_SPEECH,      // This is TI Speech chip access
     MF_CART,        // This is banked TI Cart access at >6000
@@ -205,20 +212,20 @@ enum _MEM_TYPE
     MF_GROMR,       // This is the TMS9918a GROM read access
     MF_GROMW,       // This is the TMS9918a GROM write access
     MF_SAMS,        // This is the SAMS memory expanded access registers at >4000
+    MF_SAMS8,       // This is RAM8 except that it's banked into a larger SAMS memory pool
     MF_MBX,         // This is the MBX register that causes a bank switch at >7000
     MF_UNUSED,      // This is some unused memory space... will return 0xFF
 };
 
 
-extern u16 SAMS_BANKS;
 extern u32 SAMS_Read32(u32 address);
 extern void SAMS_Write32(u32 address, u32 data);
 extern void SAMS_MapDSR(u8 dataBit);
 
 extern void TMS9900_Reset(char *szGame);
 extern void TMS9900_Run(void);
-extern void TMS9900_RaiseInterrupt(void);
-extern void TMS9900_ClearInterrupt(void);
+extern void TMS9900_RaiseInterrupt(u16 iMask);
+extern void TMS9900_ClearInterrupt(u16 iMask);
 extern void TMS9900_SetAccurateEmulationFlag(u16 flag);
 extern void TMS9900_ClearAccurateEmulationFlag(u16 flag);
 extern void SAMS_cru_write(u16 address, u8 dataBit);

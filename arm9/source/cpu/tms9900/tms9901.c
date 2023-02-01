@@ -18,6 +18,7 @@
 #include "tms9901.h"
 #include "tms9900.h"
 #include "../../disk.h"
+#include "../../SAMS.h"
 
 // From https://www.unige.ch/medecine/nouspikel/ti99/tms9901.htm 
 //
@@ -86,9 +87,9 @@ void TMS9901_Reset(void)
     // -------------------------------------------------------------------------------------------------------------------
     // Set the state of the 32 I/O pins... with the first pin being special to indicate timer active or IO mode active
     // -------------------------------------------------------------------------------------------------------------------
-    tms9901.PinState[PIN_TIMER_OR_IO]  =  TIMER_INACTIVE;
+    tms9901.PinState[PIN_TIMER_OR_IO]  =  IO_MODE;
     
-    TMS9900_ClearInterrupt();
+    TMS9900_ClearInterrupt(0xFFFF);
 }
 
 // -----------------------------------------------------------------------------------------
@@ -110,11 +111,11 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         if (cruAddress & 0xFC00)
         {
-            if ((cruAddress & 0xFF8) == 0x880)    // Disk support from >880 to >888 (CRU base >1000)
+            if ((cruAddress & 0xF80) == 0x880)    // Disk support from >880 to >888 (CRU base >1000)
             {
                 disk_cru_write(cruAddress, dataBit);
             }
-            else if ((cruAddress & 0xFFE) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            else if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
             {
                 SAMS_cru_write(cruAddress, dataBit);
             }
@@ -127,14 +128,37 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
             // Bit 0 is special as it defines if we are in Timer or I/O mode... We don't yet handle timer
             // mode but it's only used for Cassette IO which is not currently supported but we track it still.
             // -------------------------------------------------------------------------------------------------
-            if (cruA == PIN_TIMER_OR_IO) tms9901.PinState[PIN_TIMER_OR_IO] = (dataBit ? TIMER_ACTIVE : TIMER_INACTIVE);
-
-            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)
+            if (cruA == PIN_TIMER_OR_IO) 
+            {
+                tms9901.PinState[PIN_TIMER_OR_IO] = (dataBit ? TIMER_MODE : IO_MODE);
+            }
+            else
+            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_MODE)
             {
                 // --------------------------------------------------------------------------------------
-                // Do nothing... we don't support this yet except for reset handling
+                // In Timer Mode we need to handle the bit15 soft reset as well as setting timer data
                 // --------------------------------------------------------------------------------------
-                if (cruA == 15) TMS9901_Reset();
+                if (cruA == 15) // Soft Reset
+                {
+	                tms9901.PinState[0]=0;	// timer control
+	                tms9901.PinState[1]=0;	// peripheral interrupt mask
+	                tms9901.PinState[2]=0;	// VDP interrupt mask
+	                tms9901.PinState[3]=0;	// timer interrupt mask
+	                tms9901.TimerCounter=0; // timer counter
+                    tms9901.TimerStart=0;   // timer start
+                }
+                else if ((cruA >= 1) && (cruA <= 14))    // Bits 1-14 represent the the 14 bit counter/timer ...
+                {   
+                    if (dataBit) tms9901.TimerStart |= (1 << (cruA-1));     // Clear or set bit in Timer
+                    else tms9901.TimerStart &= ~(1 << (cruA-1));
+                    tms9901.TimerStart &= 0x3FFF;                           // 14 bits of Timer
+                    tms9901.TimerCounter = tms9901.TimerStart;              // Timer will countdown only in IO mode
+                    TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_TIMER);   // Force timer to be dealt with...
+                }
+                else if (cruA > 15)
+                {
+                    tms9901.PinState[PIN_TIMER_OR_IO] = IO_MODE;        // Writes to pin 16 or more result in exit back to IO mode
+                }
             }
             else    // We're in I/O Mode
             {
@@ -143,6 +167,11 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
                 // column and alpha-lock easily enough with the use of defines from tms9901.h
                 // --------------------------------------------------------------------------------------
                 tms9901.PinState[cruA] = dataBit;
+                if (cruA == PIN_TIMER_INT) 
+                {
+                    // Any write to pin 3 will clear the timer interrupt
+                    TMS9901_ClearTimerInterrupt();
+                }
             }
         }
         cruAddress++;   // Move to the next CRU bit (if any)
@@ -156,23 +185,31 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
 ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
 {
     u16 retVal = 0x0000;        // Accumulate bits below
- 
-    cruAddress &= 0x1F;         // CRU mirrors    
+
     if (num == 0) num = 16;     // A zero means read all 16 bits...
-    
+
     for (u8 bitNum = 0; bitNum < num; bitNum++)
     {
-        if (cruAddress < MAX_PINS)  // We're only handling CRU reads for the internal 32 bits for now... good enough
+        if (cruAddress & 0xFC00)
         {
+            if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            {
+                retVal = SAMS_cru_read(cruAddress);
+            }
+        }
+        else
+        {        
+            cruAddress &= 0x1F;     // CRU mirrors    
             u8 bitState = 1;        // Default output to a '1' until proven otherwise below...
-            
-            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_ACTIVE)    // We are only handling bit 0 and bit 15
+
+            if (tms9901.PinState[PIN_TIMER_OR_IO] == TIMER_MODE)    // We handle bit 0 thru 15 in Timer Mode
             {
                 switch (cruAddress)
                 {
-                    case 0:     bitState = 1;                                           break;     // Bit 0 in timer mode always returns '1'
-                    case 15:    bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;     // Bit 15 in timer mode returns the state of the Interupt request
-                    default:    bitState = 1;                                           break;     // Otherwise do nothing... 
+                    case 0:     bitState = 1;                                                                               break;     // Bit 0 in timer mode always returns '1'
+                    case 15:    bitState = ((tms9901.VDPIntteruptInProcess && tms9901.PinState[PIN_VDP_INT]) || 
+                                            (tms9901.TimerIntteruptInProcess && tms9901.PinState[PIN_TIMER_INT]) ? 0:1);    break;     // Pin 15 is for either VDP or Timer interrupt... report if that's set
+                    default:    bitState = (tms9901.TimerCounter & (1<<(cruAddress-1))) ? 0:1;                              break;     // Otherwise get the timer bit and report it
                 }
             }
             else    // This is IO mode - there are some aliased pins we need to be careful of...
@@ -182,17 +219,17 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
                 //1 >0002   I+  Peripheral interrupt incoming line 
                 //2 >0004   I+  VDP interrupts incoming line 
                 // --------------------------------------------------
-                
+
                 // Some pins are aliased - this will correct the pin number
                 cruAddress = CRU_AliasTable[cruAddress];
-                
+
                 switch (cruAddress)
                 {
-                    case 0:     bitState = 0;                                           break;      // Bit 0 in timer mode always returns '0'
-                        
-                    case 1:     bitState = 1;                                           break;      // We don't allow external interrupts yet
-                    case 2:     bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;      // Pin 2 is for the VDP interrupt... report if that's set
-                        
+                    case 0:     bitState = 0;                                           break;      // Bit 0 in IO mode always returns '0'
+
+                    case 1:     bitState = 1;                                           break;      // We don't allow external interrupts
+                    case 2:     bitState = (tms9901.VDPIntteruptInProcess ? 0 : 1);     break;      // Pin 2 is for reporting the VDP interrupt
+
                     case 7:     // Keyboard Row 4
                                 if (tms9901.PinState[PIN_ALPHA_LOCK] == PIN_LOW) 
                                 {
@@ -215,11 +252,11 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
                             if (tms9901.Keyboard[TIKeys[cruAddress-3][column]]) bitState = 0;
                         }
                         break;
-                       
-                    default:    break;                                                              // Otherwise do nothing... returned bit will be '1'
+
+                    default:    bitState = tms9901.PinState[cruAddress]; break;                        // Otherwise loopback: returned bit will be last value written
                 }
             }
-            
+
             // ----------------------------------------------------------------------------------------------
             // If we've decoded a '1' write that bit into the 16-bit return value into the appopriate spot.
             // ----------------------------------------------------------------------------------------------
@@ -230,7 +267,7 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
         }
         cruAddress++;   // Move to the next CRU bit (if any)
     }
-    
+
     return retVal;  // Return the assembled word to the caller...
 }
 
@@ -244,8 +281,7 @@ ITCM_CODE void TMS9901_ClearJoyKeyData(void)
 }
 
 // -----------------------------------------------------------------------------------------
-// Right now we are only handling VDP interrupts. The Timer is only used for 
-// Cassette IO and we don't handle any external interupt sources.
+// Handle VDP Interrupt
 // -----------------------------------------------------------------------------------------
 ITCM_CODE void TMS9901_RaiseVDPInterrupt(void)
 {
@@ -254,7 +290,7 @@ ITCM_CODE void TMS9901_RaiseVDPInterrupt(void)
         tms9901.VDPIntteruptInProcess = 1;                  // Remember that we raised this interrupt
         if (tms9901.PinState[PIN_VDP_INT] == PIN_HIGH)      // Raise the interrupt if the CPU wants to see it
         {
-            TMS9900_RaiseInterrupt();                       // Tell the TMS9900 that we have an interrupt...
+            TMS9900_RaiseInterrupt(INT_VDP);                // Tell the TMS9900 that we have an interrupt...
         }
     }
 }
@@ -266,7 +302,34 @@ ITCM_CODE void TMS9901_ClearVDPInterrupt(void)
         tms9901.VDPIntteruptInProcess = 0;                  // Remember that we cleared this interrupt
         if (tms9901.PinState[PIN_VDP_INT] == PIN_HIGH)      // Clear the interrupt if the CPU wants to see it
         {
-            TMS9900_ClearInterrupt();                       // Tell the TMS9900 that we have cleared an interrupt...
+            TMS9900_ClearInterrupt(INT_VDP);                // Tell the TMS9900 that we have cleared an interrupt...
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------------------
+// Handle Timer Interrupt
+// -----------------------------------------------------------------------------------------
+void TMS9901_RaiseTimerInterrupt(void)
+{
+    if (!tms9901.TimerIntteruptInProcess)                     // Do nothing if we've already fired this interrupt...
+    {  
+        tms9901.TimerIntteruptInProcess = 1;                  // Remember that we raised this interrupt
+        if (tms9901.PinState[PIN_TIMER_INT] == PIN_HIGH)      // Raise the interrupt if the CPU wants to see it
+        {
+            TMS9900_RaiseInterrupt(INT_TIMER);                // Tell the TMS9900 that we have an interrupt...
+        }
+    }
+}
+
+void TMS9901_ClearTimerInterrupt(void)
+{
+    if (tms9901.TimerIntteruptInProcess) 
+    {
+        tms9901.TimerIntteruptInProcess = 0;                  // Remember that we cleared this interrupt
+        if (tms9901.PinState[PIN_TIMER_INT] == PIN_HIGH)      // Clear the interrupt if the CPU wants to see it
+        {
+            TMS9900_ClearInterrupt(INT_TIMER);                // Tell the TMS9900 that we have cleared an interrupt...
         }
     }
 }

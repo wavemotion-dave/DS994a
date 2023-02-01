@@ -860,9 +860,9 @@
         // break us out of the main loop and the next time
         // we loop on the TMS9900 we will be in 'Accurate' mode
         // --------------------------------------------------------
-        if (!(tms9900.accurateEmuFlags & EMU_IDLE))
+        if (!(tms9900.accurateEmuFlags & ACCURATE_EMU_IDLE))
         {
-            tms9900.accurateEmuFlags |= EMU_IDLE;
+            tms9900.accurateEmuFlags |= ACCURATE_EMU_IDLE;
             AddCycleCount(228);
         }
         break;
