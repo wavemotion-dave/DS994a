@@ -107,6 +107,10 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 * Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
 * Enjoy - save often :) 
 
+How do I play Frogger? :
+-----------------------
+No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine.
+
 Blend Mode (DSi) :
 -----------------------
 DS99/4a supports a "blend mode" which I borrowed from my scheme on StellaDS. In this mode, 
