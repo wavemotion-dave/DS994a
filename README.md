@@ -13,7 +13,7 @@ Features :
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* Disk Support for DSK1 and DSK2 up to 360K each using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a hack for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
 
 Copyright :
