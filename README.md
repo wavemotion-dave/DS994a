@@ -84,6 +84,10 @@ DS994a supports the following file types:
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
 
 
+Memory/System Configurations :
+-----------------------
+By default each game is configured to run on a 32K expanded system. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
+
 How do I play Adventure or Tunnels of Doom? :
 -----------------------
 Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adventure Games and my personal favorite: Tunnels of Doom (and early dungeon crawler that probably has more to do with my wanting a TI99/4a emulator on my DS than anything). To play these games requires that the 'database' for each game is loaded from somewhere. Back in the day, we loaded via Cassette. But for DS99/4a we don't have analog cassette support so you'll have to load from Disk. To do so:
@@ -95,9 +99,13 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * For Scott Adams adventures you should enable the ALPHA LOCK key in Game Options (lowercase filenames won't load).
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part).
 
-Memory/System Configurations :
+How do I play Realms of Antiquity? :
 -----------------------
-By default each game is configured to run on a 32K expanded system. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
+In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A labor of love for almost a decade of hand-crafting this is the pinnacle of RPGs for the TI99/4a. It is playable on DS994a but due to needing 3 Disk Drives and full 1MB SAMS support, you can only run this on the DSi or above.
+* Ensure SAMS 1MB is enabled in configuration for this game.
+* Load the binary roacart.bin as your cartridge and advance to the TI title screen
+* Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
+* Enjoy - save often :) 
 
 Blend Mode (DSi) :
 -----------------------
