@@ -110,8 +110,8 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 Blend Mode (DSi) :
 -----------------------
 DS99/4a supports a "blend mode" which I borrowed from my scheme on StellaDS. In this mode, 
-two frames are blended together - this is really useful when playing games like Space Fury or Galaxian 
-where the bullets on screen are only 1 pixel wide and the DSi LCD just doesn't hold onto the pixels 
+two frames are blended together - this is really useful when playing games like TI Invaders or Scramble
+where the bullets on screen are small and the DSi LCD just doesn't hold onto the pixels 
 long enough to be visible. These games were designed to run on an old tube TV with phosphor which 
 decays slowly so your eye will see slight traces as the image fades. This emulates that (crudely).
 On the DSi using this new mode renders those games really bright and visible.
