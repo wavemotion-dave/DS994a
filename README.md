@@ -95,6 +95,9 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * For Scott Adams adventures you should enable the ALPHA LOCK key in Game Options (lowercase filenames won't load).
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part).
 
+Memory/System Configurations :
+-----------------------
+By default each game is configured to run on a 32K expanded system. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
 
 Blend Mode (DSi) :
 -----------------------
