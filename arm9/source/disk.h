@@ -32,6 +32,7 @@ extern u8 ReadTICCRegister(u16 address);
 extern void WriteTICCRegister(u16 address, u8 val);
 extern void HandleTICCSector(void);
 extern void disk_cru_write(u16 address, u8 data);
+extern u8 disk_cru_read(u16 address);
 
 extern void disk_mount(u8 drive, char *path, char *filename);
 extern void disk_unmount(u8 drive);

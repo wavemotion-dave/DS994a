@@ -74,7 +74,6 @@ Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay. Cause unknown.
-* Save and Load state do not yet work with SAMS expanded memory.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 
 File Types Supported :
@@ -121,6 +120,12 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V0.9: 02-Feb-2023 by wavemotion-dave
+* Added DSK3 support. All three drives support up to 360K disks. 
+* Improved emulation on SAMS memory such that Realms of Antiquity will run.
+* Persist SAMS memory on Save State/Load using RLE compression.
+* Other cleanups as time permitted.
+
 V0.8: 29-Jan-2023 by wavemotion-dave
 * Added DSK2 support and both drives now handle up to 360K disks. 
 * Improved default key mapping so X='1' and Y='2' allowing faster game startup.

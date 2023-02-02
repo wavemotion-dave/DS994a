@@ -146,9 +146,6 @@ void TI99SaveState()
             i+=4;
         }
     }
-    // Restore the memory banks as they were...
-    SAMS_cru_write(0x0000, theSAMS.cruSAMS[0]);
-    SAMS_cru_write(0x0001, theSAMS.cruSAMS[1]);
       
     // And finally the 'special' memory layout carts...
     if (myConfig.cartType == CART_TYPE_SUPERCART)
@@ -314,8 +311,9 @@ void TI99LoadState()
                 if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
             }
             
-            // Make sure our DSR is installed propery and the right memory region is mapped in
-            SAMS_MapDSR(theSAMS.cruSAMS[0]);
+            // Restore the SAMS memory banks as they were... this should get our memory map back properly
+            SAMS_cru_write(0x0000, theSAMS.cruSAMS[0]);
+            SAMS_cru_write(0x0001, theSAMS.cruSAMS[1]);            
             
             // Fix up transparency
             if (BGColor)

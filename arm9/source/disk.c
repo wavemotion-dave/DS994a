@@ -77,6 +77,12 @@ void disk_init(void)
     memset(Disk, 0x00, sizeof(Disk));
 }
 
+
+u8 disk_cru_read(u16 address)
+{
+    return 1;   // For now... until we want to be more sophisticated
+}
+
 void disk_cru_write(u16 address, u8 data)
 {
     extern u8 DiskDSR[];

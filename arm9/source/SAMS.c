@@ -24,7 +24,7 @@
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
 
-u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // We use 128K of VRAM and the rest comes from this memory pool (allocated to support 512K for DS-Lite and 1MB for DSi and above)
+u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // Allocated to support 512K for DS-Lite and 1MB for DSi and above
 
 SAMS theSAMS    __attribute__((section(".dtcm")));         // The entire state of the SAMS memory map handler
 

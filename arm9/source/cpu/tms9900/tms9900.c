@@ -1159,7 +1159,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------
-void Ts_Accurate(u16 bytes)
+ITCM_CODE void Ts_Accurate(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1235,7 +1235,7 @@ inline void Ts(u16 bytes)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------------
-void Td_Accurate(u16 bytes)
+ITCM_CODE void Td_Accurate(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
@@ -1388,6 +1388,17 @@ void ExecuteOneInstruction(u16 opcode)
     u8 op8 = (u8)OpcodeLookup[opcode];
     switch (op8)
     {
+    #include "tms9900.inc"
+    }
+}
+
+void ExecuteOneInstructionAccurate(u16 opcode)
+{
+    u8 data8;
+    u16 data16;
+    u8 op8 = (u8)OpcodeLookup[opcode];
+    switch (op8)
+    {
 #define Ts Ts_Accurate
 #define Td Td_Accurate
 #define TsTd TsTd_Accurate
@@ -1402,6 +1413,60 @@ void ExecuteOneInstruction(u16 opcode)
     }
 }
 
+void TMS9900_RunAccurate(void)
+{
+    u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
+    
+    do
+    {
+        if (tms9901.TimerCounter)   // Has a timer been programmed?
+        {
+            if (tms9901.PinState[PIN_TIMER_OR_IO] == IO_MODE)   // Timer only runs when we are in IO Mode
+            {
+                // This is a gross misrepresentation of how the timer works... needs to be more accurate but good enough for now
+                tms9901.TimerCounter--;
+                if (tms9901.TimerCounter == 0)
+                {
+                    TMS9901_RaiseTimerInterrupt();
+                    tms9901.TimerCounter = tms9901.TimerStart;
+                }
+            }
+        }
+        if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
+        if (tms9900.idleReq)
+        {
+            tms9900.cycles += 4;
+        }
+        else
+        {
+            u8 data8;
+            u16 data16;
+            if (tms9900.PC == 0x40e8) HandleTICCSector();
+            tms9900.currentOp = ReadPC16();
+            u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
+            switch (op8)
+            {
+#define Ts Ts_Accurate
+#define Td Td_Accurate
+#define TsTd TsTd_Accurate
+#define ReadRAM16 ReadRAM16a
+#define WriteRAM16 WriteRAM16a
+#define ExecuteOneInstruction ExecuteOneInstructionAccurate
+            #include "tms9900.inc"
+#undef Ts
+#undef Td            
+#undef TsTd
+#undef ReadRAM16
+#undef WriteRAM16
+#undef ExecuteOneInstruction                    
+            }
+        }
+    }
+    while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
+    
+    tms9900.cycleDelta = tms9900.cycles-myCounter;
+}
+
 // --------------------------------------------------------------------------------------------------------------
 // Execute 1 scanline worth of TMS9900 instructions. We keep track of the cycle delta - that is, the overage
 // from one scanline to the next and we compensate the next scanline by the appopriate delta to keep things
@@ -1412,6 +1477,8 @@ void ExecuteOneInstruction(u16 opcode)
 // --------------------------------------------------------------------------------------------------------------
 ITCM_CODE void TMS9900_Run(void)
 {
+    if (tms9900.accurateEmuFlags) return TMS9900_RunAccurate();
+    
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
 
     // --------------------------------------------------------------------
@@ -1419,54 +1486,20 @@ ITCM_CODE void TMS9900_Run(void)
     // needs special attention.  Most games don't need this handling
     // and we save the precious DS CPU cycles as this is almost 10% slower.
     // --------------------------------------------------------------------
-    if (tms9900.accurateEmuFlags)
+    do
     {
-        do
+        u8 data8;
+        u16 data16;
+        if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
+        if (tms9900.PC == 0x40e8) HandleTICCSector();
+        tms9900.currentOp = ReadPC16_Fast();
+        u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
+        switch (op8)
         {
-            if (tms9901.TimerCounter)   // Has a timer been programmed?
-            {
-                if (tms9901.PinState[PIN_TIMER_OR_IO] == IO_MODE)   // Timer only runs when we are in IO Mode
-                {
-                    // This is a gross misrepresentation of how the timer works... needs to be more accurate but good enough for now
-                    tms9901.TimerCounter--;
-                    if (tms9901.TimerCounter == 0)
-                    {
-                        TMS9901_RaiseTimerInterrupt();
-                        tms9901.TimerCounter = tms9901.TimerStart;
-                    }
-                }
-            }
-            if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
-            if (tms9900.idleReq)
-            {
-                tms9900.cycles += 4;
-            }
-            else
-            {
-                if (tms9900.PC == 0x40e8) HandleTICCSector();
-                tms9900.currentOp = ReadPC16();
-                ExecuteOneInstruction(tms9900.currentOp);
-            }
+        #include "tms9900.inc"
         }
-        while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
     }
-    else    // No special Idle handling... we can do this a bit faster here...
-    {
-        do
-        {
-            u8 data8;
-            u16 data16;
-            if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
-            if (tms9900.PC == 0x40e8) HandleTICCSector();
-            tms9900.currentOp = ReadPC16_Fast();
-            u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
-            switch (op8)
-            {
-            #include "tms9900.inc"
-            }
-        }
-        while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
-    }
+    while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
 
     tms9900.cycleDelta = tms9900.cycles-myCounter;
 }

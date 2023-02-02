@@ -192,7 +192,11 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
     {
         if (cruAddress & 0xFC00)
         {
-            if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            if ((cruAddress & 0xF80) == 0x880)    // Disk support from >880 to >888 (CRU base >1000)
+            {
+                retVal = disk_cru_read(cruAddress);
+            }
+            else if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
             {
                 retVal = SAMS_cru_read(cruAddress);
             }
