@@ -72,8 +72,8 @@ u8 handling_meta    __attribute__((section(".dtcm"))) = 0;
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
-u8 last_pal_mode = 99;
-u8 tmpBuf[40];
+u8 last_pal_mode = 99;         // So we show PAL properly in the upper right of the lower DS screen
+u8 tmpBuf[40];                 // For simple printf-type output
 
 u8 key_push_write = 0;
 u8 key_push_read  = 0;
@@ -344,6 +344,8 @@ void ResetTI(void)
   strcpy(dsk_filename,"");    
     
   disk_init();
+  cassette_drive_sel  = 0; // Start with DSK1
+    
   memset(debug, 0x00, sizeof(debug));
 }
 
@@ -909,7 +911,24 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     return META_KEY_NONE;
 }
 
-void ds99_main_setup(void)
+
+void  __attribute__ ((noinline)) DisplayFrameCounter(u16 emuFps)
+{
+    // If not asked to run full-speed... adjust FPS so it's stable near 60
+    if (globalConfig.showFPS != 2)
+    {
+        if (emuFps == 61) emuFps=60;
+        else if (emuFps == 59) emuFps=60;            
+    }
+    if (emuFps/100) tmpBuf[0] = '0' + emuFps/100;
+    else tmpBuf[0] = ' ';
+    tmpBuf[1] = '0' + (emuFps%100) / 10;
+    tmpBuf[2] = '0' + (emuFps%100) % 10;
+    tmpBuf[3] = 0;
+    DS_Print(0,0,6,tmpBuf);
+}
+
+void __attribute__ ((noinline)) ds99_main_setup(void)
 {
   // Returns when  user has asked for a game to run...
   showMainMenu();
@@ -968,34 +987,20 @@ ITCM_CODE void ds99_main(void)
         // -------------------------------------------------------------
         if (TIMER1_DATA >= 32728)   //  1000MS (1 sec)
         {
-            char szChai[33];
-            
             TIMER1_CR = 0;
             TIMER1_DATA = 0;
             TIMER1_CR=TIMER_ENABLE | TIMER_DIV_1024;
-            emuFps = emuActFrames;
             if (globalConfig.showFPS)
             {
-                // If not asked to run full-speed... adjust FPS so it's stable near 60
-                if (globalConfig.showFPS != 2)
-                {
-                    if (emuFps == 61) emuFps=60;
-                    else if (emuFps == 59) emuFps=60;            
-                }
-                if (emuFps/100) szChai[0] = '0' + emuFps/100;
-                else szChai[0] = ' ';
-                szChai[1] = '0' + (emuFps%100) / 10;
-                szChai[2] = '0' + (emuFps%100) % 10;
-                szChai[3] = 0;
-                DS_Print(0,0,6,szChai);
+                DisplayFrameCounter(emuActFrames);
             }
             DisplayStatusLine(false);
             emuActFrames = 0;
             
             if (bShowDebug)
             {
-                siprintf(szChai, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
-                DS_Print(5,0,6,szChai);
+                siprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
+                DS_Print(5,0,6,tmpBuf);
             }
         }
         emuActFrames++;

@@ -67,7 +67,7 @@ u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 
 _Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 
-char old_filename[MAX_PATH];
+char backup_filename[MAX_PATH];
 
 #define ERR_DEVICEERROR     6
 
@@ -311,17 +311,19 @@ void disk_write_to_sd(u8 drive)
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
-    sprintf(old_filename, "%s.bak", Disk[drive].filename);
-    rename(Disk[drive].filename, old_filename);
+    siprintf(backup_filename, "%s.bak", Disk[drive].filename);
+    remove(backup_filename);    
+    rename(Disk[drive].filename, backup_filename);
     FILE *outfile = fopen(Disk[drive].filename, "wb");
     if (outfile)
     {
         u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
         u32 diskSize = (numSectors*256);
-        fwrite(Disk[drive].image, diskSize, 1, outfile);
+        write(fileno(outfile), Disk[drive].image, diskSize);    // Skip the buffering of fwrite() as we're writing a single big chunk
+        //fwrite(Disk[drive].image, diskSize, 1, outfile);
         fclose(outfile);
     }
-    remove(old_filename);
+    remove(backup_filename);
     Disk[drive].isDirty = 0;
 }
 
