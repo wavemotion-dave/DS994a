@@ -53,7 +53,7 @@ u16 MemoryRead16(u16 address);
 char tmpFilename[256];
 
 // Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer is smaller
-u8 BankMasks[256] __attribute__((section(".dtcm")));
+u8 BankMasks[256];
 
 // Pre-fill the parity table for fast look-up based on Classic99 'black magic'
 u16 ParityTable[256]     __attribute__((section(".dtcm")));

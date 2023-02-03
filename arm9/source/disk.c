@@ -67,6 +67,8 @@ u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 
 _Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 
+char old_filename[MAX_PATH];
+
 #define ERR_DEVICEERROR     6
 
 void disk_init(void)
@@ -157,7 +159,7 @@ u8 ReadTICCRegister(u16 address)
 void WriteTICCRegister(u16 address, u8 val) 
 {
     if ((address < 0x5ff8) || (address > 0x5fff)) return;
-    
+ 
     switch (address&0xfffe) 
     {
     case 0x5ff8:
@@ -309,6 +311,8 @@ void disk_write_to_sd(u8 drive)
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
+    sprintf(old_filename, "%s.bak", Disk[drive].filename);
+    rename(Disk[drive].filename, old_filename);
     FILE *outfile = fopen(Disk[drive].filename, "wb");
     if (outfile)
     {
@@ -317,6 +321,7 @@ void disk_write_to_sd(u8 drive)
         fwrite(Disk[drive].image, diskSize, 1, outfile);
         fclose(outfile);
     }
+    remove(old_filename);
     Disk[drive].isDirty = 0;
 }
 
