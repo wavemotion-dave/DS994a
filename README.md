@@ -4,6 +4,7 @@ DS994a - A Texas Instruments TI99/4a Emulator for the DS/DSi
 To run requires the TI BIOS ROMS in the /roms/bios directory.
 See BIOS files further down for the ones you need.
 
+![TI99/4a Screen](https://github.com/wavemotion-dave/DS994a/blob/main/ti_screen.bmp)
 
 Features :
 -----------------------
