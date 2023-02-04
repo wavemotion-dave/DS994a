@@ -5,7 +5,7 @@
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The TI99DS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -76,7 +76,7 @@ void TI99SaveState()
     uNbO = fwrite(&tms9900, sizeof(tms9900), 1, handle);
     uNbO = fwrite(&tms9901, sizeof(tms9901), 1, handle);
       
-    // Write SAMS memory
+    // Write SAMS memory indexes
     if (uNbO) uNbO = fwrite(&theSAMS, sizeof(theSAMS),1, handle); 
       
     // Save TI Memory that might possibly be volatile (RAM areas mostly)
@@ -222,7 +222,7 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&tms9900, sizeof(tms9900), 1, handle);
             if (uNbO) uNbO = fread(&tms9901, sizeof(tms9901), 1, handle);
             
-            // Load SAMS memory
+            // Load SAMS memory indexes
             if (uNbO) uNbO = fread(&theSAMS, sizeof(theSAMS),1, handle); 
             
             // Ensure we are pointing to the right cart bank in memory

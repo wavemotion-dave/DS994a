@@ -5,7 +5,7 @@
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The TI99DS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 //
 // Bits of this code came from Clasic99 (C) Mike Brent who has graciously allowed
 // me to use it to help with the core TMS9900 emualation. Please see Classic99 for

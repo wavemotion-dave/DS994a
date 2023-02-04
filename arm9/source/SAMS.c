@@ -5,7 +5,7 @@
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The TI99DS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 
@@ -175,6 +175,10 @@ u8 SAMS_cru_read(u16 cruAddress)
     return 1;
 }
 
+// ------------------------------------------------------------------
+// Map the SAMS DSR in/out at address 0>4000 which is shared
+// with the Disk Controller (and other periprhals in the future)
+// ------------------------------------------------------------------
 void SAMS_MapDSR(u8 dataBit)
 {
     if (dataBit == 1) // Mapping DSR in
@@ -193,6 +197,10 @@ void SAMS_MapDSR(u8 dataBit)
     }
 }
 
+// --------------------------------------------------------------------------------------------------
+// These 32-bit read/write functions are used only for the Load/Save state handlers in savegame.c 
+// and are mainly needed so we can do simple Run-Length-Encoding (RLE) on the big SAMS memory area.
+// --------------------------------------------------------------------------------------------------
 u32 SAMS_Read32(u32 address)
 {
     u32* ptr = (u32*)MemSAMS;

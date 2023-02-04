@@ -5,7 +5,7 @@
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The TI99DS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 // =====================================================================================
 
 #include <nds.h>

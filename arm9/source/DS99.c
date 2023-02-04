@@ -5,7 +5,7 @@
 // readme files, with or without modification, are permitted in any medium without 
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
-// The TI99DS emulator is offered as-is, without any warranty.
+// The DS994a emulator is offered as-is, without any warranty.
 // =====================================================================================
 #include <nds.h>
 #include <nds/fifomessages.h>
@@ -32,7 +32,7 @@
 #include "ti99kbd-func.h"
 #include "options.h"
 #include "ecranHaut.h"
-
+#include "screenshot.h"
 #include "soundbank.h"
 #include "soundbank_bin.h"
 #include "cpu/sn76496/SN76496.h"
@@ -1216,6 +1216,14 @@ ITCM_CODE void ds99_main(void)
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
       }
       else        
+      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y)) 
+      {
+            DS_Print(10,0,0,"SNAPSHOT");
+            screenshot();
+            WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+            DS_Print(10,0,0,"        ");
+      }
+      else        
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y)) 
       {
           // --------------------------------------------------------------------------------------------------
@@ -1302,6 +1310,34 @@ ITCM_CODE void ds99_main(void)
   }
 }
 
+void RefreshTopScreen(void)
+{
+  u8 uBcl;
+  u16 uVide;
+  // -----------------------------------------------------------------
+  // Change graphic mode to initiate emulation.
+  // Here we can claim back 128K of VRAM which is otherwise unused
+  // but we can use it for fast memory swaps and look-up-tables.
+  // -----------------------------------------------------------------
+  videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
+  vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
+  vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
+  
+  REG_BG3CNT = BG_BMP8_256x256;
+  REG_BG3PA = (1<<8); 
+  REG_BG3PB = 0;
+  REG_BG3PC = 0;
+  REG_BG3PD = (1<<8);
+  REG_BG3X = 0;
+  REG_BG3Y = 0;
+
+  // Init the page flipping buffer...
+  for (uBcl=0;uBcl<192;uBcl++) 
+  {
+     uVide=(uBcl/12);
+     dmaFillWords(uVide | (uVide<<16),pVidFlipBuf+uBcl*128,256);
+  }
+}
 
 /*********************************************************************************
  * Init DS Emulator - setup VRAM banks and background screen rendering banks
