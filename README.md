@@ -110,8 +110,8 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 
 How do I play Realms of Antiquity? :
 -----------------------
-In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A labor of love for almost a decade of hand-crafting this is the pinnacle of RPGs for the TI99/4a. It is playable on DS994a but due to needing 3 Disk Drives and full 1MB SAMS support, you can only run this on the DSi or above.
-* Ensure SAMS 1MB is enabled in configuration for this game.
+In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A labor of love for almost a decade of hand-crafting this is the pinnacle of RPGs for the TI99/4a. It is playable on DS994a but requires all three disk drives to be used.
+* Ensure SAMS 512K/1MB is enabled in configuration for this game.
 * Load the binary roacart.bin as your cartridge and advance to the TI title screen
 * Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
 * Enjoy - save often :) 
