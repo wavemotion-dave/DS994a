@@ -84,6 +84,14 @@ DS994a supports the following file types:
 * Files ending in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
 
+Key Mapping :
+-----------------------
+You can map all 12 of the DS keys (ABXY, D-Pad, Start, Select, Left/Right Shoulder Buttons) to any TI key (Joystick 1, Joystick 2 or Keyboard Key). 
+By default the shoulder buttons are used for FCTN and SHIFT which is convienent as there are many games that require the Function keys. You can also press the X key to toggle P1, P2 and Keyboard Game mapping while in the "Configure Keys" area.
+
+There are also some special keys that are always available:
+* Hold Left Shoulder + Right Shoulder + X and you will swap the top/bottom screens.
+* Hold Left Shoulder + Right Shoulder + Y and you will take a .BMP snapshot of the top screen (written to SD card with date/time as the filename).
 
 Memory/System Configurations :
 -----------------------
