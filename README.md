@@ -108,6 +108,8 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * For Scott Adams adventures you should enable the ALPHA LOCK key in Game Options (lowercase filenames won't load).
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part).
 
+![Tunnels of Doom](https://github.com/wavemotion-dave/DS994a/blob/main/tod.bmp)
+
 How do I play Realms of Antiquity? :
 -----------------------
 In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A labor of love for almost a decade of hand-crafting this is the pinnacle of RPGs for the TI99/4a. It is playable on DS994a but requires all three disk drives to be used.
@@ -115,6 +117,8 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 * Load the binary roacart.bin as your cartridge and advance to the TI title screen
 * Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
 * Enjoy - save often :) 
+
+![Realms of Antiquity](https://github.com/wavemotion-dave/DS994a/blob/main/roa.bmp)
 
 How do I play Frogger? :
 -----------------------
