@@ -8,6 +8,7 @@ See BIOS files further down for the ones you need.
 
 Features :
 -----------------------
+* Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
 * Cart loads up to 512K Banked (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion built-in
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units.
