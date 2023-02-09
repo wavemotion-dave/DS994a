@@ -899,17 +899,15 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         }
     }
 
+    // ----------------------------------------------------------------
+    // This is only set to 1 if a normal (non meta) key is pressed...
+    // ----------------------------------------------------------------
     if (bKeyClick == 1)
     {
         mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
-        bKeyClick = 2;
-        if (meta_next_key == META_KEY_FUNCTION)
-        {
-          meta_next_key = 0;
-          //InitBottomScreen();
-        } else meta_next_key = 0;
+        bKeyClick = 2;      // No more click - one was enough 
         
-        handling_meta = 0;  // We've handled a normal key... no more meta
+        if (handling_meta) handling_meta = 4;   // This will force the meta key to deactivate as soon as nothing is touched on the virtual keyboard screen
     }
     
     return META_KEY_NONE;
@@ -989,23 +987,27 @@ ITCM_CODE void ds99_main(void)
         // -------------------------------------------------------------
         // Stuff to do once/second such as FPS display and Debug Data
         // -------------------------------------------------------------
-        if (TIMER1_DATA >= 32728)   //  1000MS (1 sec)
+        if (TIMER1_DATA >= 16364)   //  500ms (half-sec)
         {
+            static u16 once_per_sec = 0;
             TIMER1_CR = 0;
             TIMER1_DATA = 0;
             TIMER1_CR=TIMER_ENABLE | TIMER_DIV_1024;
-            if (globalConfig.showFPS)
+            if (once_per_sec++ & 1)
             {
-                DisplayFrameCounter(emuActFrames);
+                if (globalConfig.showFPS)
+                {
+                    DisplayFrameCounter(emuActFrames);
+                    }
+                emuActFrames = 0;
+
+                if (bShowDebug)
+                {
+                    siprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
+                    DS_Print(5,0,6,tmpBuf);
+                }
             }
-            DisplayStatusLine(false);
-            emuActFrames = 0;
-            
-            if (bShowDebug)
-            {
-                siprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
-                DS_Print(5,0,6,tmpBuf);
-            }
+            DisplayStatusLine(false);   // This updates twice per second
         }
         emuActFrames++;
 
@@ -1145,7 +1147,6 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_SHIFT]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1164,7 +1165,6 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_CONTROL]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1175,7 +1175,6 @@ ITCM_CODE void ds99_main(void)
                     if (meta_next_key == META_KEY_FUNCTION) meta_next_key = 0;
                     else meta_next_key = META_KEY_FUNCTION;
                     tms9901.Keyboard[TMS_KEY_FUNCTION]=1;
-                    //InitBottomScreen();
                     meta_next_key = META_KEY_FUNCTION;
                     handling_meta = 1;
                     DisplayStatusLine(false);
@@ -1185,7 +1184,6 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1194,7 +1192,7 @@ ITCM_CODE void ds99_main(void)
       } // No Screen Touch...
       else  
       {
-          if (handling_meta)
+          if (handling_meta < 4)
           {
               if (meta_next_key == 0) // if we were dealing with Alpha Lock
               {
@@ -1205,6 +1203,14 @@ ITCM_CODE void ds99_main(void)
                   handling_meta = 2;    // We've released a meta key...
               }
           }
+          else
+          if (handling_meta == 4)
+          {
+                // And here we only want to reset the meta key if we have released a normal key
+                meta_next_key = 0;  // No more meta key        
+                handling_meta = 0;  // We've handled a normal key... no more meta
+          }
+          
           ResetNow = 0;
           bKeyClick = 0;
       }
