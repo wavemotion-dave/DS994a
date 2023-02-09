@@ -48,7 +48,7 @@ Credits :
 -----------------------
 * Thanks to Alekmaul who provided the original Coleco emulator framework of which this is based.
 * Thanks to Flubba for the SN76496 sound core.
-* Thanks to Marat Fayzullin (ColEM) for the TI991A video driver.
+* Thanks to Marat Fayzullin (ColEM) for the TI9918A video driver.
 * Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code plus some helpful consults.
 * Thanks to Pete Eberlein and some great ideas and a bit of code from his upcoming BuLWiP emulator. 
 * Thanks to ti99iuc over on AtariAge for the DS99/4a Logo
