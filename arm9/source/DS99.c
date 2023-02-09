@@ -29,7 +29,6 @@
 #include "intro.h"
 #include "alpha.h"
 #include "ti99kbd.h"
-#include "ti99kbd-func.h"
 #include "options.h"
 #include "ecranHaut.h"
 #include "screenshot.h"
@@ -399,7 +398,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
     {
         if(tms9901.Keyboard[TMS_KEY_SHIFT] == 1)
         {
-            DS_Print(0,0,6, "SHIFT");
+            DS_Print(0,0,6, "SHFT");
             bShiftKeysBlanked = 0;
         }
         else 
@@ -407,6 +406,11 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             if(tms9901.Keyboard[TMS_KEY_CONTROL] == 1)
             {
                 DS_Print(0,0,6, "CTRL");
+                bShiftKeysBlanked = 0;
+            }
+            else if(tms9901.CapsLock)
+            {
+                DS_Print(0,0,6, "CAPS");
                 bShiftKeysBlanked = 0;
             }
             else
@@ -444,7 +448,7 @@ void KeyPushFilename(char *filename)
 }
 
 
-#define MAX_FILES_PER_DSK           32         // We allow 36 files shown per disk... that's enough for our purposes and it's what we can show on screen
+#define MAX_FILES_PER_DSK           32         // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen
 char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per file (really 10 but we keep it on an 16-byte boundary)
 u8   dsk_num_files = 0;
 void ShowDiskListing(void)
@@ -829,7 +833,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         // --------------------------------------------------------------------------
         // Test the touchscreen rendering of the keyboard
         // --------------------------------------------------------------------------
-        if ((iTy >= 13) && (iTy < 47))        // Row 1 (top row)
+        if ((iTy >= 10) && (iTy < 50))        // Row 1 (top row)
         {
             if      ((iTx >= 3)   && (iTx < 24))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 24)  && (iTx < 45))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -844,7 +848,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 213) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_EQUALS]=1; if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 234) && (iTx < 256))  return MiniMenu();
         }
-        else if ((iTy >= 47) && (iTy < 82))        // Row 2 (QWERTY row)
+        else if ((iTy >= 50) && (iTy < 85))        // Row 2 (QWERTY row)
         {
             if      ((iTx >= 14)  && (iTx < 35))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 35)  && (iTx < 56))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -858,7 +862,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 203) && (iTx < 224))  {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 224) && (iTx < 245))  {tms9901.Keyboard[TMS_KEY_SLASH]=1;  if (!bKeyClick) bKeyClick=1;}
         }
-        else if ((iTy >= 82) && (iTy < 119))       // Row 3 (ASDF row)
+        else if ((iTy >= 85) && (iTy < 121))       // Row 3 (ASDF row)
         {
             if      ((iTx >= 20)  && (iTx < 42))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 42)  && (iTx < 63))   {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -872,7 +876,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 208) && (iTx < 231))  {tms9901.Keyboard[TMS_KEY_SEMI]=1;   if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 231) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
         }
-        else if ((iTy >= 119) && (iTy < 155))       // Row 4 (ZXCV row)
+        else if ((iTy >= 121) && (iTy < 157))       // Row 4 (ZXCV row)
         {
             if      ((iTx >= 11)  && (iTx < 32))   return META_KEY_SHIFT;
             else if ((iTx >= 32)  && (iTx < 53))   {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -886,7 +890,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 200) && (iTx < 222))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 222) && (iTx < 255))  return META_KEY_SHIFT;
         }
-        else if ((iTy >= 155) && (iTy < 192))       // Row 5 (SPACE BAR row)
+        else if ((iTy >= 157) && (iTy <= 192))       // Row 5 (SPACE BAR row)
         {
             if      ((iTx >= 11)  && (iTx < 32))   return META_KEY_ALPHALOCK;
             else if ((iTx >= 32)  && (iTx < 53))   return META_KEY_CONTROL;
@@ -902,7 +906,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         if (meta_next_key == META_KEY_FUNCTION)
         {
           meta_next_key = 0;
-          InitBottomScreen();
+          //InitBottomScreen();
         } else meta_next_key = 0;
         
         handling_meta = 0;  // We've handled a normal key... no more meta
@@ -1141,7 +1145,7 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_SHIFT]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    InitBottomScreen();
+                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1160,7 +1164,7 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_CONTROL]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    InitBottomScreen();
+                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1171,7 +1175,7 @@ ITCM_CODE void ds99_main(void)
                     if (meta_next_key == META_KEY_FUNCTION) meta_next_key = 0;
                     else meta_next_key = META_KEY_FUNCTION;
                     tms9901.Keyboard[TMS_KEY_FUNCTION]=1;
-                    InitBottomScreen();
+                    //InitBottomScreen();
                     meta_next_key = META_KEY_FUNCTION;
                     handling_meta = 1;
                     DisplayStatusLine(false);
@@ -1181,7 +1185,7 @@ ITCM_CODE void ds99_main(void)
                     tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
                     meta_next_key = 0;
                     handling_meta = 0;
-                    InitBottomScreen();
+                    //InitBottomScreen();
                     DisplayStatusLine(false);
                     handling_meta = 3;
                 }
@@ -1310,35 +1314,6 @@ ITCM_CODE void ds99_main(void)
   }
 }
 
-void RefreshTopScreen(void)
-{
-  u8 uBcl;
-  u16 uVide;
-  // -----------------------------------------------------------------
-  // Change graphic mode to initiate emulation.
-  // Here we can claim back 128K of VRAM which is otherwise unused
-  // but we can use it for fast memory swaps and look-up-tables.
-  // -----------------------------------------------------------------
-  videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
-  vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
-  vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
-  
-  REG_BG3CNT = BG_BMP8_256x256;
-  REG_BG3PA = (1<<8); 
-  REG_BG3PB = 0;
-  REG_BG3PC = 0;
-  REG_BG3PD = (1<<8);
-  REG_BG3X = 0;
-  REG_BG3Y = 0;
-
-  // Init the page flipping buffer...
-  for (uBcl=0;uBcl<192;uBcl++) 
-  {
-     uVide=(uBcl/12);
-     dmaFillWords(uVide | (uVide<<16),pVidFlipBuf+uBcl*128,256);
-  }
-}
-
 /*********************************************************************************
  * Init DS Emulator - setup VRAM banks and background screen rendering banks
  ********************************************************************************/
@@ -1404,21 +1379,11 @@ void InitBottomScreen(void)
     }
     else // Must be TI99 keyboard
     {
-        if (meta_next_key == META_KEY_FUNCTION)
-        {
-            decompress(ti99kbd_funcTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-            decompress(ti99kbd_funcMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
-            dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-            dmaCopy((void*) ti99kbd_funcPal,(void*) BG_PALETTE_SUB,256*2);
-        }
-        else
-        {
-            decompress(ti99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-            decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
-            dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-            dmaCopy((void*) ti99kbdPal,(void*) BG_PALETTE_SUB,256*2);
-        }
-
+        decompress(ti99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+        decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+        dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
+        dmaCopy((void*) ti99kbdPal,(void*) BG_PALETTE_SUB,256*2);
+        
         unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
         dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
     }
