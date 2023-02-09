@@ -84,6 +84,12 @@ DS994a supports the following file types:
 * Files ending in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
 
+Keyboards and Menus :
+-----------------------
+Two virtual keyboards are supported... a standard linear layout black on grey and a TI-looking keyboard that more closely resembles a real system. The TI keyboard is nice but the buttons are, by nature, a bit smaller and probably require the use of a stylus. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
+
+![TI99 Virtual Keyboard](https://github.com/wavemotion-dave/DS994a/blob/main/tikbd.png)
+
 Key Mapping :
 -----------------------
 You can map all 12 of the DS keys (ABXY, D-Pad, Start, Select, Left/Right Shoulder Buttons) to any TI key (Joystick 1, Joystick 2 or Keyboard Key). 
