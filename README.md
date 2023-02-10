@@ -88,6 +88,14 @@ DS994a supports the following file types:
 * Files ending in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
 
+Configuration :
+-----------------------
+There are two levels of configuration:
+* Global Configuration sets defaults for all games - though most things can be overridden at the individual game level.
+* Game Configuration is specific to the game you've loaded.
+
+Be sure to use the START button to save out your configuration options so they persist on future launches of the emulator.
+
 Keyboards and Menus :
 -----------------------
 Two virtual keyboards are supported... a standard linear layout black on grey and a TI-looking keyboard that more closely resembles a real system. The TI keyboard is nice but the buttons are, by nature, a bit smaller and probably require the use of a stylus. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
