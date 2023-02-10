@@ -166,6 +166,13 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
+V1.0: XX-Feb-2023 by wavemotion-dave
+* Improved TI99 keyboard which is the new default.
+* Improved DSK saves for more robust writes.
+* Screen Snapshot added (press and hold L+R+Y)
+* Ability to swap upper / lower screens (press and hold L+R+X)
+* Cleanup across the board for the official 1.0 release.
+
 V0.9: 02-Feb-2023 by wavemotion-dave
 * Added DSK3 support. All three drives support up to 360K disks. 
 * Improved emulation on SAMS memory such that Realms of Antiquity will run.
