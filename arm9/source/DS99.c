@@ -528,9 +528,9 @@ void ShowDiskListing(void)
 }
 
 // ------------------------------------------------------------------------
-// Show the Cassette Menu text - highlight the selected row.
+// Show the Disk Menu text - highlight the selected row.
 // ------------------------------------------------------------------------
-void CassetteMenuShow(bool bClearScreen, u8 sel)
+void DiskMenuShow(bool bClearScreen, u8 sel)
 {
     cassette_menu_items = 0;
     if (bClearScreen)
@@ -568,16 +568,16 @@ void CassetteMenuShow(bool bClearScreen, u8 sel)
 }
 
 // ------------------------------------------------------------------------
-// Handle Cassette mini-menu interface...
+// Handle Disk mini-menu interface...
 // ------------------------------------------------------------------------
-void CassetteMenu(void)
+void DiskMenu(void)
 {
   u8 menuSelection = 0;
     
   SoundPause();
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
-  CassetteMenuShow(true, menuSelection);
+  DiskMenuShow(true, menuSelection);
 
   while (true) 
   {
@@ -587,19 +587,19 @@ void CassetteMenu(void)
         if (nds_key & KEY_UP)  
         {
             menuSelection = (menuSelection > 0) ? (menuSelection-1):(cassette_menu_items-1);
-            CassetteMenuShow(false, menuSelection);
+            DiskMenuShow(false, menuSelection);
         }
         if (nds_key & KEY_DOWN)  
         {
             menuSelection = (menuSelection+1) % cassette_menu_items;
-            CassetteMenuShow(false, menuSelection);
+            DiskMenuShow(false, menuSelection);
         }
         if (nds_key & KEY_X)  
         {
             // Wait for keyrelease...
             while (keysCurrent() & KEY_X) WAITVBL;
             cassette_drive_sel = (cassette_drive_sel+1) % MAX_DSKS;
-            CassetteMenuShow(true, menuSelection);
+            DiskMenuShow(true, menuSelection);
         }
         if (nds_key & KEY_A)  
         {
@@ -609,22 +609,22 @@ void CassetteMenu(void)
                 if (myDskFile != NULL)
                 {
                     disk_mount(cassette_drive_sel, myDskPath, myDskFile);
-                    CassetteMenuShow(true, menuSelection);
+                    DiskMenuShow(true, menuSelection);
                 }
                 else
                 {
-                    CassetteMenuShow(true, menuSelection);
+                    DiskMenuShow(true, menuSelection);
                 }
             }
             if (menuSelection == 1) // UNMOUNT .DSK FILE
             {
                 disk_unmount(cassette_drive_sel);
-                CassetteMenuShow(true, menuSelection);
+                DiskMenuShow(true, menuSelection);
             }
             if (menuSelection == 2)
             {
                   ShowDiskListing();
-                  CassetteMenuShow(true, menuSelection);
+                  DiskMenuShow(true, menuSelection);
             }
             if (menuSelection == 3) // PASTE DSK1.FILENAME
             {
@@ -817,7 +817,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         }
         else if ((iTy >= 169) && (iTy < 192))  // Row 6
         {
-            if      ((iTx >= 1)   && (iTx < 35))   CassetteMenu();
+            if      ((iTx >= 1)   && (iTx < 35))   DiskMenu();
             else if ((iTx >= 174) && (iTx < 214))  {tms9901.Keyboard[TMS_KEY_SPACE]=1; if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 214) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1; if (!bKeyClick) bKeyClick=1;}
             
@@ -894,8 +894,9 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         {
             if      ((iTx >= 11)  && (iTx < 32))   return META_KEY_ALPHALOCK;
             else if ((iTx >= 32)  && (iTx < 53))   return META_KEY_CONTROL;
-            else if ((iTx >= 53) && (iTx < 220))   {tms9901.Keyboard[TMS_KEY_SPACE]=1;   if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 220) && (iTx < 242))  return META_KEY_FUNCTION;
+            else if ((iTx >= 53)  && (iTx < 200))  {tms9901.Keyboard[TMS_KEY_SPACE]=1;   if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 200) && (iTx < 221))  return META_KEY_FUNCTION;
+            else if ((iTx >= 221) && (iTx < 255))  DiskMenu();
         }
     }
 
@@ -1122,7 +1123,7 @@ ITCM_CODE void ds99_main(void)
             break;
                 
             case META_KEY_DISKMENU:
-                CassetteMenu();
+                DiskMenu();
                 break;             
                 
             case META_KEY_ALPHALOCK:

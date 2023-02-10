@@ -1129,6 +1129,7 @@ void FindAndLoadConfig(void)
         {
             memset(&globalConfig, 0x00, sizeof(globalConfig));
             memset(&AllConfigs, 0x00, sizeof(AllConfigs));
+            globalConfig.overlay=1; // TI99 Keyboard
             SetDefaultGameConfig();
             SaveConfig(FALSE);
         }
@@ -1149,7 +1150,9 @@ void FindAndLoadConfig(void)
     }
     else    // Not found... init the entire database...
     {
+        memset(&globalConfig, 0x00, sizeof(globalConfig));
         memset(&AllConfigs, 0x00, sizeof(AllConfigs));
+        globalConfig.overlay=1; // TI99 Keyboard
         SetDefaultGameConfig();
         SaveConfig(FALSE);
     }
