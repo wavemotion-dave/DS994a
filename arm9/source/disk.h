@@ -39,5 +39,6 @@ extern void disk_mount(u8 drive, char *path, char *filename);
 extern void disk_unmount(u8 drive);
 extern void disk_read_from_sd(u8 drive);
 extern void disk_write_to_sd(u8 disk);
+extern void disk_backup_to_sd(u8 disk);
 
 // End of file

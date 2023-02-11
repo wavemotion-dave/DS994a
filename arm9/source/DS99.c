@@ -546,6 +546,7 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     siprintf(tmpBuf, " LIST    DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
     siprintf(tmpBuf, " PASTE   DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
     siprintf(tmpBuf, " PASTE   FILE%d", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
+    siprintf(tmpBuf, " BACKUP  DSK%d",  cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
     DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  " EXIT    MENU ");  cassette_menu_items++;
 
     if (Disk[cassette_drive_sel].isMounted)
@@ -639,7 +640,18 @@ void DiskMenu(void)
                   KeyPushFilename(dsk_filename);
                   break;
             }
-            if (menuSelection == 5) // EXIT
+            if (menuSelection == 5) // BACKUP DSKx
+            {
+                  if (Disk[cassette_drive_sel].isMounted)
+                  {
+                      DS_Print(11,0,6, "BACKUP DISK");
+                      disk_backup_to_sd(cassette_drive_sel);
+                      WAITVBL;WAITVBL;
+                      DiskMenuShow(true, menuSelection);
+                      DS_Print(11,0,6, "           ");
+                  }
+            }
+            if (menuSelection == 6) // EXIT
             {
                   break;
             }

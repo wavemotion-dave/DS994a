@@ -134,7 +134,7 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 * Ensure SAMS 512K/1MB is enabled in configuration for this game.
 * Load the binary roacart.bin as your cartridge and advance to the TI title screen
 * Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
-* Enjoy - save often :) 
+* Enjoy - save often and make use of the BACKUP DISK to occasionally save off the ROAGAME.DSK (DSK1) into a /bak directory for maximum caution in case something ever goes wrong with writing the master copy.
 
 ![Realms of Antiquity](https://github.com/wavemotion-dave/DS994a/blob/main/roa.bmp)
 

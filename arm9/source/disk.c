@@ -50,6 +50,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <fat.h>
+#include <dirent.h>
 #include "DS99.h"
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
@@ -319,11 +320,30 @@ void disk_write_to_sd(u8 drive)
         u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
         u32 diskSize = (numSectors*256);
         write(fileno(outfile), Disk[drive].image, diskSize);    // Skip the buffering of fwrite() as we're writing a single big chunk
-        //fwrite(Disk[drive].image, diskSize, 1, outfile);
         fclose(outfile);
     }
     remove(backup_filename);
     Disk[drive].isDirty = 0;
+}
+
+void disk_backup_to_sd(u8 drive)
+{
+    // Change into the last known DSKs directory for this file
+    chdir(Disk[drive].path);
+
+    DIR* dir = opendir("bak");
+    if (dir) closedir(dir);  // Directory exists... close it out and move on.
+    else mkdir("bak", 0777);   // Otherwise create the directory...
+    siprintf(backup_filename, "bak/%s", Disk[drive].filename);
+    remove(backup_filename);
+    FILE *outfile = fopen(backup_filename, "wb");
+    if (outfile)
+    {
+        u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
+        u32 diskSize = (numSectors*256);
+        write(fileno(outfile), Disk[drive].image, diskSize);    // Skip the buffering of fwrite() as we're writing a single big chunk
+        fclose(outfile);
+    }
 }
 
 
