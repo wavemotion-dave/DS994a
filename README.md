@@ -53,7 +53,7 @@ Credits :
 * Thanks to Pete Eberlein and some great ideas and a bit of code from his upcoming BuLWiP emulator. 
 * Thanks to ti99iuc over on AtariAge for the DS99/4a Logo
 * Thanks to Darryl Hirschler for the TI99 Keyboard Graphic
-* Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes.
+* Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes as well as testing and providing feedback.
 
 
 Installation :
