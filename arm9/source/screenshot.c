@@ -101,3 +101,5 @@ bool screenshot(void)
 
     return true;
 }
+
+// End of file

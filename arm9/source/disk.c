@@ -42,7 +42,6 @@
 // and in full force.
 //
 // http://harmlesslion.com - visit the web page for contact info
-//
 
 #include <nds.h>
 

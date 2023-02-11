@@ -1,3 +1,5 @@
+// Please see the README.md file as it contains much useful info.
+
 #include <nds/arm7/audio.h>
 #include <nds/fifocommon.h>
 #include <nds/fifomessages.h>

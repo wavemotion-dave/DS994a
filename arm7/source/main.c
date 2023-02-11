@@ -1,3 +1,5 @@
+// Please see the README.md file as it contains much useful info.
+
 /*---------------------------------------------------------------------------------
 
 	default ARM7 core

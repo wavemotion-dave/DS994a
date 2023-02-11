@@ -1,3 +1,4 @@
+// Borrowed from GodMode9i from Rocket Robz
 #ifndef SCREENSHOT_H
 #define SCREENSHOT_H
 #include <nds/ndstypes.h>

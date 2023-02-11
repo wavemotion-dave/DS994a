@@ -11,6 +11,8 @@
 // me to use it to help with the core TMS9900 emualation. Please see Classic99 for
 // the original CPU core and please adhere to the copyright wishes of Mike Brent
 // for any code that is duplicated here.
+//
+// Please see the README.md file as it contains much useful info.
 // =====================================================================================
 
 #include <nds.h>

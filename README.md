@@ -84,8 +84,8 @@ Known Issues :
 File Types Supported :
 -----------------------
 DS994a supports the following file types:
-* Files ending in C/D/G files also known as 'mixed mode' files. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
-* Files ending in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
+* Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
+* Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
 
 Configuration :
@@ -166,7 +166,7 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Versions :
 -----------------------
-V1.0: XX-Feb-2023 by wavemotion-dave
+V1.0: 11-Feb-2023 by wavemotion-dave
 * Improved TI99 keyboard which is the new default.
 * Improved DSK saves for more robust writes.
 * Screen Snapshot added (press and hold L+R+Y)

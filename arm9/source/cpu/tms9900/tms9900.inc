@@ -20,6 +20,8 @@
 // I've run both cputest and MP test against this code... those are acid tests
 // for the TMS9900 CPU and it passes the cputest and fails only the XOP on the MP
 // test which is expected since I'm not handling that.
+//
+// Please see the README.md file as it contains much useful info.
 // =====================================================================================
 
 

@@ -6,6 +6,8 @@
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
+//
+// Please see the README.md file as it contains much useful info.
 // =====================================================================================
 #include <nds.h>
 

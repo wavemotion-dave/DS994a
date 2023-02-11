@@ -6,6 +6,8 @@
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
+//
+// Please see the README.md file as it contains much useful info.
 // =====================================================================================
 #include <nds.h>
 #include <stdio.h>
@@ -14,7 +16,7 @@
 #include "DS99_utils.h"
 
 #include "soundbank.h"
-#include "pdev_tbg0.h"
+#include "ecranHaut.h"
 #include "pdev_bg0.h"
 
 extern unsigned int vusCptVBL;
@@ -24,7 +26,7 @@ void vblankIntro() {
 }
 
 // --------------------------------------------------------------
-// Intro with portabledev logo and new PHEONIX-EDITION version
+// Intro Splash Screen
 // --------------------------------------------------------------
 void intro_logo(void) {
   bool bOK;
@@ -47,10 +49,10 @@ void intro_logo(void) {
     
   mmEffect(SFX_MUS_INTRO);
 
-  // Show portabledev
-  decompress(pdev_tbg0Tiles, bgGetGfxPtr(bg1), LZ77Vram);
-  decompress(pdev_tbg0Map, (void*) bgGetMapPtr(bg1), LZ77Vram);
-  dmaCopy((void *) pdev_tbg0Pal,(u16*) BG_PALETTE,256*2);
+  // Show splash screen
+  decompress(ecranHautTiles, bgGetGfxPtr(bg1), LZ77Vram);
+  decompress(ecranHautMap, (void*) bgGetMapPtr(bg1), LZ77Vram);
+  dmaCopy((void *) ecranHautPal,(u16*) BG_PALETTE,256*2);
 
   decompress(pdev_bg0Tiles, bgGetGfxPtr(bg1s), LZ77Vram);
   decompress(pdev_bg0Map, (void*) bgGetMapPtr(bg1s), LZ77Vram);

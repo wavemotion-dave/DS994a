@@ -1,3 +1,5 @@
+# Please see the README.md file as it contains much useful info.
+
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------
@@ -9,7 +11,7 @@ include $(DEVKITARM)/ds_rules
 
 export TARGET		:=	DS994a
 export TOPDIR		:=	$(CURDIR)
-export VERSION		:=  0.9f
+export VERSION		:=  1.0
 
 ICON 		:= -b $(CURDIR)/logo.bmp "DS994a $(VERSION);wavemotion-dave;https://github.com/wavemotion-dave/DS994a" 
 
