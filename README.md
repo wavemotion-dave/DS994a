@@ -64,7 +64,7 @@ Installation :
 * If you want to play disk based games (Adventure, Tunnels of Doom, etc) you will need 994adisk.bin (often just named disk.bin but you need to rename it and put it into /roms/bios).
 * You will need games to play... right now the emulator supports C/D/G files and '8' non-inverted files. Basically just try loading a file to see if it works... the ROMs should have a .bin extension. 
 * Recommend you put your game ROMs into /roms/ti99 as the emulator will default to that directory. That's where the cool kids keep them.
-* Recommend you put any disks needed (.dsk files) into the same directory as your ROMs until I can get a better file manager worked out.
+* Recommend you put any disk files needed in a directory easily accessible (near) where you store your rom files so it's a faster navigation.
 
 BIOS Files :
 -----------------------
@@ -141,6 +141,10 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 How do I play Frogger? :
 -----------------------
 No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine.
+
+How do I play Q-Bert? :
+-----------------------
+A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the Nintendo d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision port) work. 
 
 Blend Mode (DSi) :
 -----------------------
