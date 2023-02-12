@@ -333,9 +333,6 @@ void disk_read_from_sd(u8 drive)
 
 void disk_write_to_sd(u8 drive)
 {
-
-    DC_FlushAll();
-    
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
@@ -346,8 +343,8 @@ void disk_write_to_sd(u8 drive)
     if (outfile)
     {
         u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
-        u32 diskSize = (numSectors*256);
-        write(fileno(outfile), Disk[drive].image, diskSize);    // Skip the buffering of fwrite() as we're writing a single big chunk
+        size_t diskSize = (numSectors*256);
+        fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
         fclose(outfile);
     }
     remove(backup_filename);
@@ -356,8 +353,6 @@ void disk_write_to_sd(u8 drive)
 
 void disk_backup_to_sd(u8 drive)
 {
-    DC_FlushAll();
-    
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
@@ -370,8 +365,8 @@ void disk_backup_to_sd(u8 drive)
     if (outfile)
     {
         u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
-        u32 diskSize = (numSectors*256);
-        write(fileno(outfile), Disk[drive].image, diskSize);    // Skip the buffering of fwrite() as we're writing a single big chunk
+        size_t diskSize = (numSectors*256);
+        fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
         fclose(outfile);
     }
 }
