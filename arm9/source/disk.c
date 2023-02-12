@@ -283,6 +283,31 @@ void disk_mount(u8 drive, char *path, char *filename)
     Disk[drive].isDirty = 0;
     strcpy(Disk[drive].path, path);
     strcpy(Disk[drive].filename, filename);
+    siprintf(backup_filename, "%s.bak", Disk[drive].filename);
+    
+    // ---------------------------------------------------------
+    // Check if a backup file exists... if one exists and
+    // the normal .DSK is not at least 90K that means something
+    // went wrong and we now need to restore the backup...
+    // ---------------------------------------------------------
+    FILE *tmpFile = fopen(backup_filename, "rb");
+    if (tmpFile)
+    {
+        fclose(tmpFile);
+        FILE *tmpFile = fopen(Disk[drive].filename, "rb");
+        fseek(tmpFile, 0L, SEEK_END);
+        int sz = ftell(tmpFile);
+        fclose(tmpFile);
+        if (sz < (90*1024))
+        {
+            remove(Disk[drive].filename);
+            rename(backup_filename, Disk[drive].filename);
+        }
+    }
+    
+    // ---------------------------------------
+    // Now we can read the file as intended...
+    // ---------------------------------------
     disk_read_from_sd(drive);
 }
 
@@ -308,6 +333,9 @@ void disk_read_from_sd(u8 drive)
 
 void disk_write_to_sd(u8 drive)
 {
+
+    DC_FlushAll();
+    
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
@@ -328,6 +356,8 @@ void disk_write_to_sd(u8 drive)
 
 void disk_backup_to_sd(u8 drive)
 {
+    DC_FlushAll();
+    
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
