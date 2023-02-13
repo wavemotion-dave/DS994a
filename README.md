@@ -128,7 +128,7 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * You will need the disk (.DSK) image for the game you want to play
 * Load the cartridge file normally... then use the Cassette icon to mount the .DSK
 * For Adventure you load the game by typing "DSK1.PIRATE" (for Pirate's adventure... or whatever name/game you want... use LIST DISK to see what's on the disk as there were more than a dozen Scott Adams adventure games).
-* For Scott Adams adventures you should enable the ALPHA LOCK key in Game Options (lowercase filenames won't load).
+* For some adventure games you should enable the ALPHA LOCK key in Game Options or use the ALPHA LOCK key on the TI99 Keyboard.
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part).
 
 ![Tunnels of Doom](https://github.com/wavemotion-dave/DS994a/blob/main/tod.bmp)
@@ -222,7 +222,7 @@ V0.7: 24-Jan-2023 by wavemotion-dave
 V0.6: 21-Jan-2023 by wavemotion-dave
 * Re-write of the CPU core. It's 20% smaller and 20% faster.
 * Added ability to list disk contents so you can see what programs are on it.
-* Added write-backing of .DSK files. When they chagne the file is written out in the background.
+* Added write-backing of .DSK files. When they change the file is written out in the background.
 * Added SAMS 512K expanded memory support - must be enabled in OPTIONS on a per-game basis.
 * Added new cartridge types to support SuperCart 8K, MiniMemory 4K and Milton Bradley MBX carts (with and without special 1K RAM).
 * New splash screen... new logo icon... a fresh start!
