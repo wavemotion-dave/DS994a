@@ -80,6 +80,7 @@ Known Issues :
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay. Cause unknown.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
+* TI Speech Module is not supported yet. Games that rely on the module will still play - just no voice.
 
 File Types Supported :
 -----------------------
