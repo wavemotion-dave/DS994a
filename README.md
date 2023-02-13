@@ -182,8 +182,12 @@ Windows but I've never done it and don't know how.
 If you've got the nds libraries above setup correctly it should be a matter of typing:
 * _make clean_
 * _make_
-To build the emulator. The output of this is DS994a.nds with a version as set in the MAKEFILE.
 
+To build the emulator. The output of this is DS994a.nds with a version as set in the MAKEFILE.
+I use the following standard environment variables that are SET on Ubuntu:
+* DEVKITARM=/opt/devkitpro/devkitARM
+* DEVKITPPC=/opt/devkitpro/devkitPPC
+* DEVKITPRO=/opt/devkitpro
 
 Versions :
 -----------------------
