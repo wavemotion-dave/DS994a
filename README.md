@@ -172,6 +172,19 @@ So my recommendation is as follows:
 
 To enable this new blend mode, pick your game and go into the "Game Options" sub-menu and turn it on.
 
+Compile Instructions :
+-----------------------
+DS99/4a was built on my home Ubuntu 18.04 system and later upgraded to Ubuntu 20.04. I used GCC version 7.5.0
+when I was on Ubuntu 18.04 and later GCC 9.4,0 when I was on Ubuntu 20.04.  It uses libnds 1.8.0 and DEVKITPRO
+from the Pacman repositories (devkitpro-pacman version 6.0.1-2).  I'm told it should also build under 
+Windows but I've never done it and don't know how.
+
+If you've got the nds libraries above setup correctly it should be a matter of typing:
+* MAKE CLEAN
+* MAKE
+To build the emulator. The output of this is DS994a.nds with a version as set in the MAKEFILE.
+
+
 Versions :
 -----------------------
 V1.0: 11-Feb-2023 by wavemotion-dave

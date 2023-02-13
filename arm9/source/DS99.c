@@ -84,8 +84,8 @@ char dsk_filename[16];
 u16 PAL_Timing[] = {656, 596, 546, 504};    // 100%, 110%, 120% and 130%
 u16 NTSC_Timing[] = {546, 496, 454, 420};   // 100%, 110%, 120% and 130%
 
-u8 cassette_menu_items = 0;
-u8 cassette_drive_sel  = 0; // Start with DSK1
+u8 disk_menu_items = 0;
+u8 disk_drive_select  = 0; // Start with DSK1
 
 // The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
@@ -239,9 +239,11 @@ void setupStream(void)
 }
 
 
-// -----------------------------------------------------------------------
+// ------------------------------------------------------------------------
 // We setup the sound chips - disabling all volumes to start.
-// -----------------------------------------------------------------------
+// The TI9919 sound chip is basically the same as the Colecovision
+// SN76496 chip and we already have a driver for that one and will use it.
+// ------------------------------------------------------------------------
 void dsInstallSoundEmuFIFO(void) 
 {
   SoundPause();
@@ -304,14 +306,14 @@ void ResetStatusFlags(void)
 
 
 // --------------------------------------------------------------
-// When we first load a ROM/CASSETTE or when the user presses
+// When we first load a ROM/DISK or when the user presses
 // the RESET button on the touch-screen...
 // --------------------------------------------------------------
 void ResetTI(void)
 {
   Reset9918();                          // Reset video chip
    
-  sn76496Reset(1, &sncol);              // Reset the SN sound chip
+  sn76496Reset(1, &sncol);              // Reset the SN/TI sound chip
   sn76496W(0x90 | 0x0F  ,&sncol);       //  Write new Volume for Channel A (off) 
   sn76496W(0xB0 | 0x0F  ,&sncol);       //  Write new Volume for Channel B (off)
   sn76496W(0xD0 | 0x0F  ,&sncol);       //  Write new Volume for Channel C (off)
@@ -345,7 +347,7 @@ void ResetTI(void)
   strcpy(dsk_filename,"");    
     
   disk_init();
-  cassette_drive_sel  = 0; // Start with DSK1
+  disk_drive_select  = 0; // Start with DSK1
     
   memset(debug, 0x00, sizeof(debug));
 }
@@ -474,7 +476,7 @@ void ShowDiskListing(void)
     u8 idx=0;
     DS_Print(5,5,6,      "=== DISK CONTENTS ===");
     dsk_num_files = 0;
-    if (Disk[cassette_drive_sel].isMounted)
+    if (Disk[disk_drive_select].isMounted)
     {
         // --------------------------------------------------------
         // First find all files and store them into our array...
@@ -482,11 +484,11 @@ void ShowDiskListing(void)
         u16 sectorPtr = 0;
         for (u16 i=0; i<256; i += 2)
         {
-            sectorPtr = (Disk[cassette_drive_sel].image[256 + (i+0)] << 8) | (Disk[cassette_drive_sel].image[256 + (i+1)] << 0);
+            sectorPtr = (Disk[disk_drive_select].image[256 + (i+0)] << 8) | (Disk[disk_drive_select].image[256 + (i+1)] << 0);
             if (sectorPtr == 0) break;
             for (u8 j=0; j<10; j++) 
             {
-                dsk_listing[dsk_num_files][j] = Disk[cassette_drive_sel].image[(256*sectorPtr) + j];
+                dsk_listing[dsk_num_files][j] = Disk[disk_drive_select].image[(256*sectorPtr) + j];
             }
             dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
             if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
@@ -534,37 +536,37 @@ void ShowDiskListing(void)
 // ------------------------------------------------------------------------
 void DiskMenuShow(bool bClearScreen, u8 sel)
 {
-    cassette_menu_items = 0;
+    disk_menu_items = 0;
     if (bClearScreen)
     {
         DrawCleanBackground();
     }
     
     DS_Print(8,6,6,                                                 " TI DISK MENU ");
-    siprintf(tmpBuf, " MOUNT   DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    siprintf(tmpBuf, " UNMOUNT DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    siprintf(tmpBuf, " LIST    DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    siprintf(tmpBuf, " PASTE   DSK%d ", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    siprintf(tmpBuf, " PASTE   FILE%d", cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    siprintf(tmpBuf, " BACKUP  DSK%d",  cassette_drive_sel+1); DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  tmpBuf);  cassette_menu_items++;
-    DS_Print(8,8+cassette_menu_items,(sel==cassette_menu_items)?2:0,  " EXIT    MENU ");  cassette_menu_items++;
+    siprintf(tmpBuf, " MOUNT   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    siprintf(tmpBuf, " UNMOUNT DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    siprintf(tmpBuf, " LIST    DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    siprintf(tmpBuf, " PASTE   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    siprintf(tmpBuf, " PASTE   FILE%d", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    siprintf(tmpBuf, " BACKUP  DSK%d",  disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  " EXIT    MENU ");  disk_menu_items++;
 
-    if (Disk[cassette_drive_sel].isMounted)
+    if (Disk[disk_drive_select].isMounted)
     {
-        u16 numSectors = (Disk[cassette_drive_sel].image[0x0A] << 8) | Disk[cassette_drive_sel].image[0x0B];
-        siprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", cassette_drive_sel+1, (Disk[cassette_drive_sel].image[0x12] == 2 ? "DS":"SS"), (Disk[cassette_drive_sel].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
-        DS_Print(4,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,tmpBuf);
+        u16 numSectors = (Disk[disk_drive_select].image[0x0A] << 8) | Disk[disk_drive_select].image[0x0B];
+        siprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", disk_drive_select+1, (Disk[disk_drive_select].image[0x12] == 2 ? "DS":"SS"), (Disk[disk_drive_select].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
+        DS_Print(4,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
         
         u8 col=0;
-        strncpy(tmpBuf, Disk[cassette_drive_sel].filename, 32);
+        strncpy(tmpBuf, Disk[disk_drive_select].filename, 32);
         tmpBuf[31] = 0;
         if (strlen(tmpBuf) < 32) col=16-(strlen(tmpBuf)/2);
         if (strlen(tmpBuf) & 1) col--;
-        DS_Print(col,9+cassette_menu_items+3,(sel==cassette_menu_items)?2:0,tmpBuf);   
+        DS_Print(col,9+disk_menu_items+3,(sel==disk_menu_items)?2:0,tmpBuf);   
     } 
     else
     {
-        DS_Print(3,9+cassette_menu_items+1,(sel==cassette_menu_items)?2:0,"      DISK NOT MOUNTED       ");
+        DS_Print(3,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,"      DISK NOT MOUNTED       ");
     }
     
     DS_Print(2,22,0, "A TO SELECT, X SWITCH DRIVES");
@@ -589,19 +591,19 @@ void DiskMenu(void)
     {
         if (nds_key & KEY_UP)  
         {
-            menuSelection = (menuSelection > 0) ? (menuSelection-1):(cassette_menu_items-1);
+            menuSelection = (menuSelection > 0) ? (menuSelection-1):(disk_menu_items-1);
             DiskMenuShow(false, menuSelection);
         }
         if (nds_key & KEY_DOWN)  
         {
-            menuSelection = (menuSelection+1) % cassette_menu_items;
+            menuSelection = (menuSelection+1) % disk_menu_items;
             DiskMenuShow(false, menuSelection);
         }
         if (nds_key & KEY_X)  
         {
             // Wait for keyrelease...
             while (keysCurrent() & KEY_X) WAITVBL;
-            cassette_drive_sel = (cassette_drive_sel+1) % MAX_DSKS;
+            disk_drive_select = (disk_drive_select+1) % MAX_DSKS;
             DiskMenuShow(true, menuSelection);
         }
         if (nds_key & KEY_A)  
@@ -611,7 +613,7 @@ void DiskMenu(void)
                 TILoadDiskFile();   // Sets myDskFile[] and myDskPath[]
                 if (myDskFile != NULL)
                 {
-                    disk_mount(cassette_drive_sel, myDskPath, myDskFile);
+                    disk_mount(disk_drive_select, myDskPath, myDskFile);
                     DiskMenuShow(true, menuSelection);
                 }
                 else
@@ -621,7 +623,7 @@ void DiskMenu(void)
             }
             if (menuSelection == 1) // UNMOUNT .DSK FILE
             {
-                disk_unmount(cassette_drive_sel);
+                disk_unmount(disk_drive_select);
                 DiskMenuShow(true, menuSelection);
             }
             if (menuSelection == 2)
@@ -631,7 +633,7 @@ void DiskMenu(void)
             }
             if (menuSelection == 3) // PASTE DSK1.FILENAME
             {
-                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_1+cassette_drive_sel);KeyPush(TMS_KEY_PERIOD);
+                  KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_S);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_1+disk_drive_select);KeyPush(TMS_KEY_PERIOD);
                   KeyPushFilename(dsk_filename);
                   break;
             }
@@ -642,10 +644,10 @@ void DiskMenu(void)
             }
             if (menuSelection == 5) // BACKUP DSKx
             {
-                  if (Disk[cassette_drive_sel].isMounted)
+                  if (Disk[disk_drive_select].isMounted)
                   {
                       DS_Print(11,0,6, "BACKUP DISK");
-                      disk_backup_to_sd(cassette_drive_sel);
+                      disk_backup_to_sd(disk_drive_select);
                       WAITVBL;WAITVBL;
                       DiskMenuShow(true, menuSelection);
                       DS_Print(11,0,6, "           ");
@@ -681,7 +683,7 @@ void DiskMenu(void)
 u8 bKeyClick = 0;
 
 // ------------------------------------------------------------------------
-// Show the Cassette Menu text - highlight the selected row.
+// Show the Mini Menu - highlight the selected row. 
 // ------------------------------------------------------------------------
 u8 mini_menu_items = 0;
 void MiniMenuShow(bool bClearScreen, u8 sel)
@@ -702,7 +704,7 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
 }
 
 // ------------------------------------------------------------------------
-// Handle Cassette mini-menu interface...
+// Handle mini-menu interface...
 // ------------------------------------------------------------------------
 u8 MiniMenu(void)
 {
@@ -760,6 +762,13 @@ u8 MiniMenu(void)
   return retVal;
 }
 
+
+// ------------------------------------------------------------------------------------------------
+// Here we've already determined that a touch event has taken place on the DS so we are going to 
+// look up (row-by-row) what key was pressed. The routine will set the appopriate bit in the 
+// Keyboard[] array to let the emulation know that a key has been pressed. Special attention 
+// is made for the 'sticky' special keys like Function, Control and Shift.
+// ------------------------------------------------------------------------------------------------
 u8 CheckKeyboardInput(u16 iTy, u16 iTx)
 {
     if (myConfig.overlay == 0)
@@ -945,6 +954,9 @@ void  __attribute__ ((noinline)) DisplayFrameCounter(u16 emuFps)
     DS_Print(0,0,6,tmpBuf);
 }
 
+// ---------------------------------------------------------------------------------------
+// Some common setup stuff that we don't need to take up space in fast ITCM_CODE memory
+// ---------------------------------------------------------------------------------------
 void __attribute__ ((noinline)) ds99_main_setup(void)
 {
   // Returns when  user has asked for a game to run...
@@ -974,7 +986,12 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
 }
 
 // ------------------------------------------------------------------------
-// The main emulation loop is here... call into the Z80, VDP and PSG 
+// The main emulation loop is here... call into the TMS9900, VDP and 
+// run the sound engine. This is placed in fast ITCM_CODE even though it
+// really only runs at 60 fps (or 50 for PAL systems)... mainly because
+// it's the heart of our system that drives all other calls and make
+// the emulation work.  If we need ITCM_CODE space, we could probably
+// give up on putting this in fast memory and not lose much performance.
 // ------------------------------------------------------------------------
 ITCM_CODE void ds99_main(void) 
 {
