@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "DS99.h"
 #include "DS99_utils.h"
-#include "ecranHaut.h"
 
 // ------------------------------------------------------------------------------
 // With only 125 released games plus 25-50 prototypes and 50-ish homebrews,

@@ -21,7 +21,7 @@
 #include "DS99mngt.h"
 #include "DS99_utils.h"
 
-#include "ecranHaut.h"
+#include "splash.h"
 #include "options.h"
 
 #include "CRC32.h"
@@ -1678,9 +1678,9 @@ void tiDSChangeOptions(void)
   bg0 = bgInit(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
   bg1 = bgInit(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
   bgSetPriority(bg0,1);bgSetPriority(bg1,0);
-  decompress(ecranHautTiles, bgGetGfxPtr(bg0), LZ77Vram);
-  decompress(ecranHautMap, (void*) bgGetMapPtr(bg0), LZ77Vram);
-  dmaCopy((void*) ecranHautPal,(void*) BG_PALETTE,256*2);
+  decompress(splashTiles, bgGetGfxPtr(bg0), LZ77Vram);
+  decompress(splashMap, (void*) bgGetMapPtr(bg0), LZ77Vram);
+  dmaCopy((void*) splashPal,(void*) BG_PALETTE,256*2);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0) + 51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1),32*24*2);
 

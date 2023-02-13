@@ -72,7 +72,7 @@ SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
 PNGFILES	:=	$(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.png)))
 
-OSPECIALS :=  options.o ti99kbd.o ecranHaut.o alpha.o pdev_bg0.o
+OSPECIALS :=  splash.o options.o ti99kbd.o ds99kbd.o pdev_bg0.o
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
@@ -147,10 +147,10 @@ options.s options.h : options.png
 ti99kbd.s ti99kbd.h : ti99kbd.png
 	grit $^ -o $@  -gt -mrt -mR8 -mLs -gzl -mzl
 
-ecranHaut.s ecranHaut.h : ecranHaut.png
+splash.s splash.h : splash.png
 	grit $^ -o $@  -gt -mrt -mR8 -mLs -gzl -mzl
 
-alpha.s alpha.h : alpha.png
+ds99kbd.s ds99kbd.h : ds99kbd.png
 	grit $^ -o $@  -gt -mrt -mR8 -mLs -gzl -mzl
 
 pdev_bg0.s pdev_bg0.h : pdev_bg0.png

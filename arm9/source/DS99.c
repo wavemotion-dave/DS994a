@@ -29,10 +29,10 @@
 #include "cpu/tms9900/tms9900.h"
 #include "disk.h"
 #include "intro.h"
-#include "alpha.h"
+#include "ds99kbd.h"
 #include "ti99kbd.h"
 #include "options.h"
-#include "ecranHaut.h"
+#include "splash.h"
 #include "screenshot.h"
 #include "soundbank.h"
 #include "soundbank_bin.h"
@@ -856,7 +856,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
         // --------------------------------------------------------------------------
         // Test the touchscreen rendering of the keyboard
         // --------------------------------------------------------------------------
-        if ((iTy >= 10) && (iTy < 50))        // Row 1 (top row)
+        if ((iTy >= 8) && (iTy < 47))        // Row 1 (top row)
         {
             if      ((iTx >= 3)   && (iTx < 24))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 24)  && (iTx < 45))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -871,7 +871,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 213) && (iTx < 234))  {tms9901.Keyboard[TMS_KEY_EQUALS]=1; if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 234) && (iTx < 256))  return MiniMenu();
         }
-        else if ((iTy >= 50) && (iTy < 85))        // Row 2 (QWERTY row)
+        else if ((iTy >= 47) && (iTy < 83))        // Row 2 (QWERTY row)
         {
             if      ((iTx >= 14)  && (iTx < 35))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 35)  && (iTx < 56))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -885,7 +885,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 203) && (iTx < 224))  {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 224) && (iTx < 245))  {tms9901.Keyboard[TMS_KEY_SLASH]=1;  if (!bKeyClick) bKeyClick=1;}
         }
-        else if ((iTy >= 85) && (iTy < 121))       // Row 3 (ASDF row)
+        else if ((iTy >= 83) && (iTy < 119))       // Row 3 (ASDF row)
         {
             if      ((iTx >= 20)  && (iTx < 42))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 42)  && (iTx < 63))   {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -899,7 +899,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 208) && (iTx < 231))  {tms9901.Keyboard[TMS_KEY_SEMI]=1;   if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 231) && (iTx < 256))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
         }
-        else if ((iTy >= 121) && (iTy < 157))       // Row 4 (ZXCV row)
+        else if ((iTy >= 119) && (iTy < 155))       // Row 4 (ZXCV row)
         {
             if      ((iTx >= 11)  && (iTx < 32))   return META_KEY_SHIFT;
             else if ((iTx >= 32)  && (iTx < 53))   {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
@@ -913,7 +913,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
             else if ((iTx >= 200) && (iTx < 222))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 222) && (iTx < 255))  return META_KEY_SHIFT;
         }
-        else if ((iTy >= 157) && (iTy <= 192))       // Row 5 (SPACE BAR row)
+        else if ((iTy >= 155) && (iTy <= 192))       // Row 5 (SPACE BAR row)
         {
             if      ((iTx >= 11)  && (iTx < 32))   return META_KEY_ALPHALOCK;
             else if ((iTx >= 32)  && (iTx < 53))   return META_KEY_CONTROL;
@@ -1377,9 +1377,9 @@ void TI99DSInit(void)
   bg0 = bgInit(0, BgType_Text8bpp,  BgSize_T_256x512, 31,0);
   bg1 = bgInit(1, BgType_Text8bpp,  BgSize_T_256x512, 29,0);
   bgSetPriority(bg0,1);bgSetPriority(bg1,0);
-  decompress(ecranHautTiles,  bgGetGfxPtr(bg0), LZ77Vram);
-  decompress(ecranHautMap,  (void*) bgGetMapPtr(bg0), LZ77Vram);
-  dmaCopy((void*) ecranHautPal,(void*)  BG_PALETTE,256*2);
+  decompress(splashTiles,  bgGetGfxPtr(bg0), LZ77Vram);
+  decompress(splashMap,  (void*) bgGetMapPtr(bg0), LZ77Vram);
+  dmaCopy((void*) splashPal,(void*)  BG_PALETTE,256*2);
   unsigned  short dmaVal =*(bgGetMapPtr(bg0)+51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1),32*24*2);
 
@@ -1407,10 +1407,10 @@ void InitBottomScreen(void)
     swiWaitForVBlank();
     if (myConfig.overlay == 0)
     {
-        decompress(alphaTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
-        decompress(alphaMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+        decompress(ds99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+        decompress(ds99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
         dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
-        dmaCopy((void*) alphaPal,(void*) BG_PALETTE_SUB,256*2);
+        dmaCopy((void*) ds99kbdPal,(void*) BG_PALETTE_SUB,256*2);
 
         unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
         dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);

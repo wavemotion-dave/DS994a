@@ -16,7 +16,7 @@
 #include "DS99_utils.h"
 
 #include "soundbank.h"
-#include "ecranHaut.h"
+#include "splash.h"
 #include "pdev_bg0.h"
 
 extern unsigned int vusCptVBL;
@@ -50,9 +50,9 @@ void intro_logo(void) {
   mmEffect(SFX_MUS_INTRO);
 
   // Show splash screen
-  decompress(ecranHautTiles, bgGetGfxPtr(bg1), LZ77Vram);
-  decompress(ecranHautMap, (void*) bgGetMapPtr(bg1), LZ77Vram);
-  dmaCopy((void *) ecranHautPal,(u16*) BG_PALETTE,256*2);
+  decompress(splashTiles, bgGetGfxPtr(bg1), LZ77Vram);
+  decompress(splashMap, (void*) bgGetMapPtr(bg1), LZ77Vram);
+  dmaCopy((void *) splashPal,(u16*) BG_PALETTE,256*2);
 
   decompress(pdev_bg0Tiles, bgGetGfxPtr(bg1s), LZ77Vram);
   decompress(pdev_bg0Map, (void*) bgGetMapPtr(bg1s), LZ77Vram);
