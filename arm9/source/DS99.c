@@ -372,19 +372,19 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
         if (Disk[drive].driveWriteCounter)
         {
             Disk[drive].driveWriteCounter--;
-            if (Disk[drive].driveWriteCounter) DS_Print(12,0,6, "DISK WRITE");
+            if (Disk[drive].driveWriteCounter) DS_Print(11,0,6, "DISK WRITE");
             else
             {
                 // Persist the disk - write it back to the SD card
                 disk_write_to_sd(drive);
-                DS_Print(12,0,6, "          ");
+                DS_Print(11,0,6, "          ");
             }
         }
         else if (Disk[drive].driveReadCounter)
         {
             Disk[drive].driveReadCounter--;
-            if (Disk[drive].driveReadCounter) DS_Print(12,0,6, "DISK READ ");
-            else DS_Print(12,0,6, "          ");
+            if (Disk[drive].driveReadCounter) DS_Print(11,0,6, "DISK READ ");
+            else DS_Print(11,0,6, "          ");
         }
     }
 
