@@ -180,8 +180,8 @@ from the Pacman repositories (devkitpro-pacman version 6.0.1-2).  I'm told it sh
 Windows but I've never done it and don't know how.
 
 If you've got the nds libraries above setup correctly it should be a matter of typing:
-* MAKE CLEAN
-* MAKE
+* _make clean_
+* _make_
 To build the emulator. The output of this is DS994a.nds with a version as set in the MAKEFILE.
 
 
