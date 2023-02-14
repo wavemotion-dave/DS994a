@@ -196,6 +196,7 @@ V1.1: 14-Feb-2023 by wavemotion-dave
 * New compile with GCC 9.7.0 and latest libnds
 * Improved DSK writes for greater consistency and safety
 * Reverted to -O2 compilation optmizations for greater stability
+* Improved TI keyboard graphic - more legible and cleaner look
 * Minor cleanups as time permitted.
 
 V1.0: 11-Feb-2023 by wavemotion-dave
