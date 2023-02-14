@@ -195,7 +195,7 @@ Versions :
 V1.1: 14-Feb-2023 by wavemotion-dave
 * New compile with GCC 9.4.0 and latest DEVKITPRO and libnds 1.8.0
 * Improved DSK writes for greater consistency and safety
-* Reverted to -O2 compilation optmizations for greater stability
+* Reverted to -O2 compilation optimizations for greater stability
 * Improved TI keyboard graphic - more legible and cleaner look
 * Minor cleanups as time permitted.
 
