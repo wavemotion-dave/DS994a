@@ -193,7 +193,7 @@ I use the following standard environment variables that are SET on Ubuntu:
 Versions :
 -----------------------
 V1.1: 14-Feb-2023 by wavemotion-dave
-* New compile with GCC 9.7.0 and latest libnds
+* New compile with GCC 9.4.0 and latest DEVKITPRO and libnds 1.8.0
 * Improved DSK writes for greater consistency and safety
 * Reverted to -O2 compilation optmizations for greater stability
 * Improved TI keyboard graphic - more legible and cleaner look
