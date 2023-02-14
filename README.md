@@ -99,7 +99,7 @@ Be sure to use the START button to save out your configuration options so they p
 
 Emulated Disk Drives :
 -----------------------
-DS994a will support 3 Disk Drives as DSK1, DSK2 and DSK3. I'm using the TI99 standard Disk Controller but with a hack to allow up to 360KB drives to be supported. Any writees to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the Nintendo DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
+DS994a will support 3 Disk Drives as DSK1, DSK2 and DSK3. I'm using the TI99 standard Disk Controller but with a hack to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the Nintendo DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
 
 Keyboards and Menus :
 -----------------------
@@ -192,6 +192,12 @@ I use the following standard environment variables that are SET on Ubuntu:
 
 Versions :
 -----------------------
+V1.1: 14-Feb-2023 by wavemotion-dave
+* New compile with GCC 9.7.0 and latest libnds
+* Improved DSK writes for greater consistency and safety
+* Reverted to -O2 compilation optmizations for greater stability
+* Minor cleanups as time permitted.
+
 V1.0: 11-Feb-2023 by wavemotion-dave
 * Improved TI99 keyboard which is the new default.
 * Improved DSK saves for more robust writes.
