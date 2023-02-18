@@ -1,5 +1,6 @@
 // Borrowed from Godemode9i from Rocket Robz
 
+#include "printf.h"
 #include "screenshot.h"
 
 #include <nds.h>
@@ -93,7 +94,7 @@ bool screenshot(void)
     time_t unixTime = time(NULL);    
     struct tm* timeStruct = gmtime((const time_t *)&unixTime);
 
-    siprintf(snapPath, "SNAP-%02d-%02d-%04d-%02d-%02d-%02d.bmp", timeStruct->tm_mday, timeStruct->tm_mon+1, timeStruct->tm_year+1900, timeStruct->tm_hour, timeStruct->tm_min, timeStruct->tm_sec);
+    sprintf(snapPath, "SNAP-%02d-%02d-%04d-%02d-%02d-%02d.bmp", timeStruct->tm_mday, timeStruct->tm_mon+1, timeStruct->tm_year+1900, timeStruct->tm_hour, timeStruct->tm_min, timeStruct->tm_sec);
     
     // Take top screenshot
     if(!screenshotbmp(snapPath))

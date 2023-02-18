@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <fat.h>
 
+#include "printf.h"
 #include "DS99.h"
 #include "CRC32.h"
 #include "cpu/tms9900/tms9901.h"

@@ -18,6 +18,7 @@
 #include <fat.h>
 #include <dirent.h>
 
+#include "printf.h"
 #include "DS99.h"
 #include "CRC32.h"
 #include "cpu/tms9900/tms9901.h"
@@ -47,7 +48,7 @@ void TI99SaveState()
   DIR* dir = opendir("sav");
   if (dir) closedir(dir);  // Directory exists... close it out and move on.
   else mkdir("sav", 0777);   // Otherwise create the directory...
-  siprintf(szFile,"sav/%s", gpFic[ucGameAct].szName);
+  sprintf(szFile,"sav/%s", gpFic[ucGameAct].szName);
 
   int len = strlen(szFile);
   if (szFile[len-3] == '.') // In case of .sg or .sc
@@ -193,7 +194,7 @@ void TI99LoadState()
     chdir(currentDirROMs);
     
     // Init filename = romname and .SAV in place of ROM
-    siprintf(szFile,"sav/%s", gpFic[ucGameAct].szName);
+    sprintf(szFile,"sav/%s", gpFic[ucGameAct].szName);
     int len = strlen(szFile);
     if (szFile[len-3] == '.') // In case of .sg or .sc
     {

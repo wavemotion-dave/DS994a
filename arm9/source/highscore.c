@@ -14,6 +14,7 @@
 #include <fat.h>
 #include <dirent.h>
 #include <unistd.h>
+#include "printf.h"
 #include "DS99.h"
 #include "DS99_utils.h"
 
@@ -251,14 +252,14 @@ void show_scores(short foundIdx, bool bShowLegend)
     {
         if ((highscores.highscore_table[foundIdx].options & HS_OPT_SORTMASK) == HS_OPT_SORTTIME)
         {
-            siprintf(hs_line, "%04d-%02d-%02d   %-3s   %c%c:%c%c.%c%c", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
+            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %c%c:%c%c.%c%c", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
                                                              highscores.highscore_table[foundIdx].scores[i].initials, highscores.highscore_table[foundIdx].scores[i].score[0], highscores.highscore_table[foundIdx].scores[i].score[1],
                                                              highscores.highscore_table[foundIdx].scores[i].score[2], highscores.highscore_table[foundIdx].scores[i].score[3], highscores.highscore_table[foundIdx].scores[i].score[4],
                                                              highscores.highscore_table[foundIdx].scores[i].score[5]);
         }
         else
         {
-            siprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s  ", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
+            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s  ", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
                                                                highscores.highscore_table[foundIdx].scores[i].initials, highscores.highscore_table[foundIdx].scores[i].score);
         }
         DS_Print(3,6+i, 0, hs_line);
@@ -465,7 +466,7 @@ void highscore_entry(short foundIdx, u32 crc)
             dampen--;
         }
 
-        siprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s", score_entry.year, score_entry.month, score_entry.day, score_entry.initials, score_entry.score);
+        sprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s", score_entry.year, score_entry.month, score_entry.day, score_entry.initials, score_entry.score);
         if ((++blink % 60) > 30)
         {
             if (entry_idx < 3)
@@ -606,7 +607,7 @@ void highscore_options(short foundIdx, u32 crc)
             dampen--;
         }
 
-        siprintf(hs_line, "%-20s", notes);
+        sprintf(hs_line, "%-20s", notes);
         if ((++blink % 60) > 30)
         {
             hs_line[entry_idx] = '_';

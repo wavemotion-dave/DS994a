@@ -86,6 +86,10 @@ enum
     KBD_FNCT,
     KBD_CTRL,
     KBD_SHIFT,
+    KBD_FNCT_E,
+    KBD_FNCT_S,
+    KBD_FNCT_D,
+    KBD_FNCT_X,
     MAX_KEY_OPTIONS
 };
 
@@ -129,5 +133,6 @@ extern void DisplayStatusLine(bool bForce);
 extern void ResetTI(void);
 extern void DiskSave(char *filename);
 extern void DrawCleanBackground(void);
+extern void CheckSpeech(u8 data);
 
 #endif

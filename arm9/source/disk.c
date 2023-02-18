@@ -51,6 +51,7 @@
 #include <ctype.h>
 #include <fat.h>
 #include <dirent.h>
+#include "printf.h"
 #include "DS99.h"
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
@@ -283,7 +284,7 @@ void disk_mount(u8 drive, char *path, char *filename)
     Disk[drive].isDirty = 0;
     strcpy(Disk[drive].path, path);
     strcpy(Disk[drive].filename, filename);
-    siprintf(backup_filename, "%s.bak", Disk[drive].filename);
+    sprintf(backup_filename, "%s.bak", Disk[drive].filename);
     
     // ---------------------------------------------------------
     // Check if a backup file exists... if one exists and
@@ -336,7 +337,7 @@ void disk_write_to_sd(u8 drive)
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
-    siprintf(backup_filename, "%s.bak", Disk[drive].filename);
+    sprintf(backup_filename, "%s.bak", Disk[drive].filename);
     remove(backup_filename);    
     rename(Disk[drive].filename, backup_filename);
     FILE *outfile = fopen(Disk[drive].filename, "wb");
@@ -359,7 +360,7 @@ void disk_backup_to_sd(u8 drive)
     DIR* dir = opendir("bak");
     if (dir) closedir(dir);  // Directory exists... close it out and move on.
     else mkdir("bak", 0777);   // Otherwise create the directory...
-    siprintf(backup_filename, "bak/%s", Disk[drive].filename);
+    sprintf(backup_filename, "bak/%s", Disk[drive].filename);
     remove(backup_filename);
     FILE *outfile = fopen(backup_filename, "wb");
     if (outfile)

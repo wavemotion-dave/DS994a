@@ -1114,7 +1114,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 WriteBank(address);
                 break;
             case MF_SPEECH:
-                // Not yet
+                CheckSpeech(data);
                 break;
             case MF_SAMS:
                 SAMS_WriteBank(address, data);

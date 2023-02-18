@@ -20,6 +20,7 @@
 #include <fat.h>
 #include <maxmod9.h>
 
+#include "printf.h"
 #include "DS99.h"
 #include "highscore.h"
 #include "DS99_utils.h"
@@ -133,6 +134,10 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_FNCT,
     KBD_CTRL,
     KBD_SHIFT,
+    KBD_FNCT_E,
+    KBD_FNCT_S,
+    KBD_FNCT_D,
+    KBD_FNCT_X,
 };
 
 
@@ -212,6 +217,20 @@ void setupStream(void)
   mmLoadEffect(SFX_CLICKNOQUIT);
   mmLoadEffect(SFX_KEYCLICK);
   mmLoadEffect(SFX_MUS_INTRO);
+  mmLoadEffect(SFX_PRESS_FIRE);
+  mmLoadEffect(SFX_ADVANCING);
+  mmLoadEffect(SFX_GOODSHOT);
+  mmLoadEffect(SFX_ATTACKING);
+  mmLoadEffect(SFX_ASTEROID);
+  mmLoadEffect(SFX_DESTROYED);
+  mmLoadEffect(SFX_BEWARE);
+  mmLoadEffect(SFX_LOOKOUT);
+  mmLoadEffect(SFX_WATCHOUT);
+  mmLoadEffect(SFX_UH);
+  mmLoadEffect(SFX_OOOOH);
+  mmLoadEffect(SFX_YIKES);
+  mmLoadEffect(SFX_OUCH);
+  mmLoadEffect(SFX_OOPS);
 
   //----------------------------------------------------------------
   //  open stream
@@ -511,7 +530,7 @@ void ShowDiskListing(void)
                 // ----------------------------------------------------
                 for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
                 {
-                    siprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
+                    sprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
                     if (i < (MAX_FILES_PER_DSK/2)) DS_Print(5, 7+i, (i==sel)?2:0, tmpBuf);
                     else DS_Print(18, 7+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
                 }
@@ -543,18 +562,18 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     }
     
     DS_Print(8,6,6,                                                 " TI DISK MENU ");
-    siprintf(tmpBuf, " MOUNT   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
-    siprintf(tmpBuf, " UNMOUNT DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
-    siprintf(tmpBuf, " LIST    DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
-    siprintf(tmpBuf, " PASTE   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
-    siprintf(tmpBuf, " PASTE   FILE%d", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
-    siprintf(tmpBuf, " BACKUP  DSK%d",  disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " MOUNT   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " UNMOUNT DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " LIST    DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " PASTE   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " PASTE   FILE%d", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " BACKUP  DSK%d",  disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
     DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  " EXIT    MENU ");  disk_menu_items++;
 
     if (Disk[disk_drive_select].isMounted)
     {
         u16 numSectors = (Disk[disk_drive_select].image[0x0A] << 8) | Disk[disk_drive_select].image[0x0B];
-        siprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", disk_drive_select+1, (Disk[disk_drive_select].image[0x12] == 2 ? "DS":"SS"), (Disk[disk_drive_select].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
+        sprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", disk_drive_select+1, (Disk[disk_drive_select].image[0x12] == 2 ? "DS":"SS"), (Disk[disk_drive_select].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
         DS_Print(4,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
         
         u8 col=0;
@@ -1035,7 +1054,7 @@ ITCM_CODE void ds99_main(void)
 
                 if (bShowDebug)
                 {
-                    siprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
+                    sprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
                     DS_Print(5,0,6,tmpBuf);
                 }
             }
@@ -1262,6 +1281,7 @@ ITCM_CODE void ds99_main(void)
       {
             DS_Print(10,0,0,"SNAPSHOT");
             screenshot();
+            //WriteSpeechData();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
             DS_Print(10,0,0,"        ");
       }
@@ -1344,6 +1364,10 @@ ITCM_CODE void ds99_main(void)
                       case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                       case KBD_REDO:        tms9901.Keyboard[TMS_KEY_8]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                       case KBD_BACK:        tms9901.Keyboard[TMS_KEY_9]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_FNCT_E:      tms9901.Keyboard[TMS_KEY_E]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_FNCT_S:      tms9901.Keyboard[TMS_KEY_S]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_FNCT_D:      tms9901.Keyboard[TMS_KEY_D]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      case KBD_FNCT_X:      tms9901.Keyboard[TMS_KEY_X]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
                   }
               }
           }
@@ -1626,5 +1650,65 @@ int main(int argc, char **argv)
 }
 
 
+void _putchar(char character) {};   // Not used but needed to link printf()
+
+#if 0
+u8 zzz[50000];
+
+void WriteSpeechData()
+{
+    FILE *fp=fopen("speech8.txt", "a+");
+    if (fp)
+    {
+        for (int i=0; i<debug[0]; i++)
+        {
+            sprintf(tmpBuf, "%4d: %02X\n", i, zzz[i]);
+            fwrite(tmpBuf, strlen(tmpBuf), 1, fp);
+        }
+        fclose(fp);
+    }
+}
+#endif
+
+u32 speechData32 __attribute__((section(".dtcm"))) = 0;
+
+void CheckSpeech(u8 data)
+{
+    speechData32 = (speechData32 << 8) | data;
+ 
+    if ((speechData32 & 0xFF000000) == 0x60000000)
+    {
+        // Parsec
+        if (speechData32 == 0x60108058) mmEffect(SFX_PRESS_FIRE);
+        if (speechData32 == 0x600E0821) mmEffect(SFX_ASTEROID);
+        if (speechData32 == 0x604D7399) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
+        if (speechData32 == 0x604BCBD6) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
+        if (speechData32 == 0x60C6703A) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
+        if (speechData32 == 0x6046E3B2) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
+
+        // Alpiner
+        if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
+        if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
+        if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
+
+        if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
+        if (speechData32 == 0x60293565) mmEffect(SFX_UH);   
+        if (speechData32 == 0x600828D2) mmEffect(SFX_OOOOH);
+        if (speechData32 == 0x60A26A54) mmEffect(SFX_OUCH); 
+        if (speechData32 == 0x602BCE6E) mmEffect(SFX_OOPS); 
+        if (speechData32 == 0x60A574FE) mmEffect(SFX_UH);   
+        if (speechData32 == 0x602530B1) mmEffect(SFX_OOPS); 
+    }
+    else
+    {
+        // Parsec
+        if (speechData32 == 0x1A31AF92) mmEffect(SFX_ADVANCING);
+        if (speechData32 == 0x1E6575C0) mmEffect(SFX_ATTACKING);
+        // Alpiner
+        if (speechData32 == 0xB7825589) mmEffect(SFX_LOOKOUT);
+    }
+    
+    //zzz[debug[0]++] = data;
+}
 // End of file
 

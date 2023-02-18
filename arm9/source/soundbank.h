@@ -1,17 +1,20 @@
-// =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
-//
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
-// royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
-//
-// The DS994a emulator is offered as-is, without any warranty.
-//
-// Please see the README.md file as it contains much useful info.
-// =====================================================================================
 #define SFX_CLICKNOQUIT	0
 #define SFX_KEYCLICK	1
 #define SFX_MUS_INTRO	2
-#define MSL_NSONGS	    0
-#define MSL_NSAMPS	    3
-#define MSL_BANKSIZE	3
+#define SFX_PRESS_FIRE	3
+#define SFX_ADVANCING	4
+#define SFX_GOODSHOT	5
+#define SFX_ATTACKING	6
+#define SFX_DESTROYED	7
+#define SFX_BEWARE	8
+#define SFX_LOOKOUT	9
+#define SFX_WATCHOUT	10
+#define SFX_UH	11
+#define SFX_OOOOH	12
+#define SFX_YIKES	13
+#define SFX_OUCH	14
+#define SFX_ASTEROID	15
+#define SFX_OOPS	16
+#define MSL_NSONGS	0
+#define MSL_NSAMPS	17
+#define MSL_BANKSIZE	17
