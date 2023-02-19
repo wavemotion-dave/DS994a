@@ -19,7 +19,6 @@ SOURCES		:=  source/cpu/tms9918a source/cpu/sn76496 source/cpu/m6502 source/cpu/
 INCLUDES	:=	include 
 DATA		:=	data
 GRAPHICS	:=	gfx
-SPRITES		:=  spr_data
 BACKGRD		:=  gfx_data
 
 #---------------------------------------------------------------------------------
@@ -63,13 +62,12 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
- 					$(foreach dir,$(SPRITES),$(CURDIR)/$(dir)) \
           $(foreach dir,$(BACKGRD),$(CURDIR)/$(dir))
  
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.bin)))
 PNGFILES	:=	$(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.png)))
 
 OSPECIALS :=  splash.o options.o ti99kbd.o ds99kbd.o pdev_bg0.o
