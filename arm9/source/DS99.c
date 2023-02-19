@@ -1300,13 +1300,10 @@ ITCM_CODE void ds99_main(void)
       else        
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y)) 
       {
-            if (isDSiMode())
-            {
-                DS_Print(10,0,0,"SNAPSHOT");
-                screenshot();
-                WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-                DS_Print(10,0,0,"        ");
-            }
+            DS_Print(10,0,0,"SNAPSHOT");
+            screenshot();
+            WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+            DS_Print(10,0,0,"        ");
       }
       else        
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y)) 

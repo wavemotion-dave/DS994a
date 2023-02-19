@@ -40,7 +40,7 @@ u8           MemGROM[0x10000];           // 64K of GROM MemCPU Space
 u8           MemCART[MAX_CART_SIZE];     // Cart C/D/8 memory up to 512K banked at >6000
 u8           MemType[0x10000];           // Memory type for each address
 u8           DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
-
+u16          numCartBanks = 1;           // Number of CART banks (8K each)
 u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
 
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
@@ -568,8 +568,8 @@ void TMS9900_Reset(char *szGame)
             }
             else // More than 8K needs banking support
             {
-                u16 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
-                tms9900.bankMask = BankMasks[numBanks-1];
+                u16 numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
+                tms9900.bankMask = BankMasks[numCartBanks-1];
             }
         }
 
@@ -597,20 +597,20 @@ void TMS9900_Reset(char *szGame)
         infile = fopen(tmpFilename, "rb");
         int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);
-        u16 numBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
-        tms9900.bankMask = BankMasks[numBanks-1];
+        numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
+        tms9900.bankMask = BankMasks[numCartBanks-1];
         
-        if (numBanks > 1)
+        if (numCartBanks > 1)
         {
             // If the image is inverted we need to swap 8K banks
             if ((fileType == '3') || (fileType == '9'))
             {
-                for (u16 i=0; i<numBanks/2; i++)
+                for (u16 i=0; i<numCartBanks/2; i++)
                 {
                     // Swap 8k bank...
                     memcpy(FastCartBuffer, MemCART + (i*0x2000), 0x2000);  
-                    memcpy(MemCART+(i*0x2000), MemCART + ((numBanks-i-1)*0x2000), 0x2000);
-                    memcpy(MemCART + ((numBanks-i-1)*0x2000), FastCartBuffer, 0x2000);
+                    memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
+                    memcpy(MemCART + ((numCartBanks-i-1)*0x2000), FastCartBuffer, 0x2000);
                 }
             }
         }

@@ -40,7 +40,17 @@ bool screenshotbmp(const char* filename) {
     REG_DISPCAPCNT = DCAP_BANK(DCAP_BANK_VRAM_B) | DCAP_SIZE(DCAP_SIZE_256x192) | DCAP_ENABLE;
     while(REG_DISPCAPCNT & DCAP_ENABLE);
 
-    u8* temp = malloc(256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER));
+    u8 *temp;
+    if (isDSiMode())
+    {
+        // On the DSi there is ample memory to just allocate the buffer and free it below...
+        temp = malloc(256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER));
+    }
+    else
+    {
+        extern u8 *MemSAMS;
+        temp = MemSAMS + (400 * 1024);  // Take our chances here... if we're on the DSi and we've got more than 400K of SAMS usage this will not end well
+    }
 
     if(!temp) {
         fclose(file);
@@ -83,7 +93,7 @@ bool screenshotbmp(const char* filename) {
     DC_FlushAll();
     fwrite(temp, 1, 256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER), file);
     fclose(file);
-    free(temp);
+    if (isDSiMode()) free(temp);
     return true;
 }
 
