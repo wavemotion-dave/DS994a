@@ -228,9 +228,13 @@ void setupStream(void)
   mmLoadEffect(SFX_WATCHOUT);
   mmLoadEffect(SFX_UH);
   mmLoadEffect(SFX_OOOOH);
+  mmLoadEffect(SFX_OHNO);
   mmLoadEffect(SFX_YIKES);
   mmLoadEffect(SFX_OUCH);
   mmLoadEffect(SFX_OOPS);
+  mmLoadEffect(SFX_ONWARD);
+  mmLoadEffect(SFX_GOAGAIN);
+  mmLoadEffect(SFX_YUCK);
   mmLoadEffect(SFX_MONSTERDAMAGEDSHIP);
   mmLoadEffect(SFX_LASEROVERHEAT);
   mmLoadEffect(SFX_UNKNOWNOBJECT);
@@ -243,6 +247,11 @@ void setupStream(void)
   mmLoadEffect(SFX_MONSTERDESTROYED);
   mmLoadEffect(SFX_GOODSHOTCAPTAIN);
   mmLoadEffect(SFX_WAYTOGOCAP);
+  mmLoadEffect(SFX_DUCK);
+  mmLoadEffect(SFX_MEANTO);
+  mmLoadEffect(SFX_SPORT);
+  mmLoadEffect(SFX_THANITLOOKS);
+  mmLoadEffect(SFX_WALKEDINTO);
 
   //----------------------------------------------------------------
   //  open stream
@@ -1291,10 +1300,13 @@ ITCM_CODE void ds99_main(void)
       else        
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y)) 
       {
-            DS_Print(10,0,0,"SNAPSHOT");
-            screenshot();
-            WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-            DS_Print(10,0,0,"        ");
+            if (isDSiMode())
+            {
+                DS_Print(10,0,0,"SNAPSHOT");
+                screenshot();
+                WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+                DS_Print(10,0,0,"        ");
+            }
       }
       else        
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y)) 
@@ -1683,14 +1695,20 @@ void CheckSpeech(u8 data)
         if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
         if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
         if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
-
+        if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK); 
         if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
-        if (speechData32 == 0x60293565) mmEffect(SFX_UH);   
-        if (speechData32 == 0x600828D2) mmEffect(SFX_OOOOH);
-        if (speechData32 == 0x60A26A54) mmEffect(SFX_OUCH); 
-        if (speechData32 == 0x602BCE6E) mmEffect(SFX_OOPS); 
-        if (speechData32 == 0x60A574FE) mmEffect(SFX_UH);   
-        if (speechData32 == 0x602530B1) mmEffect(SFX_OOPS); 
+        if (speechData32 == 0x602530B1) mmEffect(SFX_UH); 
+        if (speechData32 == 0x60A5F222) mmEffect(SFX_OOPS);
+        if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH); 
+        if (speechData32 == 0x60293565) mmEffect(SFX_OOOOH);
+        if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);        
+        if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD); 
+        if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN); 
+        if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO); 
+        if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT); 
+        if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS); 
+        if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK); 
+        if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO); 
 
         // Moonmine
         if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 

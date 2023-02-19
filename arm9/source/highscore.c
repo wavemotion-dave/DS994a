@@ -120,15 +120,6 @@ void highscore_init(void)
         fread(&highscores, sizeof(highscores), 1, fp);
         fclose(fp);
         
-        // --------------------------------------------
-        // If the high score version is wrong or if 
-        // the checksum is wrong, reset to defaults
-        // --------------------------------------------
-        if (highscores.version != HS_VERSION) 
-        {
-            if (highscores.version == 0x0005)  upgrade_database = 1;    // Special to update 400 entry database to 560
-            create_defaults = 1;
-        }
         if (highscore_checksum() != highscores.checksum) create_defaults = 1;
     }
     else
@@ -136,26 +127,7 @@ void highscore_init(void)
         create_defaults = 1;
     }
     
-    if (upgrade_database)
-    {
-        for (int i=400; i<MAX_HS_GAMES; i++)
-        {
-            highscores.highscore_table[i].crc = 0x00000000;
-            strcpy(highscores.highscore_table[i].notes, "                    ");
-            highscores.highscore_table[i].options = 0x0000;
-            for (int j=0; j<10; j++)
-            {
-                strcpy(highscores.highscore_table[i].scores[j].score, "000000");
-                strcpy(highscores.highscore_table[i].scores[j].initials, "   ");
-                strcpy(highscores.highscore_table[i].scores[j].reserved, "     ");                
-                highscores.highscore_table[i].scores[j].year = 0;
-                highscores.highscore_table[i].scores[j].month = 0;
-                highscores.highscore_table[i].scores[j].day = 0;
-            }
-        }
-        highscore_save();
-    }
-    else if (create_defaults)  // Doesn't exist yet or is invalid... create defaults and save it...
+    if (create_defaults)  // Doesn't exist yet or is invalid... create defaults and save it...
     {
         strcpy(highscores.last_initials, "   ");
         
