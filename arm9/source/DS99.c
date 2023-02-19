@@ -231,6 +231,18 @@ void setupStream(void)
   mmLoadEffect(SFX_YIKES);
   mmLoadEffect(SFX_OUCH);
   mmLoadEffect(SFX_OOPS);
+  mmLoadEffect(SFX_MONSTERDAMAGEDSHIP);
+  mmLoadEffect(SFX_LASEROVERHEAT);
+  mmLoadEffect(SFX_UNKNOWNOBJECT);
+  mmLoadEffect(SFX_ZYGAPPROACH);
+  mmLoadEffect(SFX_CREWLOST);
+  mmLoadEffect(SFX_ZYGNEVERGET);
+  mmLoadEffect(SFX_ZYGHAHA);
+  mmLoadEffect(SFX_WATERAHEAD);
+  mmLoadEffect(SFX_MONSTERATTACKEDCREW);
+  mmLoadEffect(SFX_MONSTERDESTROYED);
+  mmLoadEffect(SFX_GOODSHOTCAPTAIN);
+  mmLoadEffect(SFX_WAYTOGOCAP);
 
   //----------------------------------------------------------------
   //  open stream
@@ -1281,7 +1293,6 @@ ITCM_CODE void ds99_main(void)
       {
             DS_Print(10,0,0,"SNAPSHOT");
             screenshot();
-            //WriteSpeechData();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
             DS_Print(10,0,0,"        ");
       }
@@ -1652,24 +1663,6 @@ int main(int argc, char **argv)
 
 void _putchar(char character) {};   // Not used but needed to link printf()
 
-#if 0
-u8 zzz[50000];
-
-void WriteSpeechData()
-{
-    FILE *fp=fopen("speech8.txt", "a+");
-    if (fp)
-    {
-        for (int i=0; i<debug[0]; i++)
-        {
-            sprintf(tmpBuf, "%4d: %02X\n", i, zzz[i]);
-            fwrite(tmpBuf, strlen(tmpBuf), 1, fp);
-        }
-        fclose(fp);
-    }
-}
-#endif
-
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 
 void CheckSpeech(u8 data)
@@ -1698,17 +1691,27 @@ void CheckSpeech(u8 data)
         if (speechData32 == 0x602BCE6E) mmEffect(SFX_OOPS); 
         if (speechData32 == 0x60A574FE) mmEffect(SFX_UH);   
         if (speechData32 == 0x602530B1) mmEffect(SFX_OOPS); 
+
+        // Moonmine
+        if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 
+        if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP); 
+        if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT); 
+        if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH); 
+        if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST); 
+        if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED); 
+        if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN); 
+        if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET); 
+        if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);         
+        if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD); 
+        if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW); 
+        if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);        
     }
     else
     {
         // Parsec
         if (speechData32 == 0x1A31AF92) mmEffect(SFX_ADVANCING);
         if (speechData32 == 0x1E6575C0) mmEffect(SFX_ATTACKING);
-        // Alpiner
-        if (speechData32 == 0xB7825589) mmEffect(SFX_LOOKOUT);
     }
-    
-    //zzz[debug[0]++] = data;
 }
 // End of file
 
