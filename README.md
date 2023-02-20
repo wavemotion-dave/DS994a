@@ -17,7 +17,7 @@ Features :
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI99 keyboard - both new and classic so it can look just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a hack for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
-* No Speech Synth yet (but games requiring the Speech Synth will run/play - just no voice)
+* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice).  A few games have speech samples built-in (Parsec, Alpiner and Moonmine).
 
 Copyright :
 -----------------------
@@ -80,7 +80,7 @@ Known Issues :
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay. Cause unknown.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
-* TI Speech Module is not supported yet. Games that rely on the module will still play - just no voice.
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner and Moonmine.
 
 File Types Supported :
 -----------------------
@@ -190,8 +190,20 @@ I use the following standard environment variables that are SET on Ubuntu:
 * DEVKITPPC=/opt/devkitpro/devkitPPC
 * DEVKITPRO=/opt/devkitpro
 
+To create the soundbank.bin and soundbank.h file in the data directory:
+
+mmutil -osoundbank.bin -hsoundbank.h -d *.wav
+
+And then move the soundbank.h file to the arm9/sources directory
+
+
 Versions :
 -----------------------
+V1.2: 20-Feb-2023 by wavemotion-dave
+* Speech samples added for Parsec, Alpiner and Moonmine. It's not perfect but does bring back the feels of those games with speech!
+* Added additional TI keys that can be mapped to the DS.
+* Minor cleanups as time permitted.
+
 V1.1: 14-Feb-2023 by wavemotion-dave
 * New compile with GCC 9.4.0 and latest DEVKITPRO and libnds 1.8.0
 * Improved DSK writes for greater consistency and safety

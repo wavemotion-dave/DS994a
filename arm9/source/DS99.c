@@ -223,6 +223,13 @@ void setupStream(void)
   mmLoadEffect(SFX_ATTACKING);
   mmLoadEffect(SFX_ASTEROID);
   mmLoadEffect(SFX_DESTROYED);
+  mmLoadEffect(SFX_COUNTDOWN);
+  mmLoadEffect(SFX_5);
+  mmLoadEffect(SFX_4);
+  mmLoadEffect(SFX_3);
+  mmLoadEffect(SFX_2);
+  mmLoadEffect(SFX_1);
+  mmLoadEffect(SFX_NEXTLEVEL);
   mmLoadEffect(SFX_BEWARE);
   mmLoadEffect(SFX_LOOKOUT);
   mmLoadEffect(SFX_WATCHOUT);
@@ -252,6 +259,7 @@ void setupStream(void)
   mmLoadEffect(SFX_SPORT);
   mmLoadEffect(SFX_THANITLOOKS);
   mmLoadEffect(SFX_WALKEDINTO);
+  mmLoadEffect(SFX_HELP);
 
   //----------------------------------------------------------------
   //  open stream
@@ -1674,7 +1682,7 @@ void _putchar(char character) {};   // Not used but needed to link printf()
 
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 
-void CheckSpeech(u8 data)
+ITCM_CODE void CheckSpeech(u8 data)
 {
     speechData32 = (speechData32 << 8) | data;
  
@@ -1682,50 +1690,63 @@ void CheckSpeech(u8 data)
     {
         // Parsec
         if (speechData32 == 0x60108058) mmEffect(SFX_PRESS_FIRE);
-        if (speechData32 == 0x600E0821) mmEffect(SFX_ASTEROID);
-        if (speechData32 == 0x604D7399) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
-        if (speechData32 == 0x604BCBD6) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
-        if (speechData32 == 0x60C6703A) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
-        if (speechData32 == 0x6046E3B2) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
-
+        else if (speechData32 == 0x604D7399) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
+        else if (speechData32 == 0x604BCBD6) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
+        else if (speechData32 == 0x60C6703A) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
+        else if (speechData32 == 0x6046E3B2) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
+        else if (speechData32 == 0x6040066E) mmEffect(SFX_ATTACKING);
+        else if (speechData32 == 0x6043F77E) mmEffect(SFX_ADVANCING);
+        else if (speechData32 == 0x600E0821) mmEffect(SFX_ASTEROID);
+        
+        else if (speechData32 == 0x60090846) mmEffect(SFX_COUNTDOWN);
+        else if (speechData32 == 0x6071A647) mmEffect(SFX_5);
+        else if (speechData32 == 0x600A48A5) mmEffect(SFX_4);
+        else if (speechData32 == 0x60080826) mmEffect(SFX_3);
+        else if (speechData32 == 0x600D586E) mmEffect(SFX_2);
+        else if (speechData32 == 0x604967BB) mmEffect(SFX_1);
+        else if (speechData32 == 0x6030B4EA) mmEffect(SFX_NEXTLEVEL);
+        
         // Alpiner
-        if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
-        if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
-        if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
-        if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK); 
-        if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
-        if (speechData32 == 0x602530B1) mmEffect(SFX_UH); 
-        if (speechData32 == 0x60A5F222) mmEffect(SFX_OOPS);
-        if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH); 
-        if (speechData32 == 0x60293565) mmEffect(SFX_OOOOH);
-        if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);        
-        if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD); 
-        if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN); 
-        if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO); 
-        if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT); 
-        if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS); 
-        if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK); 
-        if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO); 
+        else if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
+        else if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
+        else if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
+        else if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK); 
+        else if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
+        else if (speechData32 == 0x602530B1) mmEffect(SFX_UH); 
+        else if (speechData32 == 0x60A5F222) mmEffect(SFX_OOPS);
+        else if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH); 
+        else if (speechData32 == 0x60293565) mmEffect(SFX_OOOOH);
+        else if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);        
+        else if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD); 
+        else if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN); 
+        else if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO); 
+        else if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT); 
+        else if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS); 
+        else if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK); 
+        else if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO); 
+        else if (speechData32 == 0x600828D2) mmEffect(SFX_HELP); 
 
         // Moonmine
-        if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 
-        if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP); 
-        if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT); 
-        if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH); 
-        if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST); 
-        if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED); 
-        if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN); 
-        if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET); 
-        if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);         
-        if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD); 
-        if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW); 
-        if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);        
-    }
-    else
-    {
-        // Parsec
-        if (speechData32 == 0x1A31AF92) mmEffect(SFX_ADVANCING);
-        if (speechData32 == 0x1E6575C0) mmEffect(SFX_ATTACKING);
+        else if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 
+        else if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP); 
+        else if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT); 
+        else if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH); 
+        else if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST); 
+        else if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED); 
+        else if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN); 
+        else if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET); 
+        else if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);         
+        else if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD); 
+        else if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW); 
+        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);
+#if 0        
+        else
+        {
+            FILE *fp = fopen("aaa_speech.txt", "a+");
+            fprintf(fp, ": %08X\n", speechData32);
+            fclose(fp);
+        }
+#endif        
     }
 }
 // End of file
