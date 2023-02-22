@@ -277,6 +277,10 @@ void setupStream(void)
   mmLoadEffect(SFX_MOONADVANCE);
   mmLoadEffect(SFX_EXTRACREW);
   mmLoadEffect(SFX_BONUSPOINTS);
+
+  mmLoadEffect(SFX_BIG_GETYOU);
+  mmLoadEffect(SFX_BIG_FALL);
+  mmLoadEffect(SFX_BIG_ROAR);
     
   //----------------------------------------------------------------
   //  open stream
@@ -1698,10 +1702,15 @@ int main(int argc, char **argv)
 void _putchar(char character) {};   // Not used but needed to link printf()
 
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
-
+extern u16 readSpeech;
 ITCM_CODE void CheckSpeech(u8 data)
 {
     speechData32 = (speechData32 << 8) | data;
+
+    if (speechData32 == 0x40404040)
+    {
+        readSpeech = 0xAA;
+    }
     
     if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
@@ -1770,11 +1779,12 @@ ITCM_CODE void CheckSpeech(u8 data)
         else if (speechData32 == 0x6002889A) mmEffect(SFX_CONGRATSCAP);
         else if (speechData32 == 0x60492BC9) mmEffect(SFX_EXTRACREW);
         else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
-  
-// Bigfoot        
-//: 60A45A00
-//: 608021AE
-//: 60A850A5
+        
+        // Bigfoot
+        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); //I'll get you
+        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling
+        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);  // Roar
+        
 #if 0
         else
         {

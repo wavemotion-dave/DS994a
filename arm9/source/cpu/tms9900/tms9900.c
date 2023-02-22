@@ -976,7 +976,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
     return (retVal << 8) | (retVal >> 8);
 }
 
-
+u16 readSpeech = 999;
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
     u8 memType = MemType[address];
@@ -1002,7 +1002,14 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return tms9900.cartBankPtr[(address&0x1FFF)];
                 break;
             case MF_SPEECH:
-                return (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                if (readSpeech != 999)
+                {
+                    u8 data = readSpeech;
+                    readSpeech = 999;
+                    return data;
+                }
+                else
+                    return (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
                 break;
             case MF_DISK:
                 return ReadTICCRegister(address);
