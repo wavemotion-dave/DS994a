@@ -67,6 +67,9 @@ u8 diskSideSelected      = 0;  // Side 0 or Side 1
 u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 
 _Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
+u8 Disk1_ImageBuf[MAX_DSK_SIZE];
+u8 Disk2_ImageBuf[MAX_DSK_SIZE];
+u8 Disk3_ImageBuf[256];
 
 char backup_filename[MAX_PATH];
 
@@ -78,6 +81,14 @@ void disk_init(void)
     // Start with no disk mounted and all image data clear
     // ------------------------------------------------------
     memset(Disk, 0x00, sizeof(Disk));
+    
+    memset(Disk1_ImageBuf, 0x00, MAX_DSK_SIZE);
+    memset(Disk2_ImageBuf, 0x00, MAX_DSK_SIZE);
+    memset(Disk3_ImageBuf, 0x00, 256);
+    
+    Disk[DSK1].image = Disk1_ImageBuf;  // Buffered
+    Disk[DSK2].image = Disk2_ImageBuf;  // Buffered
+    Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first sector only.
 }
 
 
@@ -251,18 +262,38 @@ void HandleTICCSector(void)
             // -----------------------------------------------------------------
             // Move the 256 byte sector from the .DSK image to the VDP memory
             // -----------------------------------------------------------------
-            memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
+            if (drive == DSK3)
+            {
+                // Change into the last known DSKs directory for this file
+                chdir(Disk[drive].path);
+
+                // Seek to the right sector and read in 256 bytes...
+                FILE *infile = fopen(Disk[drive].filename, "rb");
+                if (infile)
+                {
+                    fseek(infile, index, SEEK_SET);
+                    fread(&pVDPVidMem[destVDP], 1, 256, infile);
+                    fclose(infile);
+                }
+            }
+            else
+            {
+                memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
+            }
             *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
-            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
             Disk[drive].driveReadCounter = 2;            // briefly show that we are reading from the disk
+            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
         } 
         else  // Must be write
         {
-            memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
-            *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
+            if (drive != DSK3)
+            {
+                memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
+                *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
+                Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
+                Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
+            }
             MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
-            Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
-            Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
         } 
     } else success = false;
 
@@ -316,7 +347,14 @@ void disk_unmount(u8 drive)
 {
     if (Disk[drive].isDirty) disk_write_to_sd(drive);
     Disk[drive].isMounted = false;
-    memset(Disk[drive].image, 0x00, MAX_DSK_SIZE);
+    if (drive != DSK3)
+    {
+        memset(Disk[drive].image, 0x00, MAX_DSK_SIZE);
+    }
+    else
+    {
+        memset(Disk[drive].image, 0x00, 256);
+    }
 }
 
 void disk_read_from_sd(u8 drive)
@@ -327,50 +365,62 @@ void disk_read_from_sd(u8 drive)
     FILE *infile = fopen(Disk[drive].filename, "rb");
     if (infile)
     {
-        fread(Disk[drive].image, MAX_DSK_SIZE, 1, infile);
+        if (drive != DSK3)
+        {
+            fread(Disk[drive].image, 1, MAX_DSK_SIZE, infile);
+        }
+        else
+        {
+            fread(Disk[drive].image, 256, 1, infile);   // Just the first sector
+        }
         fclose(infile);
     }
 }
 
 void disk_write_to_sd(u8 drive)
 {
-    // Change into the last known DSKs directory for this file
-    chdir(Disk[drive].path);
-
-    sprintf(backup_filename, "%s.bak", Disk[drive].filename);
-    remove(backup_filename);    
-    rename(Disk[drive].filename, backup_filename);
-    FILE *outfile = fopen(Disk[drive].filename, "wb");
-    if (outfile)
+    if (drive != DSK3)
     {
-        u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
-        size_t diskSize = (numSectors*256);
-        fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
-        fclose(outfile);
+        // Change into the last known DSKs directory for this file
+        chdir(Disk[drive].path);
+
+        sprintf(backup_filename, "%s.bak", Disk[drive].filename);
+        remove(backup_filename);    
+        rename(Disk[drive].filename, backup_filename);
+        FILE *outfile = fopen(Disk[drive].filename, "wb");
+        if (outfile)
+        {
+            u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
+            size_t diskSize = (numSectors*256);
+            fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
+            fclose(outfile);
+        }
+        remove(backup_filename);
+        Disk[drive].isDirty = 0;
     }
-    remove(backup_filename);
-    Disk[drive].isDirty = 0;
 }
 
 void disk_backup_to_sd(u8 drive)
 {
-    // Change into the last known DSKs directory for this file
-    chdir(Disk[drive].path);
-
-    DIR* dir = opendir("bak");
-    if (dir) closedir(dir);  // Directory exists... close it out and move on.
-    else mkdir("bak", 0777);   // Otherwise create the directory...
-    sprintf(backup_filename, "bak/%s", Disk[drive].filename);
-    remove(backup_filename);
-    FILE *outfile = fopen(backup_filename, "wb");
-    if (outfile)
+    if (drive != DSK3)
     {
-        u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
-        size_t diskSize = (numSectors*256);
-        fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
-        fclose(outfile);
+        // Change into the last known DSKs directory for this file
+        chdir(Disk[drive].path);
+
+        DIR* dir = opendir("bak");
+        if (dir) closedir(dir);  // Directory exists... close it out and move on.
+        else mkdir("bak", 0777);   // Otherwise create the directory...
+        sprintf(backup_filename, "bak/%s", Disk[drive].filename);
+        remove(backup_filename);
+        FILE *outfile = fopen(backup_filename, "wb");
+        if (outfile)
+        {
+            u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
+            size_t diskSize = (numSectors*256);
+            fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
+            fclose(outfile);
+        }
     }
 }
-
 
 // End of file

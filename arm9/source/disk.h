@@ -23,7 +23,7 @@ typedef struct
     u8   driveWriteCounter;     // Set to some non-zero value to show 'DISK WRITE' briefly on screen (takes priority over READ display)
     char filename[MAX_PATH];    // The name of the .dsk file
     char path[MAX_PATH];        // The directory where the .dsk file was found
-    u8   image[MAX_DSK_SIZE];   // The (up to) 360K disk image in sector format (V9T9 sector dump format)
+    u8   *image;                // The (up to) 360K disk image in sector format (V9T9 sector dump format)
 }  _Disk;
 
 extern _Disk Disk[MAX_DSKS];

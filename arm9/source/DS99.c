@@ -229,7 +229,6 @@ void setupStream(void)
   mmLoadEffect(SFX_3);
   mmLoadEffect(SFX_2);
   mmLoadEffect(SFX_1);
-  mmLoadEffect(SFX_NEXTLEVEL);
   mmLoadEffect(SFX_BEWARE);
   mmLoadEffect(SFX_LOOKOUT);
   mmLoadEffect(SFX_WATCHOUT);
@@ -259,8 +258,26 @@ void setupStream(void)
   mmLoadEffect(SFX_SPORT);
   mmLoadEffect(SFX_THANITLOOKS);
   mmLoadEffect(SFX_WALKEDINTO);
-  mmLoadEffect(SFX_HELP);
-
+  mmLoadEffect(SFX_HELP);    
+  mmLoadEffect(SFX_ANYKEYTOGO);
+  mmLoadEffect(SFX_GETTINGTIRED);
+  mmLoadEffect(SFX_GAMEOVER);
+  mmLoadEffect(SFX_BETTERLUCK);
+  mmLoadEffect(SFX_ADVANCELEVEL);
+  mmLoadEffect(SFX_CONTINUEGAME);
+  mmLoadEffect(SFX_COOLANTLOW);
+  mmLoadEffect(SFX_OUTOFWATER);
+  mmLoadEffect(SFX_CONGRATSCAP);
+  mmLoadEffect(SFX_LASERONTARGET);    
+  mmLoadEffect(SFX_NICESHOOTING);    
+  mmLoadEffect(SFX_GREATSHOT);    
+  mmLoadEffect(SFX_EXTRASHIP);
+  mmLoadEffect(SFX_WARNINGFUEL);
+  mmLoadEffect(SFX_SORRYFUEL);
+  mmLoadEffect(SFX_MOONADVANCE);
+  mmLoadEffect(SFX_EXTRACREW);
+  mmLoadEffect(SFX_BONUSPOINTS);
+    
   //----------------------------------------------------------------
   //  open stream
   //----------------------------------------------------------------
@@ -1685,26 +1702,29 @@ u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 ITCM_CODE void CheckSpeech(u8 data)
 {
     speechData32 = (speechData32 << 8) | data;
- 
-    if ((speechData32 & 0xFF000000) == 0x60000000)
+    
+    if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
         // Parsec
-        if (speechData32 == 0x60108058) mmEffect(SFX_PRESS_FIRE);
-        else if (speechData32 == 0x604D7399) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
-        else if (speechData32 == 0x604BCBD6) mmEffect((rand() & 3) ? SFX_DESTROYED:SFX_GOODSHOT);
-        else if (speechData32 == 0x60C6703A) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
-        else if (speechData32 == 0x6046E3B2) mmEffect((rand() & 3) ? SFX_GOODSHOT:SFX_DESTROYED);
+             if (speechData32 == 0x60108058) mmEffect(SFX_PRESS_FIRE);
+        else if (speechData32 == 0x604D7399) mmEffect(SFX_DESTROYED);
+        else if (speechData32 == 0x604BCBD6) mmEffect(SFX_GOODSHOT);
+        else if (speechData32 == 0x60C6703A) mmEffect(SFX_NICESHOOTING);
+        else if (speechData32 == 0x6046E3B2) mmEffect(SFX_GREATSHOT);
+        else if (speechData32 == 0x60E00025) mmEffect(SFX_LASERONTARGET);
         else if (speechData32 == 0x6040066E) mmEffect(SFX_ATTACKING);
         else if (speechData32 == 0x6043F77E) mmEffect(SFX_ADVANCING);
         else if (speechData32 == 0x600E0821) mmEffect(SFX_ASTEROID);
-        
         else if (speechData32 == 0x60090846) mmEffect(SFX_COUNTDOWN);
         else if (speechData32 == 0x6071A647) mmEffect(SFX_5);
         else if (speechData32 == 0x600A48A5) mmEffect(SFX_4);
         else if (speechData32 == 0x60080826) mmEffect(SFX_3);
         else if (speechData32 == 0x600D586E) mmEffect(SFX_2);
         else if (speechData32 == 0x604967BB) mmEffect(SFX_1);
-        else if (speechData32 == 0x6030B4EA) mmEffect(SFX_NEXTLEVEL);
+        else if (speechData32 == 0x6030B4EA) mmEffect(SFX_ADVANCELEVEL);
+        else if (speechData32 == 0x604B8B41) mmEffect(SFX_EXTRASHIP);
+        else if (speechData32 == 0x6049E3B3) mmEffect(SFX_WARNINGFUEL);
+        else if (speechData32 == 0x6006F8DA) mmEffect(SFX_SORRYFUEL);
         
         // Alpiner
         else if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
@@ -1725,6 +1745,10 @@ ITCM_CODE void CheckSpeech(u8 data)
         else if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK); 
         else if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO); 
         else if (speechData32 == 0x600828D2) mmEffect(SFX_HELP); 
+        else if (speechData32 == 0x600A08C1) mmEffect(SFX_ANYKEYTOGO); 
+        else if (speechData32 == 0x600EA856) mmEffect(SFX_GETTINGTIRED); 
+        else if (speechData32 == 0x60E08096) mmEffect(SFX_GAMEOVER); 
+        else if (speechData32 == 0x60C8B1CE) mmEffect(SFX_BETTERLUCK); 
 
         // Moonmine
         else if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 
@@ -1738,8 +1762,20 @@ ITCM_CODE void CheckSpeech(u8 data)
         else if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);         
         else if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD); 
         else if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW); 
-        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);
-#if 0        
+        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);        
+        else if (speechData32 == 0x60418FC6) mmEffect(SFX_MOONADVANCE);
+        else if (speechData32 == 0x6006A851) mmEffect(SFX_CONTINUEGAME);
+        else if (speechData32 == 0x600A70C7) mmEffect(SFX_COOLANTLOW);
+        else if (speechData32 == 0x60C508AD) mmEffect(SFX_OUTOFWATER);
+        else if (speechData32 == 0x6002889A) mmEffect(SFX_CONGRATSCAP);
+        else if (speechData32 == 0x60492BC9) mmEffect(SFX_EXTRACREW);
+        else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
+  
+// Bigfoot        
+//: 60A45A00
+//: 608021AE
+//: 60A850A5
+#if 0
         else
         {
             FILE *fp = fopen("aaa_speech.txt", "a+");
