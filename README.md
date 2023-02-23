@@ -17,7 +17,8 @@ Features :
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI99 keyboard - both new and classic so it can look just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a hack for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
-* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice).  A few games have speech samples built-in (Parsec, Alpiner and Moonmine).
+* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice).  
+* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek and Bigfoot
 
 Copyright :
 -----------------------
@@ -80,7 +81,7 @@ Known Issues :
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
 * Borzork has audio squealing during gameplay. Cause unknown.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner and Moonmine.
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
 
 File Types Supported :
 -----------------------
