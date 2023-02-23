@@ -52,6 +52,8 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 u16 MemoryRead16(u16 address);
 
+u16 readSpeech = 999;
+
 char tmpFilename[256];
 
 // Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer is smaller
@@ -666,7 +668,10 @@ void TMS9900_Reset(char *szGame)
         MemType[0x6fff] = MF_MBX;   // Special bank switching register...
         WriteBankMBX(0);
     }
-
+    
+    // Ensure we are reading status byte
+    readSpeech = 999;
+    
     // -------------------------------------------------
     // SAMS support... 512K for DS and 1MB for DSi
     // -------------------------------------------------
@@ -976,7 +981,6 @@ ITCM_CODE u16 MemoryRead16(u16 address)
     return (retVal << 8) | (retVal >> 8);
 }
 
-u16 readSpeech = 999;
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
     u8 memType = MemType[address];

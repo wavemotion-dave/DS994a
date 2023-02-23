@@ -108,6 +108,7 @@ enum
 extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;
+extern u16 readSpeech;
 
 extern u16 nds_key;
 extern u8  kbd_key;

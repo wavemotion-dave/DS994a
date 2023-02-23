@@ -75,7 +75,7 @@ u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of r
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 u8 last_pal_mode = 99;         // So we show PAL properly in the upper right of the lower DS screen
-u8 tmpBuf[40];                 // For simple printf-type output
+u8 tmpBuf[256];                // For simple printf-type output and other sundry uses
 
 u8 key_push_write = 0;
 u8 key_push_read  = 0;
@@ -214,7 +214,6 @@ void setupStream(void)
   //----------------------------------------------------------------
   mmInitDefaultMem((mm_addr)soundbank_bin);
 
-  mmLoadEffect(SFX_CLICKNOQUIT);
   mmLoadEffect(SFX_KEYCLICK);
   mmLoadEffect(SFX_MUS_INTRO);
   mmLoadEffect(SFX_PRESS_FIRE);
@@ -277,10 +276,14 @@ void setupStream(void)
   mmLoadEffect(SFX_MOONADVANCE);
   mmLoadEffect(SFX_EXTRACREW);
   mmLoadEffect(SFX_BONUSPOINTS);
-
   mmLoadEffect(SFX_BIG_GETYOU);
   mmLoadEffect(SFX_BIG_FALL);
   mmLoadEffect(SFX_BIG_ROAR);
+    
+  mmLoadEffect(SFX_WELCOMEABOARD);
+  mmLoadEffect(SFX_AVOIDMINES);
+  mmLoadEffect(SFX_DAMAGEREPAIRED);
+  mmLoadEffect(SFX_EXCELLENTMANUVER);
     
   //----------------------------------------------------------------
   //  open stream
@@ -555,9 +558,20 @@ void ShowDiskListing(void)
         {
             sectorPtr = (Disk[disk_drive_select].image[256 + (i+0)] << 8) | (Disk[disk_drive_select].image[256 + (i+1)] << 0);
             if (sectorPtr == 0) break;
-            for (u8 j=0; j<10; j++) 
+            if (disk_drive_select == DSK3)
             {
-                dsk_listing[dsk_num_files][j] = Disk[disk_drive_select].image[(256*sectorPtr) + j];
+                ReadSector(disk_drive_select, sectorPtr, tmpBuf);
+                for (u8 j=0; j<10; j++) 
+                {
+                    dsk_listing[dsk_num_files][j] = tmpBuf[j];
+                }
+            }
+            else
+            {
+                for (u8 j=0; j<10; j++) 
+                {
+                    dsk_listing[dsk_num_files][j] = Disk[disk_drive_select].image[(256*sectorPtr) + j];
+                }
             }
             dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
             if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
@@ -1702,15 +1716,16 @@ int main(int argc, char **argv)
 void _putchar(char character) {};   // Not used but needed to link printf()
 
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
-extern u16 readSpeech;
+
 ITCM_CODE void CheckSpeech(u8 data)
 {
-    speechData32 = (speechData32 << 8) | data;
-
-    if (speechData32 == 0x40404040)
+    // Reading Address 0 from the Speech ROM
+    if ((speechData32 == 0x40404040) && (data == 0x10))
     {
         readSpeech = 0xAA;
-    }
+    } else readSpeech = 999;
+    
+    speechData32 = (speechData32 << 8) | data;
     
     if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
@@ -1781,13 +1796,19 @@ ITCM_CODE void CheckSpeech(u8 data)
         else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
         
         // Bigfoot
-        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); //I'll get you
-        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling
-        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);  // Roar
+        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); // I'll get you!
+        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling noise
+        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);   // Bigfoot Roar
         
+        // Star Trek
+        else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);
+        else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);
+        else if (speechData32 == 0x600AF022) mmEffect(SFX_DAMAGEREPAIRED);
+        else if (speechData32 == 0x60ADC8DE) mmEffect(SFX_EXCELLENTMANUVER);
 #if 0
         else
         {
+            debug[1]++;
             FILE *fp = fopen("aaa_speech.txt", "a+");
             fprintf(fp, ": %08X\n", speechData32);
             fclose(fp);

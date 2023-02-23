@@ -13,6 +13,7 @@
 #define _DS99_UTILS_H_
 
 #define MAX_ROMS                512
+#define MAX_DISKS               256
 #define MAX_ROM_LENGTH          128
 #define MAX_PATH                255
 

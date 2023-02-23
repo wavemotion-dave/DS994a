@@ -69,7 +69,7 @@ u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 _Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 u8 Disk1_ImageBuf[MAX_DSK_SIZE];
 u8 Disk2_ImageBuf[MAX_DSK_SIZE];
-u8 Disk3_ImageBuf[256];
+u8 Disk3_ImageBuf[512]; // First two sectors only
 
 char backup_filename[MAX_PATH];
 
@@ -84,7 +84,7 @@ void disk_init(void)
     
     memset(Disk1_ImageBuf, 0x00, MAX_DSK_SIZE);
     memset(Disk2_ImageBuf, 0x00, MAX_DSK_SIZE);
-    memset(Disk3_ImageBuf, 0x00, 256);
+    memset(Disk3_ImageBuf, 0x00, 512);
     
     Disk[DSK1].image = Disk1_ImageBuf;  // Buffered
     Disk[DSK2].image = Disk2_ImageBuf;  // Buffered
@@ -233,6 +233,25 @@ void WriteTICCRegister(u16 address, u8 val)
     }
 }
 
+void ReadSector(u8 drive, u16 sector, u8 *buf)
+{
+    // Change into the last known DSKs directory for this file
+    chdir(Disk[drive].path);
+
+    // Seek to the right sector and read in 256 bytes...
+    FILE *infile = fopen(Disk[drive].filename, "rb");
+    if (infile)
+    {
+        fseek(infile, (256*sector), SEEK_SET);
+        fread(buf, 1, 256, infile);
+        fclose(infile);
+    }
+    else
+    {
+        memset(buf, 0x00, 256);
+    }
+}
+
 void HandleTICCSector(void)
 {
     bool success = true;
@@ -353,7 +372,7 @@ void disk_unmount(u8 drive)
     }
     else
     {
-        memset(Disk[drive].image, 0x00, 256);
+        memset(Disk[drive].image, 0x00, 512);
     }
 }
 
@@ -371,7 +390,7 @@ void disk_read_from_sd(u8 drive)
         }
         else
         {
-            fread(Disk[drive].image, 256, 1, infile);   // Just the first sector
+            fread(Disk[drive].image, 512, 1, infile);   // Just the first two sectors
         }
         fclose(infile);
     }

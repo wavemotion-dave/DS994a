@@ -36,7 +36,7 @@ int ucGameAct=0;
 int ucDskAct=0;
 int ucGameChoice = -1;
 FIC_TI99 gpFic[MAX_ROMS];
-FIC_TI99 gpDsk[MAX_ROMS];
+FIC_TI99 gpDsk[MAX_DISKS];
 char szName[256];
 char szDiskName[256];
 char szFile[256];
@@ -452,7 +452,7 @@ void TI99FindDskFiles(void)
   countDSK=0;
 
   dir = opendir(".");
-  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_ROMS))
+  while (((pent=readdir(dir))!=NULL) && (uNbFile<MAX_DISKS))
   {
     strcpy(szFile,pent->d_name);
 
