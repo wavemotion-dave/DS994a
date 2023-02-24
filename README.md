@@ -89,6 +89,7 @@ DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
 * Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
 * All other files are considered '8' files which is a non-inverted banking up to 512K. 
+* There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 
 Configuration :
 -----------------------
@@ -100,7 +101,7 @@ Be sure to use the START button to save out your configuration options so they p
 
 Emulated Disk Drives :
 -----------------------
-DS994a will support 3 Disk Drives as DSK1, DSK2 and DSK3. The first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a hack to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the Nintendo DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
+DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. The first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a hack to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the Nintendo DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
 
 Keyboards and Menus :
 -----------------------
@@ -200,6 +201,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.3: 24-Feb-2023 by wavemotion-dave
+* More speech samples added. Parsec, Alpiner and Moonmine have all speech phrases included. Star Trek and Bigfoot have partial speech included.
+* Improved memory usage to gain back a bit more resources for future expansion.
+* Minor cleanups as time permitted.
+
 V1.2: 20-Feb-2023 by wavemotion-dave
 * Speech samples added for Parsec, Alpiner and Moonmine. It's not perfect but does bring back the feels of those games with speech!
 * Added additional TI keys that can be mapped to the DS.

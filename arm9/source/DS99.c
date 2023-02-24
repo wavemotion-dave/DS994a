@@ -279,6 +279,7 @@ void setupStream(void)
   mmLoadEffect(SFX_BIG_GETYOU);
   mmLoadEffect(SFX_BIG_FALL);
   mmLoadEffect(SFX_BIG_ROAR);
+  mmLoadEffect(SFX_BIG_CAW);
     
   mmLoadEffect(SFX_WELCOMEABOARD);
   mmLoadEffect(SFX_AVOIDMINES);
@@ -1799,6 +1800,7 @@ ITCM_CODE void CheckSpeech(u8 data)
         else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); // I'll get you!
         else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling noise
         else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);   // Bigfoot Roar
+        else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);    // Bird Screech
         
         // Star Trek
         else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);
