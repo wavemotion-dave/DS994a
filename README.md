@@ -153,6 +153,10 @@ How do I play Q-Bert? :
 -----------------------
 A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the Nintendo d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision port) work. 
 
+How do I play Bigfoot? :
+-----------------------
+Some of the Milton Bradley games use a cart banking scheme known as MBX (they also had a set of peripherals called the MBX System). DS994a needs to be told that a cart is an MBX cart.  Some of the MBX carts had extra memory. So after you select an MBX game like Bigfoot, you must go into GAME OPTIONS and tell it that it's an MBX cart (in this case 'With RAM'). Then the game should play fine. 
+
 Blend Mode (DSi) :
 -----------------------
 DS99/4a supports a "blend mode" which I borrowed from my scheme on StellaDS. In this mode, 
