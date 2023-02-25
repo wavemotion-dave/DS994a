@@ -209,9 +209,9 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
 // -------------------------------------------------------------------------------------------
 void setupStream(void) 
 {
-  //----------------------------------------------------------------
-  //  initialize maxmod with our small 3-effect soundbank
-  //----------------------------------------------------------------
+  //---------------------------------------------------------------------
+  //  initialize maxmod with our soundbank including all speech samples
+  //---------------------------------------------------------------------
   mmInitDefaultMem((mm_addr)soundbank_bin);
 
   mmLoadEffect(SFX_KEYCLICK);
@@ -280,7 +280,6 @@ void setupStream(void)
   mmLoadEffect(SFX_BIG_FALL);
   mmLoadEffect(SFX_BIG_ROAR);
   mmLoadEffect(SFX_BIG_CAW);
-    
   mmLoadEffect(SFX_WELCOMEABOARD);
   mmLoadEffect(SFX_AVOIDMINES);
   mmLoadEffect(SFX_DAMAGEREPAIRED);
@@ -386,7 +385,7 @@ void ResetTI(void)
 {
   Reset9918();                          // Reset video chip
    
-  sn76496Reset(1, &snti99);              // Reset the SN/TI sound chip
+  sn76496Reset(1, &snti99);              //  Reset the SN/TI sound chip
   sn76496W(0x90 | 0x0F  ,&snti99);       //  Write new Volume for Channel A (off) 
   sn76496W(0xB0 | 0x0F  ,&snti99);       //  Write new Volume for Channel B (off)
   sn76496W(0xD0 | 0x0F  ,&snti99);       //  Write new Volume for Channel C (off)
