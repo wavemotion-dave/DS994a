@@ -729,11 +729,11 @@ void DiskMenu(void)
             {
                   if (Disk[disk_drive_select].isMounted)
                   {
-                      DS_Print(11,0,6, "BACKUP DISK");
+                      DS_Print(10,2,6, "BACKUP DISK");
                       disk_backup_to_sd(disk_drive_select);
                       WAITVBL;WAITVBL;
                       DiskMenuShow(true, menuSelection);
-                      DS_Print(11,0,6, "           ");
+                      DS_Print(10,2,6, "           ");
                   }
             }
             if (menuSelection == 6) // EXIT
