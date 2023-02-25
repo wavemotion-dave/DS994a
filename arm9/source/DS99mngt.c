@@ -50,6 +50,7 @@ u8 TI99Init(char *szGame)
   // but we can use it for fast memory swaps and look-up-tables.
   // -----------------------------------------------------------------
   videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
+  videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
   vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
   

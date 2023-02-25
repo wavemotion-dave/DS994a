@@ -135,7 +135,6 @@ void DrawCleanBackground(void)
     // ---------------------------------------------------
     // Put up a generic background for this mini-menu...
     // ---------------------------------------------------
-    // Render the bottom screen for "options select" mode
     bg0b  = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
     bg1b  = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
     bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);

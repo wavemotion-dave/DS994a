@@ -529,8 +529,10 @@ char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per
 u8   dsk_num_files = 0;
 void ShowDiskListing(void)
 {
+    //ZZZZ something in here...
+    
     // Clear the screen...
-    for (u8 i=0; i<20; i++)
+    for (u8 i=0; i<19; i++)
     {
         DS_Print(1,4+i,6, "                                ");
     }
@@ -1409,6 +1411,7 @@ void InitBottomScreen(void)
     //  Init bottom screen
     
     swiWaitForVBlank();
+
     if (myConfig.overlay == 0)  // TI99 3D
     {
         decompress(ds99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
