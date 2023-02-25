@@ -975,7 +975,7 @@ void SaveConfig(bool bShow)
     FILE *fp;
     int slot = 0;
 
-    if (bShow) DS_Print(6,0,0, (char*)"SAVING CONFIGURATION");
+    if (bShow) DS_Print(6,2,0, (char*)"SAVING CONFIGURATION");
 
     // Set the global configuration version number...
     globalConfig.config_ver = CONFIG_VER;
@@ -1026,7 +1026,7 @@ void SaveConfig(bool bShow)
     if (bShow)
     {
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        DS_Print(4,0,0, (char*)"                        ");
+        DS_Print(4,2,0, (char*)"                        ");
     }
 }
 
@@ -1184,7 +1184,7 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"OVERLAY",        {"DS99 KEYBOARD", "TI99 KEYBOARD"},                                                                &myConfig.overlay,      2},
+        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                  &myConfig.overlay,      2},
         {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                   &myConfig.frameSkip,    3},
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                     &myConfig.frameBlend,   2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                     &myConfig.maxSprites,   2},
@@ -1330,7 +1330,7 @@ const struct options_t GlobalOption_Table[20] =
     {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
     {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
     {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                  &globalConfig.romsDIR,       3},
-    {"DEF OVERLAY",    {"DS99 KEYBOARD", "TI99 KEYBOARD"},                      &globalConfig.overlay,       2},
+    {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD"},                        &globalConfig.overlay,       2},
     {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
     {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
 

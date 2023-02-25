@@ -66,10 +66,10 @@ u8 bDiskDeviceInstalled  = 0;  // DSR installed or not installed... We don't do 
 u8 diskSideSelected      = 0;  // Side 0 or Side 1
 u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 
-_Disk Disk[MAX_DSKS];   // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
-u8 Disk1_ImageBuf[MAX_DSK_SIZE];
-u8 Disk2_ImageBuf[MAX_DSK_SIZE];
-u8 Disk3_ImageBuf[512]; // First two sectors only
+_Disk Disk[MAX_DSKS];           // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
+u8 Disk1_ImageBuf[MAX_DSK_SIZE];// Full buffering
+u8 Disk2_ImageBuf[MAX_DSK_SIZE];// Full buffering
+u8 Disk3_ImageBuf[512];         // First two sectors only
 
 char backup_filename[MAX_PATH];
 
@@ -88,7 +88,7 @@ void disk_init(void)
     
     Disk[DSK1].image = Disk1_ImageBuf;  // Buffered
     Disk[DSK2].image = Disk2_ImageBuf;  // Buffered
-    Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first sector only.
+    Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us 360KB of memory.
 }
 
 
@@ -386,11 +386,11 @@ void disk_read_from_sd(u8 drive)
     {
         if (drive != DSK3)
         {
-            fread(Disk[drive].image, 1, MAX_DSK_SIZE, infile);
+            fread(Disk[drive].image, 1, MAX_DSK_SIZE, infile); // For DSK1 and DSK2 we buffer it all
         }
         else
         {
-            fread(Disk[drive].image, 512, 1, infile);   // Just the first two sectors
+            fread(Disk[drive].image, 512, 1, infile);   // Just the first two sectors for DSK3
         }
         fclose(infile);
     }
@@ -398,6 +398,7 @@ void disk_read_from_sd(u8 drive)
 
 void disk_write_to_sd(u8 drive)
 {
+    // Only DSK1 and DSK2 support write-back
     if (drive != DSK3)
     {
         // Change into the last known DSKs directory for this file
@@ -421,6 +422,7 @@ void disk_write_to_sd(u8 drive)
 
 void disk_backup_to_sd(u8 drive)
 {
+    // Only DSK1 and DSK2 support backup
     if (drive != DSK3)
     {
         // Change into the last known DSKs directory for this file

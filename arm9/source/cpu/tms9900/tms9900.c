@@ -30,7 +30,7 @@
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
 #include "../sn76496/SN76496.h"
-extern SN76496 sncol;
+extern SN76496 snti99;
 
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
@@ -1049,7 +1049,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
         switch (memType)
         {
             case MF_SOUND:
-                sn76496W(data, &sncol);
+                sn76496W(data, &snti99);
                 break;
             case MF_VDP:
                 if (address & 2) WrCtrl9918(data>>8);
@@ -1111,7 +1111,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
         switch (memType)
         {
             case MF_SOUND:
-                 sn76496W(data, &sncol);
+                 sn76496W(data, &snti99);
                 break;
             case MF_VDP:
                 if (address & 2) WrCtrl9918(data);

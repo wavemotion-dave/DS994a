@@ -119,7 +119,7 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&pSvg, sizeof(pSvg),1, handle); 
 
     // Write PSG sound chips...
-    if (uNbO) uNbO = fwrite(&sncol, sizeof(sncol),1, handle); 
+    if (uNbO) uNbO = fwrite(&snti99, sizeof(snti99),1, handle); 
       
     // Some spare memory we can eat into...
     if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
@@ -271,7 +271,7 @@ void TI99LoadState()
             SprTab = pSvg + pVDPVidMem;
             
             // Load PSG Sound Stuff
-            if (uNbO) uNbO = fread(&sncol, sizeof(sncol),1, handle); 
+            if (uNbO) uNbO = fread(&snti99, sizeof(snti99),1, handle); 
             
             // Load spare memory for future use
             if (uNbO) uNbO = fread(&spare, 512,1, handle); 

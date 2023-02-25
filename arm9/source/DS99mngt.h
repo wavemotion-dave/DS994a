@@ -18,7 +18,7 @@
 #include "cpu/sn76496/SN76496.h"
 
 extern u32 file_crc;
-extern SN76496 sncol;
+extern SN76496 snti99;
 
 // --------------------------------------------------
 // Some CPU and VDP and SGM stuff that we need
