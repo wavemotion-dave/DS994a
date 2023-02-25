@@ -135,15 +135,14 @@ void DrawCleanBackground(void)
     // ---------------------------------------------------
     // Put up a generic background for this mini-menu...
     // ---------------------------------------------------
-    bg0b  = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
-    bg1b  = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
+    bg0b = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
+    bg1b = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
     bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);
-    decompress(optionsTiles,  bgGetGfxPtr(bg0b), LZ77Vram);
-    decompress(optionsMap,  (void*) bgGetMapPtr(bg0b), LZ77Vram);
-    dmaCopy((void*) optionsPal,(void*)  BG_PALETTE_SUB,256*2);
-    unsigned short dmaVal  = *(bgGetMapPtr(bg0b)+24*32);
-    dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
-    WAITVBL;
+    decompress(optionsTiles, bgGetGfxPtr(bg0b), LZ77Vram);
+    decompress(optionsMap, (void*) bgGetMapPtr(bg0b), LZ77Vram);
+    dmaCopy((void*) optionsPal,(void*) BG_PALETTE_SUB,256*2);
+    unsigned short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
+    dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b),32*24*2);
 }
 
 /*********************************************************************************

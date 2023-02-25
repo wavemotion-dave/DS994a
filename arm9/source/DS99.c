@@ -529,8 +529,6 @@ char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per
 u8   dsk_num_files = 0;
 void ShowDiskListing(void)
 {
-    //ZZZZ something in here...
-    
     // Clear the screen...
     for (u8 i=0; i<19; i++)
     {
@@ -1389,15 +1387,7 @@ void TI99DSInit(void)
   unsigned  short dmaVal =*(bgGetMapPtr(bg0)+51*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1),32*24*2);
 
-  // Render the bottom screen for "options select" mode
-  bg0b  = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x512, 31,0);
-  bg1b  = bgInitSub(1, BgType_Text8bpp, BgSize_T_256x512, 29,0);
-  bgSetPriority(bg0b,1);bgSetPriority(bg1b,0);
-  decompress(optionsTiles,  bgGetGfxPtr(bg0b), LZ77Vram);
-  decompress(optionsMap,  (void*) bgGetMapPtr(bg0b), LZ77Vram);
-  dmaCopy((void*) optionsPal,(void*)  BG_PALETTE_SUB,256*2);
-  dmaVal  = *(bgGetMapPtr(bg0b)+24*32);
-  dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
+  DrawCleanBackground();
     
   //  Find the files
   TI99FindFiles();
