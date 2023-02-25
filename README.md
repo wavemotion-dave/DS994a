@@ -105,7 +105,7 @@ DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. The
 
 Keyboards and Menus :
 -----------------------
-Two virtual keyboards are supported... a standard grid layout black on grey and a TI-looking keyboard that more closely resembles a real system. The TI keyboard is nice but the buttons are, by nature, a bit smaller and probably require the use of a stylus. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
+Two virtual keyboards are supported... both emulate the look and feel of a real TI keyboard. One has a slightly 3D/raised-key look and the other is a more flat look. Experiment and find the one that best suits you - you can set a global default choice in the Global Configuration menu. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
 
 ![TI99 Virtual Keyboard](https://github.com/wavemotion-dave/DS994a/blob/main/tikbd.png)
 
