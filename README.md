@@ -12,6 +12,7 @@ Features :
 * Cart loads up to 512K Banked (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion built-in
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units.
+* MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type.
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
@@ -88,7 +89,7 @@ File Types Supported :
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
 * Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
-* All other files are considered '8' files which is a non-inverted banking up to 512K. 
+* All other files are considered '8' files which is non-inverted banking up to 512K. 
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 
 Configuration :
@@ -151,7 +152,7 @@ No way to start the game? That's because it utlizes Joystick 2 unlike most every
 
 How do I play Q-Bert? :
 -----------------------
-A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the Nintendo d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision port) work. 
+A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the Nintendo d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision) work. 
 
 How do I play Bigfoot? :
 -----------------------
