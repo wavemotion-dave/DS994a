@@ -39,15 +39,12 @@
 #include "soundbank_bin.h"
 #include "cpu/sn76496/SN76496.h"
 
-u32 debug[32];
+u32 debug[8];  // A small bank of 32-bit debug registers we can use for profiling or other sundry debug purposes. Pressing X when loading a game shows the debug registers.
 
-
-// ------------------------------------------------------------------------------------------
-// Various sound chips in the system. We emulate the SN and AY sound chips but both of 
-// these really still use the underlying SN76496 sound chip driver for siplicity and speed.
-// ------------------------------------------------------------------------------------------
-extern SN76496 snti99;      // The SN sound chip is the main TI99/4a sound
-       SN76496 snmute;      // We keep this handy as a simple way to mute the sound
+// ---------------------------------------------------------------------------------------
+// The master sound chip for the TI99. The SN sound chip is the same as the TI9919 chip.
+// ---------------------------------------------------------------------------------------
+SN76496 snti99      __attribute__((section(".dtcm")));
 
 // ---------------------------------------------------------------------------
 // Some timing and frame rate comutations to keep the emulation on pace...
@@ -57,9 +54,9 @@ u16 emuActFrames    __attribute__((section(".dtcm"))) = 0;
 u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
 u8  bShowDebug      __attribute__((section(".dtcm"))) = 1;
 
-// -----------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 // For the various BIOS files ... only the TI BIOS Roms are required - everything else is optional.
-// -----------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 u8 bTIBIOSFound      = false;
 u8 bTIDISKFound      = false;
 
@@ -71,11 +68,12 @@ u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;        // 0 if Alpha 
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 
+u8 tmpBuf[256]      __attribute__((section(".dtcm")));            // For simple printf-type output and other sundry uses. Make this at least the size of 1 disk sector (256 bytes)
+
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
 volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 u8 last_pal_mode = 99;         // So we show PAL properly in the upper right of the lower DS screen
-u8 tmpBuf[256];                // For simple printf-type output and other sundry uses
 
 u8 key_push_write = 0;          // For inserting DSK filenames into the keyboard buffer
 u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard buffer
@@ -86,13 +84,14 @@ u16 PAL_Timing[] = {656, 596, 546, 504};    // 100%, 110%, 120% and 130%
 u16 NTSC_Timing[] = {546, 496, 454, 420};   // 100%, 110%, 120% and 130%
 
 u8 disk_menu_items = 0;     // Start with the top menu item
-u8 disk_drive_select  = 0;  // Start with DSK1
+u8 disk_drive_select = 0;   // Start with DSK1
 
 // The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
 
-char myDskFile[MAX_PATH]; // This will be filled in with the full filename (including .DSK) of the disk file
-char myDskPath[MAX_PATH]; // This will point to the path where the .DSK file was loaded from (and will be written back to)s
+char myDskFile[MAX_PATH];       // This will be filled in with the full filename (including .DSK) of the disk file
+char myDskPath[MAX_PATH];       // This will point to the path where the .DSK file was loaded from (and will be written back to)s
+char initial_file[MAX_PATH];    // In case something was passed on the command line into the emulator (TWL++)
 
 // --------------------------------------------------------------------
 // The key map for the TI... mapped into the NDS controller
@@ -175,17 +174,16 @@ void SoundUnPause(void)
 
 mm_ds_system sys  __attribute__((section(".dtcm")));
 mm_stream myStream __attribute__((section(".dtcm")));
-u16 mixbuf1[2048];      // When we have SN and AY sound we have to mix 3+3 channels
 
 // -------------------------------------------------------------------------------------------
 // maxmod will call this routine when the buffer is half-empty and requests that
 // we fill the sound buffer with more samples. They will request 'len' samples and
 // we will fill exactly that many. If the sound is paused, we fill with 'mute' samples.
 // -------------------------------------------------------------------------------------------
-u16 last_sample = 0;
+u16 last_sample __attribute__((section(".dtcm"))) = 0;
 ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats format)
 {
-    if (soundEmuPause)  // If paused, just "mix" in mute sound chip... all channels are OFF
+    if (soundEmuPause)  // If paused, just keep outputting the last sample which will produce no tones
     {
         u16 *p = (u16*)dest;
         for (int i=0; i<len*2; i++)
@@ -195,8 +193,8 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
     }
     else
     {
-        sn76496Mixer(len*4, dest, &snti99);
-        last_sample = ((u16*)dest)[len*2 - 1];
+        sn76496Mixer(len*4, dest, &snti99);         // Otherwise mix the channels into the buffer
+        last_sample = ((u16*)dest)[len*2 - 1];      // And save off the last sample in case we need to mute...
     }
     
     return  len;
@@ -319,28 +317,7 @@ void setupStream(void)
 void dsInstallSoundEmuFIFO(void) 
 {
   SoundPause();
-    
-  // ---------------------------------------------------------------------
-  // We setup a mute channel to cut sound for pause
-  // ---------------------------------------------------------------------
-  sn76496Reset(1, &snmute);         // Reset the SN sound chip
-    
-  sn76496W(0x80 | 0x00,&snmute);    // Write new Frequency for Channel A
-  sn76496W(0x00 | 0x00,&snmute);    // Write new Frequency for Channel A
-  sn76496W(0x90 | 0x0F,&snmute);    // Write new Volume for Channel A
-    
-  sn76496W(0xA0 | 0x00,&snmute);    // Write new Frequency for Channel B
-  sn76496W(0x00 | 0x00,&snmute);    // Write new Frequency for Channel B
-  sn76496W(0xB0 | 0x0F,&snmute);    // Write new Volume for Channel B
-    
-  sn76496W(0xC0 | 0x00,&snmute);    // Write new Frequency for Channel C
-  sn76496W(0x00 | 0x00,&snmute);    // Write new Frequency for Channel C
-  sn76496W(0xD0 | 0x0F,&snmute);    // Write new Volume for Channel C
-
-  sn76496W(0xFF,  &snmute);         // Disable Noise Channel
-    
-  sn76496Mixer(8, mixbuf1, &snmute);  // Do  an initial mix conversion to clear the output
-      
+     
   //  ------------------------------------------------------------------
   //  The SN sound chip is for normal TI99 sound handling
   //  ------------------------------------------------------------------
@@ -360,7 +337,7 @@ void dsInstallSoundEmuFIFO(void)
 
   sn76496W(0xFF,  &snti99);         // Disable Noise Channel
     
-  sn76496Mixer(8, mixbuf1, &snti99);  // Do an initial mix conversion to clear the output
+  sn76496Mixer(8, tmpBuf, &snti99);  // Do an initial mix conversion to clear the output
 
   setupStream();    // Setup maxmod stream...
 
@@ -419,7 +396,7 @@ void ResetTI(void)
   strcpy(dsk_filename,"");    
     
   disk_init();
-  disk_drive_select  = 0; // Start with DSK1
+  disk_drive_select = 0; // Start with DSK1
     
   memset(debug, 0x00, sizeof(debug));
 }
@@ -607,6 +584,7 @@ void ShowDiskListing(void)
     {
         idx++;idx++;
         DS_Print(9,9+idx,0,  "NO DISK MOUNTED"); idx++;
+        WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
     }
 
     // Wait for any press and release...
@@ -709,7 +687,7 @@ void DiskMenu(void)
                 disk_unmount(disk_drive_select);
                 DiskMenuShow(true, menuSelection);
             }
-            if (menuSelection == 2)
+            if (menuSelection == 2) // LIST DISK
             {
                   ShowDiskListing();
                   DiskMenuShow(true, menuSelection);
@@ -997,8 +975,7 @@ ITCM_CODE void ds99_main(void)
 {
   u8 dampen = 0;
   u16 iTx,  iTy;
-  u8 ResetNow  = 0;
-
+    
   ds99_main_setup();    // Stuff we don't need in ITCM fast memory...
     
   // -------------------------------------------------------------------
@@ -1243,7 +1220,6 @@ ITCM_CODE void ds99_main(void)
                 handling_meta = 0;  // We've handled a normal key... no more meta
           }
           
-          ResetNow = 0;
           bKeyClick = 0;
       }
 
@@ -1485,7 +1461,6 @@ void LoadBIOSFiles(void)
 /*********************************************************************************
  * Program entry point - check if an argument has been passed in probably from TWL++
  ********************************************************************************/
-char initial_file[128];
 int main(int argc, char **argv) 
 {
   //  Init sound

@@ -27,14 +27,7 @@
 #include "DS99_utils.h"
 #define NORAM 0xFF
 
-
 u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game
-
-// -----------------------------------------------------------
-// The master sound chip for the TI99
-// -----------------------------------------------------------
-SN76496 snti99   __attribute__((section(".dtcm")));
-
 
 /*********************************************************************************
  * Init TI99 Engine for that game
@@ -172,6 +165,10 @@ void getfile_crc(const char *path)
 }
 
 
+// ----------------------------------------------------------------------------------
+// The main CPU loop... here we run one scanline of CPU instructions and then go 
+// check in with the VDP video chip to see if we are done rendering a frame... 
+// ----------------------------------------------------------------------------------
 ITCM_CODE u32 LoopTMS9900() 
 {
     TMS9900_Run();

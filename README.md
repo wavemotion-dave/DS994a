@@ -39,7 +39,7 @@ of the more tricky opcode algorithms so they run correctly. This is used with pe
 and with great thanks!
 
 For the rest of the code: as long as there is no commercial use (i.e. no profit is made),
-copying and distribution of this emulator, it's source code and associated readme files, with 
+copying and distribution of this emulator, its source code and associated readme files, with 
 or without modification, are permitted in any medium without royalty provided this copyright
 notice is used and wavemotion-dave is thanked profusely.
 
@@ -52,8 +52,8 @@ Credits :
 * Thanks to Marat Fayzullin (ColEM) for the TI9918A video driver.
 * Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code plus some helpful consults.
 * Thanks to Pete Eberlein and some great ideas and a bit of code from his upcoming BuLWiP emulator. 
-* Thanks to ti99iuc over on AtariAge for the DS99/4a Logo
-* Thanks to Darryl Hirschler for the TI99 Keyboard Graphic
+* Thanks to ti99iuc over on AtariAge for the DS99/4a Logo.
+* Thanks to Darryl Hirschler for the TI99 Keyboard Graphic.
 * Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes as well as testing and providing feedback.
 
 
@@ -120,11 +120,11 @@ There are also some special keys that are always available:
 
 Memory/System Configurations :
 -----------------------
-By default each game is configured to run on a 32K expanded system. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
+By default each game is configured to run on a 32K expanded system which runs 99% of all TI99/4a games. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
 
 How do I play Adventure or Tunnels of Doom? :
 -----------------------
-Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adventure Games and my personal favorite: Tunnels of Doom (and early dungeon crawler that probably has more to do with my wanting a TI99/4a emulator on my DS than anything). To play these games requires that the 'database' for each game is loaded from somewhere. Back in the day, we loaded via Cassette. But for DS99/4a we don't have analog cassette support so you'll have to load from Disk. To do so:
+Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adventure Games and my personal favorite: Tunnels of Doom (an early dungeon crawler that probably has more to do with my wanting a TI99/4a emulator on my DS than anything). To play these games requires that the 'database' for each game is loaded from somewhere. Back in the day, we loaded via Cassette. But for DS99/4a we don't have analog cassette support so you'll have to load from Disk. To do so:
 * You will need the 994aDISK.bin as mentioned in the BIOS files section above.
 * You will need the cartridge files for the game (AdventureG.bin or TunnelsG.bin or similar)
 * You will need the disk (.DSK) image for the game you want to play

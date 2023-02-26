@@ -15,7 +15,7 @@
 #define MAX_ROMS                512
 #define MAX_DISKS               256
 #define MAX_ROM_LENGTH          128
-#define MAX_PATH                255
+#define MAX_PATH                128
 
 #define MAX_CONFIGS             750
 #define CONFIG_VER              0x0005

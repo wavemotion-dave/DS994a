@@ -43,11 +43,13 @@ char szFile[256];
 u32 file_size = 0;
 char currentDirROMs[MAX_PATH];
 char currentDirDSKs[MAX_PATH];
+char strBuf[40];
 
 struct GlobalConfig_t globalConfig;
 struct Config_t AllConfigs[MAX_CONFIGS];
 struct Config_t myConfig __attribute((aligned(4))) __attribute__((section(".dtcm")));
 extern u32 file_crc;
+extern u8 tmpBuf[];
 
 extern char myDskFile[];
 extern char myDskPath[];
@@ -148,7 +150,8 @@ void DrawCleanBackground(void)
 /*********************************************************************************
  * Show A message with YES / NO
  ********************************************************************************/
-u8 showMessage(char *szCh1, char *szCh2) {
+u8 showMessage(char *szCh1, char *szCh2) 
+{
   u16 iTx, iTy;
   u8 uRet=ID_SHM_CANCEL;
   u8 ucGau=0x00, ucDro=0x00,ucGauS=0x00, ucDroS=0x00, ucCho = ID_SHM_YES;
@@ -254,25 +257,6 @@ u8 showMessage(char *szCh1, char *szCh2) {
   return uRet;
 }
 
-void tiDSModeNormal(void) {
-  REG_BG3CNT = BG_BMP8_256x256;
-  REG_BG3PA = (1<<8);
-  REG_BG3PB = 0;
-  REG_BG3PC = 0;
-  REG_BG3PD = (1<<8);
-  REG_BG3X = 0;
-  REG_BG3Y = 0;
-}
-
-//*****************************************************************************
-// Put the top screen in refocused bitmap mode
-//*****************************************************************************
-void TI99DSInitScreenUp(void) {
-  videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
-  vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
-  tiDSModeNormal();
-}
-
 
 /*********************************************************************************
  * Show The 14 games on the list to allow the user to choose a new game.
@@ -281,13 +265,12 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
   u8 maxLen;
-  char szName2[80];
 
-  DS_Print(30,8,0,(NoDebGame>0 ? "<" : " "));
+  DS_Print(30,6,0,(NoDebGame>0 ? "<" : " "));
   DS_Print(30,21,0,(NoDebGame+14<countTI ? ">" : " "));
   sprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countTI);
-  DS_Print(3,6,0, szName);
-  for (ucBcl=0;ucBcl<14; ucBcl++) {
+  DS_Print(3,3,0, szName);
+  for (ucBcl=0;ucBcl<16; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
     if (ucGame < countTI)
     {
@@ -295,19 +278,19 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
       strcpy(szName,gpFic[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
       if (gpFic[ucGame].uType == DIRECT) {
-        sprintf(szName2, " %s]",szName);
-        szName2[0]='[';
-        sprintf(szName,"%-28s",szName2);
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
+        sprintf(tmpBuf, " %s]",szName);
+        tmpBuf[0]='[';
+        sprintf(szName,"%-28s",tmpBuf);
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
       }
       else {
         sprintf(szName,"%-28s",strupr(szName));
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
       }
     }
     else
     {
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
     }
   }
 }
@@ -320,13 +303,12 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
   u8 maxLen;
-  char szName2[80];
 
-  DS_Print(30,8,0,(NoDebGame>0 ? "<" : " "));
+  DS_Print(30,6,0,(NoDebGame>0 ? "<" : " "));
   DS_Print(30,21,0,(NoDebGame+14<countDSK ? ">" : " "));
   sprintf(szName,"%03d/%03d FILES AVAILABLE     ",ucSel+1+NoDebGame,countDSK);
-  DS_Print(3,6,0, szName);
-  for (ucBcl=0;ucBcl<14; ucBcl++) {
+  DS_Print(3,3,0, szName);
+  for (ucBcl=0;ucBcl<16; ucBcl++) {
     ucGame= ucBcl+NoDebGame;
     if (ucGame < countDSK)
     {
@@ -334,19 +316,19 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
       strcpy(szName,gpDsk[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
       if (gpDsk[ucGame].uType == DIRECT) {
-        sprintf(szName2, " %s]",szName);
-        szName2[0]='[';
-        sprintf(szName,"%-28s",szName2);
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
+        sprintf(tmpBuf, " %s]",szName);
+        tmpBuf[0]='[';
+        sprintf(szName,"%-28s",tmpBuf);
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
       }
       else {
         sprintf(szName,"%-28s",strupr(szName));
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
       }
     }
     else
     {
-        DS_Print(1,8+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
+        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
     }
   }
 }
@@ -490,15 +472,15 @@ void TI99FindDskFiles(void)
 
 char *TILoadDiskFile(void)
 {
-  bool bDone=false;
-  u32 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00,romSelected= 0, firstRomDisplay=0,nbRomPerPage, uNbRSPage;
-  s32 uLenFic=0, ucFlip=0, ucFlop=0;
+  u8 bDone=false;
+  u16 ucHaut=0x00, ucBas=0x00, ucSHaut=0x00, ucSBas=0x00, romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
+  s16 uLenFic=0, ucFlip=0, ucFlop=0;
 
   // Show the menu...
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B))!=0);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-  DS_Print(7,5,0,"A=SELECT,  B=EXIT");
+  DS_Print(7,4,0,"A=SELECT,  B=EXIT");
     
   // Change into the last known DSKs directory
   chdir(currentDirDSKs);
@@ -507,7 +489,7 @@ char *TILoadDiskFile(void)
 
   chosenDSK = -1;
 
-  nbRomPerPage = (countDSK>=14 ? 14 : countDSK);
+  nbRomPerPage = (countDSK>=16 ? 16 : countDSK);
   uNbRSPage = (countDSK>=5 ? 5 : countDSK);
 
   if (ucDskAct>countDSK-nbRomPerPage)
@@ -664,7 +646,7 @@ char *TILoadDiskFile(void)
         chdir(gpDsk[ucDskAct].szName);
         TI99FindDskFiles();
         ucDskAct = 0;
-        nbRomPerPage = (countDSK>=14 ? 14 : countDSK);
+        nbRomPerPage = (countDSK>=16 ? 16 : countDSK);
         uNbRSPage = (countDSK>=5 ? 5 : countDSK);
         if (ucDskAct>countDSK-nbRomPerPage) {
           firstRomDisplay=countDSK-nbRomPerPage;
@@ -728,15 +710,15 @@ char *TILoadDiskFile(void)
 // ----------------------------------------------------------------
 u8 tiDSLoadFile(void)
 {
-  bool bDone=false;
-  u32 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00,romSelected= 0, firstRomDisplay=0,nbRomPerPage, uNbRSPage;
-  s32 uLenFic=0, ucFlip=0, ucFlop=0;
+  u8 bDone=false;
+  u16 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00, romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
+  s16 uLenFic=0, ucFlip=0, ucFlop=0;
 
   // Show the menu...
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B))!=0);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-  DS_Print(7,5,0,"A=SELECT,  B=EXIT");
+  DS_Print(7,4,0,"A=SELECT,  B=EXIT");
 
   // Change into the last known ROMs directory
   chdir(currentDirROMs);
@@ -745,7 +727,7 @@ u8 tiDSLoadFile(void)
 
   ucGameChoice = -1;
 
-  nbRomPerPage = (countTI>=14 ? 14 : countTI);
+  nbRomPerPage = (countTI>=16 ? 16 : countTI);
   uNbRSPage = (countTI>=5 ? 5 : countTI);
 
   if (ucGameAct>countTI)
@@ -907,7 +889,7 @@ u8 tiDSLoadFile(void)
         chdir(gpFic[ucGameAct].szName);
         TI99FindFiles();
         ucGameAct = 0;
-        nbRomPerPage = (countTI>=14 ? 14 : countTI);
+        nbRomPerPage = (countTI>=16 ? 16 : countTI);
         uNbRSPage = (countTI>=5 ? 5 : countTI);
         if (ucGameAct>countTI-nbRomPerPage) {
           firstRomDisplay=countTI-nbRomPerPage;
@@ -972,7 +954,7 @@ u8 tiDSLoadFile(void)
 void SaveConfig(bool bShow)
 {
     FILE *fp;
-    int slot = 0;
+    s16 slot = 0;
 
     if (bShow) DS_Print(6,2,0, (char*)"SAVING CONFIGURATION");
 
@@ -1208,8 +1190,7 @@ const struct options_t Option_Table[2][20] =
 // ------------------------------------------------------------------
 u8 display_options_list(bool bFullDisplay)
 {
-    char strBuf[35];
-    int len=0;
+    s16 len=0;
 
     DS_Print(1,21, 0, (char *)"                              ");
     if (bFullDisplay)
@@ -1240,10 +1221,9 @@ void tiDSGameOptions(void)
 {
     u8 optionHighlighted;
     u8 idx;
-    bool bDone=false;
-    int keys_pressed;
-    int last_keys_pressed = 999;
-    char strBuf[35];
+    u8 bDone=false;
+    s16 keys_pressed;
+    s16 last_keys_pressed = 999;
 
     idx=display_options_list(true);
     optionHighlighted = 0;
@@ -1324,7 +1304,7 @@ void tiDSGameOptions(void)
 }
 
 
-const struct options_t GlobalOption_Table[20] =
+const struct options_t GlobalOption_Table[] =
 {
     {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
     {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
@@ -1342,8 +1322,7 @@ const struct options_t GlobalOption_Table[20] =
 // ------------------------------------------------------------------
 u8 display_global_options_list(bool bFullDisplay)
 {
-    char strBuf[35];
-    int len=0;
+    s16 len=0;
 
     DS_Print(1,21, 0, (char *)"                              ");
     if (bFullDisplay)
@@ -1370,10 +1349,9 @@ void tiDSGlobalOptions(void)
 {
     u8 optionHighlighted;
     u8 idx;
-    bool bDone=false;
-    int keys_pressed;
-    int last_keys_pressed = 999;
-    char strBuf[35];
+    u8 bDone=false;
+    s16 keys_pressed;
+    s16 last_keys_pressed = 999;
 
     idx=display_global_options_list(true);
     optionHighlighted = 0;
@@ -1742,7 +1720,7 @@ void tiDSChangeOptions(void)
         switch (ucY) {
           case 6 :      // LOAD GAME
             tiDSLoadFile();
-            dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
+            dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+3*32*2,32*21*2);
             if (ucGameChoice != -1)
             {
                 ReadFileCRCAndConfig(); // Get CRC32 of the file and read the config/keys
@@ -1765,7 +1743,7 @@ void tiDSChangeOptions(void)
             if (ucGameChoice != -1)
             {
                 tiDSChangeKeymap();
-                dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
+                dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+3*32*2,32*21*2);
                 affInfoOptions(ucY);
                 DisplayFileName();
             }
@@ -1778,7 +1756,7 @@ void tiDSChangeOptions(void)
             if (ucGameChoice != -1)
             {
                 tiDSGameOptions();
-                dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
+                dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+3*32*2,32*21*2);
                 affInfoOptions(ucY);
                 DisplayFileName();
             }
@@ -1790,7 +1768,7 @@ void tiDSChangeOptions(void)
 
           case 14 :     // GLOBAL OPTIONS
             tiDSGlobalOptions();
-            dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
+            dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+3*32*2,32*21*2);
             affInfoOptions(ucY);
             DisplayFileName();
             break;
@@ -1828,7 +1806,7 @@ ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage)
   u16 usCharac;
   char *pTrTxt=szMessage;
     
-  if (iScr == 1) return; //TODO: need t decide if we want to support text display on the top screen... probably don't need it
+  if (iScr == 1) return; //TODO: need to decide if we want to support text display on the top screen... probably don't need it
 
   pusEcran=(u16*) (iScr != 1 ? bgGetMapPtr(bg1b) : bgGetMapPtr(bg1))+iX+(iY<<5);
   pusMap=(u16*) (iScr != 1 ? (iScr == 6 ? bgGetMapPtr(bg0b)+24*32 : (iScr == 0 ? bgGetMapPtr(bg0b)+24*32 : bgGetMapPtr(bg0b)+26*32 )) : bgGetMapPtr(bg0)+51*32 );

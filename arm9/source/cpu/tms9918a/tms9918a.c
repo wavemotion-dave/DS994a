@@ -32,8 +32,8 @@ u8 MaxSprites[2] __attribute__((section(".dtcm"))) = {4, 32};     // Normally th
 
 u16 *pVidFlipBuf __attribute__((section(".dtcm"))) = (u16*) (0x06000000);    // Video flipping buffer
 
-u8 XBuf_A[256*256] ALIGN(32) = {0}; // Really it's only 256x192 - Ping Pong Buffer A
-u8 XBuf_B[256*256] ALIGN(32) = {0}; // Really it's only 256x192 - Ping Pong Buffer B
+u8 XBuf_A[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer A
+u8 XBuf_B[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer B
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
 // Look up table for colors - pre-generated and in VRAM for maximum speed!
@@ -69,7 +69,7 @@ u8 TMS9918A_palette[16*3] __attribute__((section(".dtcm")))  = {
   0x20,0x80,0x20,   0xC0,0x40,0xA0,   0xA0,0xA0,0xA0,   0xE0,0xE0,0xE0,
 };
 
-u8 pVDPVidMem[0x4000] ALIGN(32) ={0};                  // VDP video memory... 16K
+u8 pVDPVidMem[0x4000] ALIGN(32) ={0};                   // VDP video memory... 16K
 
 u16 CurLine     __attribute__((section(".dtcm")));      // Current scanline
 u8 VDP[16]      __attribute__((section(".dtcm")));      // VDP Registers
