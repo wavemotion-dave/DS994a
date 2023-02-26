@@ -233,7 +233,7 @@ void WriteTICCRegister(u16 address, u8 val)
     }
 }
 
-void ReadSector(u8 drive, u16 sector, u8 *buf)
+ITCM_CODE void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
@@ -252,7 +252,7 @@ void ReadSector(u8 drive, u16 sector, u8 *buf)
     }
 }
 
-void HandleTICCSector(void)
+ITCM_CODE void HandleTICCSector(void)
 {
     bool success = true;
     extern u8 pVDPVidMem[];
@@ -396,7 +396,7 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
-void disk_write_to_sd(u8 drive)
+ITCM_CODE void disk_write_to_sd(u8 drive)
 {
     // Only DSK1 and DSK2 support write-back
     if (drive != DSK3)

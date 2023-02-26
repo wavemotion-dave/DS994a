@@ -28,6 +28,7 @@
 #include "cpu/tms9918a/tms9918a.h"
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
+#include "cpu/sn76496/SN76496.h"
 #include "disk.h"
 #include "intro.h"
 #include "ds99kbd.h"
@@ -37,7 +38,6 @@
 #include "screenshot.h"
 #include "soundbank.h"
 #include "soundbank_bin.h"
-#include "cpu/sn76496/SN76496.h"
 
 u32 debug[8];  // A small bank of 32-bit debug registers we can use for profiling or other sundry debug purposes. Pressing X when loading a game shows the debug registers.
 
