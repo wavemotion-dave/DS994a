@@ -1616,9 +1616,9 @@ void affInfoOptions(u32 uY)
     DS_Print(2, 6,(uY== 6 ? 2 : 0),("         LOAD  GAME         "));
     DS_Print(2, 8,(uY==8  ? 2 : 0),("         PLAY  GAME         "));
     DS_Print(2,10,(uY==10 ? 2 : 0),("     REDEFINE  KEYS         "));
-    DS_Print(2,12,(uY==12 ? 2 : 0),("        GAME   OPTIONS      "));
-    DS_Print(2,14,(uY==14 ? 2 : 0),("      GLOBAL   OPTIONS      "));
-    DS_Print(2,16,(uY==16 ? 2 : 0),("        QUIT   EMULATOR     "));
+    DS_Print(2,12,(uY==12 ? 2 : 0),("         GAME  OPTIONS      "));
+    DS_Print(2,14,(uY==14 ? 2 : 0),("       GLOBAL  OPTIONS      "));
+    DS_Print(2,16,(uY==16 ? 2 : 0),("         QUIT  EMULATOR     "));
     DS_Print(6,18,0,("USE D-PAD  A=SELECT"));
 }
 
@@ -1631,7 +1631,7 @@ void NoGameSelected(u32 ucY)
     while (keysCurrent()  & (KEY_START | KEY_A));
     dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
     DS_Print(5,10,0,("   NO GAME SELECTED   "));
-    DS_Print(5,12,0,("  PLEASE, USE OPTION  "));
+    DS_Print(5,12,0,("  PLEASE, USE MENU TO "));
     DS_Print(5,14,0,("      LOAD  GAME      "));
     while (!(keysCurrent()  & (KEY_START | KEY_A)));
     while (keysCurrent()  & (KEY_START | KEY_A));
