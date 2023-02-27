@@ -30,7 +30,6 @@
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
 #include "../sn76496/SN76496.h"
-extern SN76496 snti99;
 
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
@@ -54,7 +53,9 @@ u16 MemoryRead16(u16 address);
 
 u16 readSpeech = 999;
 
-char tmpFilename[256];
+// A few externs from other modules...
+extern char tmpBuf[];
+extern SN76496 snti99;
 
 // Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer is smaller
 u8 BankMasks[256];
@@ -544,15 +545,15 @@ void TMS9900_Reset(char *szGame)
     // -----------------------------------------------------------------------------
     // We're going to be manipulating the filename a bit so copy it into a buffer
     // -----------------------------------------------------------------------------
-    strcpy(tmpFilename, szGame);
+    strcpy(tmpBuf, szGame);
 
-    u8 fileType = toupper(tmpFilename[strlen(tmpFilename)-5]);
+    u8 fileType = toupper(tmpBuf[strlen(tmpBuf)-5]);
 
     if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
     {
         tms9900.bankMask = 0x003F;
-        tmpFilename[strlen(tmpFilename)-5] = 'C';   // Try to find a 'C' file
-        infile = fopen(tmpFilename, "rb");
+        tmpBuf[strlen(tmpBuf)-5] = 'C';   // Try to find a 'C' file
+        infile = fopen(tmpBuf, "rb");
         if (infile != NULL)
         {
             int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);     // Whole cart C memory as needed...
@@ -575,8 +576,8 @@ void TMS9900_Reset(char *szGame)
             }
         }
 
-        tmpFilename[strlen(tmpFilename)-5] = 'D';   // Try to find a 'D' file
-        infile = fopen(tmpFilename, "rb");
+        tmpBuf[strlen(tmpBuf)-5] = 'D';   // Try to find a 'D' file
+        infile = fopen(tmpBuf, "rb");
         if (infile != NULL)
         {
             tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 2 banks
@@ -586,8 +587,8 @@ void TMS9900_Reset(char *szGame)
         memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
 
         // And see if there is a GROM file to go along with this load...
-        tmpFilename[strlen(tmpFilename)-5] = 'G';
-        infile = fopen(tmpFilename, "rb");
+        tmpBuf[strlen(tmpBuf)-5] = 'G';
+        infile = fopen(tmpBuf, "rb");
         if (infile != NULL)
         {
             fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM
@@ -596,7 +597,7 @@ void TMS9900_Reset(char *szGame)
     }
     else // Full Load
     {
-        infile = fopen(tmpFilename, "rb");
+        infile = fopen(tmpBuf, "rb");
         int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
         fclose(infile);
         numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
@@ -864,7 +865,8 @@ inline void WriteRAM16a(u16 address, u16 data)
 
 // -----------------------------------------------------------------------------------------------
 // A PC fetch is always from main memory and won't trigger anything like VDP or GROM access...
-// so we can be a little smarter/faster in getting the memory here.
+// so we can be a little smarter/faster in getting the memory here. This routine will handle
+// the SAMS memory map.  See ReadPC16_Fast() for the non-SAMS version.
 // -----------------------------------------------------------------------------------------------
 ITCM_CODE u16 ReadPC16(void)
 {
@@ -894,12 +896,15 @@ ITCM_CODE u16 ReadPC16(void)
     return (data16 << 8) | (data16 >> 8);
 }
 
+// ------------------------------------------------------------------------------------------------------
+// Here we're not a SAMS game so we don't have to check for or process indexing into SAMS banked memory.
+// ------------------------------------------------------------------------------------------------------
 ITCM_CODE u16 ReadPC16_Fast(void)
 {
     u16 address = tms9900.PC; tms9900.PC+=2;
 
     // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
-    if (address & 0xC000)
+    if (address & 0xE000)
     {
         u8 memType = MemType[address];
         if (memType)
@@ -909,7 +914,6 @@ ITCM_CODE u16 ReadPC16_Fast(void)
             {
                 u16 data16 = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
                 return (data16 << 8) | (data16 >> 8);
-
             }
         }
     }
@@ -1006,6 +1010,11 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return tms9900.cartBankPtr[(address&0x1FFF)];
                 break;
             case MF_SPEECH:
+                // ----------------------------------------------------------------------------------------------------------
+                // We use the sentinal 999 as meaning that we will return status. If the readSpeech value is not 999, then
+                // we return that value to the caller - this is often used to read the first byte of Speech ROM to make
+                // sure that it's an 0xAA value and thus produce TI Speech (as a way to detect if the module is attached).
+                // ----------------------------------------------------------------------------------------------------------
                 if (readSpeech != 999)
                 {
                     u8 data = readSpeech;
@@ -1013,7 +1022,9 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                     return data;
                 }
                 else
+                {
                     return (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                }
                 break;
             case MF_DISK:
                 return ReadTICCRegister(address);
@@ -1125,7 +1136,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 WriteBank(address);
                 break;
             case MF_SPEECH:
-                CheckSpeech(data);
+                WriteSpeechData(data);
                 break;
             case MF_SAMS:
                 SAMS_WriteBank(address, data);

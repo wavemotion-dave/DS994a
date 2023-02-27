@@ -502,7 +502,7 @@ void KeyPushFilename(char *filename)
 
 
 #define MAX_FILES_PER_DSK           32         // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen
-char dsk_listing[MAX_FILES_PER_DSK][16];       // And room for 16 characters per file (really 10 but we keep it on an 16-byte boundary)
+char dsk_listing[MAX_FILES_PER_DSK][12];       // And room for 16 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
 u8   dsk_num_files = 0;
 void ShowDiskListing(void)
 {
@@ -907,7 +907,7 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     if (bKeyClick == 1)
     {
         mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
-        bKeyClick = 2;      // No more click - one was enough 
+        bKeyClick = 2;           // No more click - one was enough 
         
         if (handling_meta) handling_meta = 4;   // This will force the meta key to deactivate as soon as nothing is touched on the virtual keyboard screen
     }
@@ -1065,7 +1065,7 @@ ITCM_CODE void ds99_main(void)
           }
       }
         
-      if  (keysCurrent() & KEY_TOUCH)
+      if (keysCurrent() & KEY_TOUCH)
       {
         touchPosition touch;
         touchRead(&touch);
@@ -1611,7 +1611,7 @@ void _putchar(char character) {};   // Not used but needed to link printf()
 // render speech fairly well even on the oldest DS handheld systems.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
-ITCM_CODE void CheckSpeech(u8 data)
+ITCM_CODE void WriteSpeechData(u8 data)
 {
     // Reading Address 0 from the Speech ROM
     if ((speechData32 == 0x40404040) && (data == 0x10))

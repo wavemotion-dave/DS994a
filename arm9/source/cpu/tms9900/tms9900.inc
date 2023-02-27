@@ -26,9 +26,9 @@
 
 
 // ---------------------------------------------------------------------------------------------
-// GCC at -Ofast optmization will turn an 8-bit switch into a jump table which will product
-// the fastest code possible. Each instruction below handles their own cycle count and 
-// includes all memory fetches except the 4 cycle penalty and extra waits for GROM access
+// GCC at --O2 and above optmization will turn an 8-bit switch into a jump table which will 
+// produce the fastest code possible. Each instruction below handles their own cycle count 
+// and includes all memory fetches except the 4 cycle penalty and extra waits for GROM access.
 // ---------------------------------------------------------------------------------------------
         case op_sra:
         {
@@ -735,7 +735,7 @@
     case op_soc:
         AddCycleCount(14);
         TsTd();
-        u16 data16 = MemoryRead16(tms9900.srcAddress) | MemoryRead16(tms9900.dstAddress);
+        data16 = MemoryRead16(tms9900.srcAddress) | MemoryRead16(tms9900.dstAddress);
         tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         MemoryWrite16(tms9900.dstAddress, data16);
         break;
@@ -874,7 +874,15 @@
         tms9900.ST &= ~ST_INTMASK;
         break;
 
-    case op_xop:    //TBD unlikely this could ever work on DS99/4a.. so we'll just chew up some clocks and pray...
+    case op_xop:
+        AddCycleCount(36);
+        Ts(SOURCE_WORD);  // Forces 16-bit source address mode
+        data16 = ((tms9900.currentOp & 0x03c0) >> 6);
+        TMS9900_ContextSwitch(data16);
+        MemoryWrite16(WP_REG(11), tms9900.srcAddress);
+        tms9900.ST |= ST_X;
+        break;
+    
     case op_bad:
     case op_ckon:   // No support for external instrutions...
     case op_ckof:   // No support for external instrutions...

@@ -134,6 +134,6 @@ extern void DisplayStatusLine(bool bForce);
 extern void ResetTI(void);
 extern void DiskSave(char *filename);
 extern void DrawCleanBackground(void);
-extern void CheckSpeech(u8 data);
+extern void WriteSpeechData(u8 data);
 
 #endif

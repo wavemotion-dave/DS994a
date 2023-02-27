@@ -79,8 +79,9 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 
 Known Issues :
 -----------------------
-* The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end.
+* The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end. Cause unknown.
 * Borzork has audio squealing during gameplay. Cause unknown.
+* Funware's Ambulence has graphical glitches. Cause unknown.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 * TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
 
