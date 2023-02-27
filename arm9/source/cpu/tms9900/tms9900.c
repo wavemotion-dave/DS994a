@@ -433,14 +433,14 @@ void TMS9900_Reset(char *szGame)
 
     for (u16 address = 0x8800; address < 0x8C00; address += 4)
     {
-        MemType[address+0] = MF_VDP;    // VDP Read Data
-        MemType[address+2] = MF_VDP;    // VDP Read Status
+        MemType[address+0] = MF_VDP_R;    // VDP Read Data
+        MemType[address+2] = MF_VDP_R;    // VDP Read Status
     }
 
     for (u16 address = 0x8C00; address < 0x9000; address += 4)
     {
-        MemType[address+0] = MF_VDP;   // VDP Write Data
-        MemType[address+2] = MF_VDP;   // VDP Write Address
+        MemType[address+0] = MF_VDP_W;   // VDP Write Data
+        MemType[address+2] = MF_VDP_W;   // VDP Write Address
     }
 
     for (u16 address = 0x9000; address < 0x9800; address += 4)
@@ -955,7 +955,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 retVal = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
                 return (retVal << 8) | (retVal >> 8);
                 break;
-            case MF_VDP:
+            case MF_VDP_R:
                 if (address & 2) retVal = (u16)RdCtrl9918()<<8; else retVal = (u16)RdData9918()<<8;
                 return retVal;
                 break;
@@ -998,7 +998,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
             case MF_SAMS8:
                 return *((u8*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
                 break;
-            case MF_VDP:
+            case MF_VDP_R:
                 if (address & 2) return (u8)RdCtrl9918();
                 else return (u8)RdData9918();
                 break;
@@ -1062,7 +1062,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
             case MF_SOUND:
                 sn76496W(data, &snti99);
                 break;
-            case MF_VDP:
+            case MF_VDP_W:
                 if (address & 2) WrCtrl9918(data>>8);
                 else WrData9918(data>>8);
                 break;
@@ -1124,7 +1124,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
             case MF_SOUND:
                  sn76496W(data, &snti99);
                 break;
-            case MF_VDP:
+            case MF_VDP_W:
                 if (address & 2) WrCtrl9918(data);
                 else WrData9918(data);
                 break;

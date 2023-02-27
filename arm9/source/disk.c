@@ -1,7 +1,7 @@
 // The original version of this came from Clasic99 (C) Mike Brent 
 // who has graciously allowed me to use a bit of this code for
 // very simplified DSK support. We utilize the TI99 Disk Controller
-// DSR along with support for simple 90K and 180K raw sector disks.
+// DSR along with support for simple 90K, 180K and 360K raw sector disks.
 // This should be enough to load up Scott Adam's Adventure Games 
 // and Tunnels of Doom quests.  Despite the heavy similification
 // of the code, Mike's original copyright remains below:
@@ -252,6 +252,15 @@ ITCM_CODE void ReadSector(u8 drive, u16 sector, u8 *buf)
     }
 }
 
+// ----------------------------------------------------------------------------------------------------------------
+// This is where the magic happens.. this ruotine is called to handle a sector and is done cleverly by way of 
+// looking at when the PC counter is at >40E8 whcih is the TI disk controller DSR's entry to handle sector
+// reads and writes. In this way we can utilize the existing TI disk controller DSR and just handle the actual
+// sector read/write. This allows us up to the standard 1600 bits x 256 sectors or 400K of disk space. We limit
+// to 360K which is the sort of standard Double-Sided Double-Density drive. If we wanted to go beyond this limit
+// we would have to switch to a different disk controller DSR or create our own. This shouldn't be much of a
+// problem as virtually anything that has come out on disk for the TI99 will run on a 360K or smaller floppy.
+// ----------------------------------------------------------------------------------------------------------------
 ITCM_CODE void HandleTICCSector(void)
 {
     bool success = true;
@@ -327,6 +336,13 @@ ITCM_CODE void HandleTICCSector(void)
         tms9900.PC = 0x42a0;                // error 31 (not found)
     }
 }
+
+
+// --------------------------------------------------------------------------------------------------
+// Routines below this comment are all related to reading and writing .DSK files to and from the
+// DS Fat file system on the SD Card. We take care to handle .BAK files in case we run into any
+// problems with writing the .DSK back to the SD card. Better safe than sorry.
+// --------------------------------------------------------------------------------------------------
 
 void disk_mount(u8 drive, char *path, char *filename)
 {

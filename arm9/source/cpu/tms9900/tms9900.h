@@ -209,7 +209,8 @@ enum _MEM_TYPE
     MF_SPEECH,      // This is TI Speech chip access
     MF_CART,        // This is banked TI Cart access at >6000
     MF_CART_NB,     // This is non-banked TI Cart access at >6000
-    MF_VDP,         // This is the TMS9918a Video chip access
+    MF_VDP_R,       // This is the TMS9918a Video chip access - Read
+    MF_VDP_W,       // This is the TMS9918a Video chip access - Write
     MF_DISK,        // This is the TI Disk Controller
     MF_GROMR,       // This is the TMS9918a GROM read access
     MF_GROMW,       // This is the TMS9918a GROM write access
