@@ -150,7 +150,7 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 
 How do I play Frogger? :
 -----------------------
-No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine.
+No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine. Star Trek similarly uses P2 controls and you'll want to map a few other keys for Photon Torpedos and Warp to various DS keys for maximum playability.
 
 How do I play Q-Bert? :
 -----------------------
