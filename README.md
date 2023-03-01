@@ -11,14 +11,14 @@ Features :
 * Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
 * Cart loads up to 512K Banked (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion built-in
-* SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units.
-* MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type.
+* SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
+* MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI99 keyboard with classic TI99/4a stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
-* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice).  
+* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice)
 * A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek and Bigfoot
 
 Copyright :
