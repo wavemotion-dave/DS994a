@@ -16,7 +16,7 @@ Features :
 * Save and Load State
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
-* Virtual TI99 keyboard - both new and classic so it can look just the way you remember it
+* Virtual TI99 keyboard with classic TI99/4a stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice).  
 * A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek and Bigfoot
