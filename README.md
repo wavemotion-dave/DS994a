@@ -208,7 +208,7 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V1.4: NOT YET RELEASED (probably 01-Mar-2023 by wavemotion-dave)
+V1.4: 01-Mar-2023 by wavemotion-dave
 * Added new 3D TI virtual keyboard. Removed old grey grid-style keyboard.
 * New dark menu theme throughout to more closely mimic the black/silver stylings of an old-school TI99/4a.
 * Improved memory usage and refactored code to allow for better future expansion.
