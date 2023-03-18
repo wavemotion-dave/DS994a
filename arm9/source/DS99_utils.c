@@ -684,7 +684,7 @@ char *TILoadDiskFile(void)
         }
         strncpy(szName,gpDsk[ucDskAct].szName+uLenFic,28);
         szName[28] = '\0';
-        DS_Print(1,8+romSelected,2,szName);
+        DS_Print(1,6+romSelected,2,szName);
       }
     }
     swiWaitForVBlank();
@@ -927,7 +927,7 @@ u8 tiDSLoadFile(void)
         }
         strncpy(szName,gpFic[ucGameAct].szName+uLenFic,28);
         szName[28] = '\0';
-        DS_Print(1,8+romSelected,2,szName);
+        DS_Print(1,6+romSelected,2,szName);
       }
     }
     swiWaitForVBlank();
