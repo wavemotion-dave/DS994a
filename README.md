@@ -132,7 +132,7 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * You will need the 994aDISK.bin as mentioned in the BIOS files section above.
 * You will need the cartridge files for the game (AdventureG.bin or TunnelsG.bin or similar)
 * You will need the disk (.DSK) image for the game you want to play
-* Load the cartridge file normally... then use the DISK icon/menu to mount the .DSK
+* Load the cartridge file normally... then use the TI Menu to mount the .DSK
 * For Adventure you load the game by typing "DSK1.PIRATE" (for Pirate's adventure... or whatever name/game you want... use LIST DISK to see what's on the disk as there were more than a dozen Scott Adams adventure games).
 * For some adventure games you should enable the ALPHA LOCK key in Game Options or use the ALPHA LOCK key on the TI99 Keyboard.
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part). Or you can use the DISK menu to list what's on a disk and paste it in automatically.
@@ -144,7 +144,7 @@ How do I play Realms of Antiquity? :
 In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A labor of love for more than a decade of hand-crafting this is the pinnacle of RPGs for the TI99/4a. It is playable on DS994a but requires all three disk drives to be used.
 * Ensure SAMS 512K/1MB is enabled in configuration for this game.
 * Load the binary roacart.bin as your cartridge and advance to the TI title screen
-* Using the Cassette Icon in the lower left... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
+* Using the TI Menu in the upper right... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
 * Enjoy - save often and make use of the BACKUP DISK to occasionally save off the ROAGAME.DSK (DSK1) into a /bak directory for maximum caution in case something ever goes wrong with writing the master copy.
 
 ![Realms of Antiquity](https://github.com/wavemotion-dave/DS994a/blob/main/roa.bmp)
