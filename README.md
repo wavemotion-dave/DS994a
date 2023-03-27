@@ -83,7 +83,8 @@ Known Issues :
 * Borzork has audio squealing during gameplay. Cause unknown.
 * Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
 * TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
-* The system will not auto-detect an NTSC vs PAL game. If you are running a game designed for a PAL system, you must manually change the configuration to PAL. If you don't, PAL games like Eric in Monsterland or Inteceptor won't run properly - for example, one sure sign is that collisions won't work correctly unless you set the region properly.
+* The system will not auto-detect an NTSC vs PAL game. If you are running a game designed for a PAL system, you must manually change the configuration to PAL. 
+* Speaking of PAL, Eric in Monsterland and Inteceptor won't run properly under NTSC (collision detection isn't working). Set these to PAL for now.
 
 
 File Types Supported :
