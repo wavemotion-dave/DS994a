@@ -36,11 +36,13 @@
 // -------------------------------------------------------------------
 u8           MemCPU[0x10000];            // 64K of CPU MemCPU Space
 u8           MemGROM[0x10000];           // 64K of GROM MemCPU Space
-u8           MemCART[MAX_CART_SIZE];     // Cart C/D/8 memory up to 512K banked at >6000
 u8           MemType[0x10000];           // Memory type for each address
 u8           DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
 u16          numCartBanks = 1;           // Number of CART banks (8K each)
+
 u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
+u8           *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 2MB/512K (DSi vs DS) banked at >6000
+u32          MAX_CART_SIZE = (512*1024);    
 
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
@@ -57,7 +59,7 @@ u16 readSpeech = 999;
 extern char tmpBuf[];
 extern SN76496 snti99;
 
-// Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer is smaller
+// Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer might be smaller
 u8 BankMasks[256];
 
 // Pre-fill the parity table for fast look-up based on Classic99 'black magic'
@@ -621,6 +623,7 @@ void TMS9900_Reset(char *szGame)
         memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
     }
 
+    // Put the first 8K bank into fast memory - a bit of a speedup on access and there are plenty of games that only need this 8K
     memcpy(FastCartBuffer, MemCPU+0x6000, 0x2000);
 
     // ------------------------------------------------------

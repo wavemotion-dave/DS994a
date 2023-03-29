@@ -134,6 +134,7 @@ const char szKeyName[MAX_KEY_OPTIONS][20] = {
 
 void DrawCleanBackground(void)
 {
+    swiWaitForVBlank();
     // ---------------------------------------------------
     // Put up a generic background for this mini-menu...
     // ---------------------------------------------------
@@ -1170,7 +1171,7 @@ const struct options_t Option_Table[2][20] =
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                     &myConfig.frameBlend,   2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                     &myConfig.maxSprites,   2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                    &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 512K/1MB"},                                                                 &myConfig.machineType,  2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                 &myConfig.machineType,  2},
         {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                            &myConfig.cartType,     5},
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                           &myConfig.emuSpeed,     4},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                     &myConfig.capsLock,     2},

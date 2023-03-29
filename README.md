@@ -9,7 +9,7 @@ See BIOS files further down for the ones you need.
 Features :
 -----------------------
 * Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
-* Cart loads up to 512K Banked (+40K of GROM beyond the 24K Console GROM)
+* Cart loads up to 2048K (2MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion built-in
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type
@@ -92,7 +92,7 @@ File Types Supported :
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
 * Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
-* All other files are considered '8' files which is non-inverted banking up to 512K. 
+* All other files are considered '8' files which is non-inverted banking up to 2048K (2MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
 
@@ -210,6 +210,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.5: 29-Mar-2023 by wavemotion-dave
+* Fixed minor cosmetic glitches with menu handling and ROM file selection.
+* DSi now supports up to 2048K (2MB) banked ROMs (the older DS still supports 512K).
+* Other minor cleanups as time permitted.
+
 V1.4: 01-Mar-2023 by wavemotion-dave
 * Added new 3D TI virtual keyboard. Removed old grey grid-style keyboard.
 * New dark menu theme throughout to more closely mimic the black/silver stylings of an old-school TI99/4a.

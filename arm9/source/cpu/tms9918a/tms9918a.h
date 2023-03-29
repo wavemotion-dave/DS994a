@@ -6,14 +6,12 @@
 #define MAXSCREEN           3   // Highest screen mode supported
 
 #define TMS9918_BASE        10738635
-#define TMS9918_BASE_MTX    11998475    // Not really but this achieves the "faster" 4MHz clock rate.
 
 // ---------------------------------------------------
 // The default NTSC machine time bases 
 // ---------------------------------------------------
 #define TMS9918_FRAMES      60
 #define TMS9918_LINE        ((TMS9918_BASE/(3*60*262)))
-#define TMS9918_LINE_MTX    ((TMS9918_BASE_MTX/(3*60*262)))
 
 #define TMS9918_LINES       262
 #define TMS9918_START_LINE  (3+13+27)
@@ -25,7 +23,6 @@
 // ---------------------------------------------------
 #define TMS9929_FRAMES      50
 #define TMS9929_LINE        ((TMS9918_BASE/(3*50*313)))
-#define TMS9929_LINE_MTX    ((TMS9918_BASE_MTX/(3*50*313)))
 
 #define TMS9929_LINES       313
 #define TMS9929_START_LINE  (3+13+51)

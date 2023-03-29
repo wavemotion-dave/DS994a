@@ -15,7 +15,8 @@
 #include <nds.h>
 #include <string.h>
 
-#define MAX_CART_SIZE    (512*1024)     // 512K maximum cart size...
+extern u32 MAX_CART_SIZE;   // Dynamic buffer size - if DSi we go to 2MB and for DS only 512K
+extern u8  *MemCART;        // The actual cart buffer
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 

@@ -1491,7 +1491,19 @@ int main(int argc, char **argv)
     
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
-    
+
+  // Setup the cart memory - for the DSi we can support 2MB and for the DS we can support 512K
+  if (isDSiMode())
+  {
+      MAX_CART_SIZE = (u32)(2048 * 1024);
+      MemCART = malloc(MAX_CART_SIZE);
+  }
+  else
+  {
+      MAX_CART_SIZE = (u32)(512 * 1024);
+      MemCART = malloc(MAX_CART_SIZE);
+  }    
+
   // -----------------------------------------------------------------
   // Grab the BIOS before we try to switch any directories around...
   // -----------------------------------------------------------------

@@ -101,7 +101,6 @@ enum _OPCODES
 
 extern u8   MemCPU[];
 extern u8   MemGROM[];
-extern u8   MemCART[];
 extern u8   DiskDSR[];
 extern u8   FastCartBuffer[];
 extern u8   MemType[];
