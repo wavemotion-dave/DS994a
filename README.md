@@ -186,9 +186,10 @@ To enable this new blend mode, pick your game and go into the "Game Options" sub
 
 Compile Instructions :
 -----------------------
-DS99/4a was built on my home Ubuntu 18.04 system and later upgraded to Ubuntu 20.04. I used GCC version 7.5.0
-when I was on Ubuntu 18.04 and later GCC 9.4,0 when I was on Ubuntu 20.04.  It uses libnds 1.8.0 and DEVKITPRO
-from the Pacman repositories (devkitpro-pacman version 6.0.1-2).  I'm told it should also build under 
+devkitpro-pacman version 6.0.1-2
+gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0
+libnds 1.8.0
+I use Ubuntu and the Pacman repositories (devkitpro-pacman version 6.0.1-2).  I'm told it should also build under 
 Windows but I've never done it and don't know how.
 
 If you've got the nds libraries above setup correctly it should be a matter of typing:
