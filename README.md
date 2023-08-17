@@ -213,6 +213,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.6: 17-Aug-2023 by wavemotion-dave 
+* New icon for Twilight Menu - woot!
+* Fixed missing arrows on TI-99 Classic Keyboard graphic.
+* Other minor cleanups and tweaks at time permitted.
+
 V1.5: 29-Mar-2023 by wavemotion-dave
 * Fixed minor cosmetic glitches with menu handling and ROM file selection.
 * DSi now supports up to 2048K (2MB) banked ROMs (the older DS still supports 512K).
