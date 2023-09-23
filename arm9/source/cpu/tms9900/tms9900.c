@@ -42,7 +42,7 @@ u16          numCartBanks = 1;           // Number of CART banks (8K each)
 
 u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
 u8           *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 2MB/512K (DSi vs DS) banked at >6000
-u32          MAX_CART_SIZE = (512*1024);    
+u32          MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size
 
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
@@ -307,10 +307,10 @@ void TMS9900_buildopcodes(void)
         x=(in&0xf000)>>12;
         switch(x)
         {
-        case 0: opcode0(in);        break;
-        case 1: opcode1(in);        break;
-        case 2: opcode2(in);        break;
-        case 3: opcode3(in);        break;
+        case 0: opcode0(in);             break;
+        case 1: opcode1(in);             break;
+        case 2: opcode2(in);             break;
+        case 3: opcode3(in);             break;
         case 4: OpcodeLookup[in]=op_szc; break;
         case 5: OpcodeLookup[in]=op_szcb;break;
         case 6: OpcodeLookup[in]=op_s;   break;
