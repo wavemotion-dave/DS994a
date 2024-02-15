@@ -1,8 +1,8 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -40,10 +40,10 @@ void highscore_save(void);
 // ---------------------------------------------------------
 // Each score has this stuff... Initials, score and date.
 // ---------------------------------------------------------
-struct score_t 
+struct score_t
 {
     char    initials[4];        // With NULL this is only 3 ascii characters
-    char    score[7];           // Six digits of score 
+    char    score[7];           // Six digits of score
     char    reserved[5];        // For the future...
     u16  year;                  // Date score was achieved. We'll auto-fill this from DS time
     u8   month;
@@ -62,8 +62,8 @@ struct highscore_t
 };
 
 // -----------------------------------------------------------------------------------
-// We save up to 300 games worth of scores. We also have a spot for default initials 
-// so we can re-use the last initials for the last high-score entered. Saves time 
+// We save up to 300 games worth of scores. We also have a spot for default initials
+// so we can re-use the last initials for the last high-score entered. Saves time
 // for most people who are always the ones using their DS system.
 // -----------------------------------------------------------------------------------
 struct highscore_full_t
@@ -79,7 +79,7 @@ struct highscore_full_t
 // A single score entry and high-score line to edit...
 // -----------------------------------------------------
 struct score_t score_entry;
-char hs_line[33];
+char hs_line[64];
 
 
 // ------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ u32 highscore_checksum(void)
 {
     char *ptr = (char *)&highscores;
     u32 sum = 0;
-    
+
     for (int i=0; i<(int)sizeof(highscores) - 4; i++)
     {
            sum = *ptr++;
@@ -103,14 +103,14 @@ u32 highscore_checksum(void)
 // Read the high score file, if it exists. If it doesn't exist or if the file
 // is not the right version and/or is corrupt (crc check), reset to defaults.
 // ------------------------------------------------------------------------------
-void highscore_init(void) 
+void highscore_init(void)
 {
     u8 upgrade_database = 0;
     u8 create_defaults = 0;
     FILE *fp;
-    
+
     strcpy(highscores.last_initials, "   ");
-    
+
     // --------------------------------------------------------------
     // See if the TI99DS high score file exists... if so, read it!
     // --------------------------------------------------------------
@@ -119,18 +119,18 @@ void highscore_init(void)
     {
         fread(&highscores, sizeof(highscores), 1, fp);
         fclose(fp);
-        
+
         if (highscore_checksum() != highscores.checksum) create_defaults = 1;
     }
     else
     {
         create_defaults = 1;
     }
-    
+
     if (create_defaults)  // Doesn't exist yet or is invalid... create defaults and save it...
     {
         strcpy(highscores.last_initials, "   ");
-        
+
         for (int i=0; i<MAX_HS_GAMES; i++)
         {
             highscores.highscore_table[i].crc = 0x00000000;
@@ -140,7 +140,7 @@ void highscore_init(void)
             {
                 strcpy(highscores.highscore_table[i].scores[j].score, "000000");
                 strcpy(highscores.highscore_table[i].scores[j].initials, "   ");
-                strcpy(highscores.highscore_table[i].scores[j].reserved, "     ");                
+                strcpy(highscores.highscore_table[i].scores[j].reserved, "     ");
                 highscores.highscore_table[i].scores[j].year = 0;
                 highscores.highscore_table[i].scores[j].month = 0;
                 highscores.highscore_table[i].scores[j].day = 0;
@@ -155,7 +155,7 @@ void highscore_init(void)
 // Save the high score file to disc. This gets saved in the /data directory and this
 // directory is created if it doesn't exist (mostly likely does if using TWL++)
 // ------------------------------------------------------------------------------------
-void highscore_save(void) 
+void highscore_save(void)
 {
     FILE *fp;
 
@@ -168,7 +168,7 @@ void highscore_save(void)
     {
         mkdir("/data", 0777);   // Otherwise create the directory...
     }
-    
+
     // --------------------------------------------------------
     // Set our current highscore file version and checksum...
     // --------------------------------------------------------
@@ -209,13 +209,13 @@ void highscore_showoptions(u16 options)
         DS_Print(22,5,0, (char*)"[ALPHA]");
     }
     else
-    {   
-        DS_Print(22,5,0, (char*)"       ");    
+    {
+        DS_Print(22,5,0, (char*)"       ");
     }
 }
 
 // -----------------------------------------------------
-// Show the 10 scores for this game... 
+// Show the 10 scores for this game...
 // -----------------------------------------------------
 void show_scores(short foundIdx, bool bShowLegend)
 {
@@ -224,19 +224,19 @@ void show_scores(short foundIdx, bool bShowLegend)
     {
         if ((highscores.highscore_table[foundIdx].options & HS_OPT_SORTMASK) == HS_OPT_SORTTIME)
         {
-            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %c%c:%c%c.%c%c", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
+            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %c%c:%c%c.%c%c", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day,
                                                              highscores.highscore_table[foundIdx].scores[i].initials, highscores.highscore_table[foundIdx].scores[i].score[0], highscores.highscore_table[foundIdx].scores[i].score[1],
                                                              highscores.highscore_table[foundIdx].scores[i].score[2], highscores.highscore_table[foundIdx].scores[i].score[3], highscores.highscore_table[foundIdx].scores[i].score[4],
                                                              highscores.highscore_table[foundIdx].scores[i].score[5]);
         }
         else
         {
-            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s  ", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day, 
+            sprintf(hs_line, "%04d-%02d-%02d   %-3s   %-6s  ", highscores.highscore_table[foundIdx].scores[i].year, highscores.highscore_table[foundIdx].scores[i].month,highscores.highscore_table[foundIdx].scores[i].day,
                                                                highscores.highscore_table[foundIdx].scores[i].initials, highscores.highscore_table[foundIdx].scores[i].score);
         }
         DS_Print(3,6+i, 0, hs_line);
     }
-    
+
     if (bShowLegend)
     {
         DS_Print(2,16,0, (char*)"                             ");
@@ -253,8 +253,8 @@ void show_scores(short foundIdx, bool bShowLegend)
 // very simple bubblesort which is very slow but with only 10 scores, this is
 // still blazingly fast on the NDS.
 // -------------------------------------------------------------------------------
-char cmp1[21];
-char cmp2[21];
+char cmp1[32];
+char cmp2[32];
 void highscore_sort(short foundIdx)
 {
     // Bubblesort!!
@@ -266,11 +266,11 @@ void highscore_sort(short foundIdx)
             {
                 if (strcmp(highscores.highscore_table[foundIdx].scores[j+1].score, "000000") == 0)
                      strcpy(cmp1, "999999");
-                else 
+                else
                     strcpy(cmp1, highscores.highscore_table[foundIdx].scores[j+1].score);
                 if (strcmp(highscores.highscore_table[foundIdx].scores[j].score, "000000") == 0)
                      strcpy(cmp2, "999999");
-                else 
+                else
                     strcpy(cmp2, highscores.highscore_table[foundIdx].scores[j].score);
                 if (strcmp(cmp1, cmp2) < 0)
                 {
@@ -284,13 +284,13 @@ void highscore_sort(short foundIdx)
             {
                 if (strcmp(highscores.highscore_table[foundIdx].scores[j+1].score, "000000") == 0)
                      strcpy(cmp1, "------");
-                else 
+                else
                     strcpy(cmp1, highscores.highscore_table[foundIdx].scores[j+1].score);
                 if (strcmp(highscores.highscore_table[foundIdx].scores[j].score, "000000") == 0)
                      strcpy(cmp2, "------");
-                else 
+                else
                     strcpy(cmp2, highscores.highscore_table[foundIdx].scores[j].score);
-                
+
                 if (strcmp(cmp1, cmp2) > 0)
                 {
                     // Swap...
@@ -310,7 +310,7 @@ void highscore_sort(short foundIdx)
                 }
             }
         }
-    }    
+    }
 }
 
 
@@ -327,7 +327,7 @@ void highscore_entry(short foundIdx, u32 crc)
     char dampen=0;
     time_t unixTime = time(NULL);
     struct tm* timeStruct = gmtime((const time_t *)&unixTime);
-    
+
     DS_Print(2,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER SCORE");
     DS_Print(2,20,0, (char*)"PRESS START TO SAVE SCORE   ");
     DS_Print(2,21,0, (char*)"PRESS SELECT TO CANCEL      ");
@@ -343,7 +343,7 @@ void highscore_entry(short foundIdx, u32 crc)
         swiWaitForVBlank();
         if (keysCurrent() & KEY_SELECT) {bEntryDone=1;}
 
-        if (keysCurrent() & KEY_START) 
+        if (keysCurrent() & KEY_START)
         {
             strcpy(highscores.last_initials, score_entry.initials);
             memcpy(&highscores.highscore_table[foundIdx].scores[9], &score_entry, sizeof(score_entry));
@@ -357,14 +357,14 @@ void highscore_entry(short foundIdx, u32 crc)
         {
             if ((keysCurrent() & KEY_RIGHT) || (keysCurrent() & KEY_A))
             {
-                if (entry_idx < 8) entry_idx++; 
+                if (entry_idx < 8) entry_idx++;
                 blink=25;
                 dampen=15;
             }
 
-            if (keysCurrent() & KEY_LEFT)  
+            if (keysCurrent() & KEY_LEFT)
             {
-                if (entry_idx > 0) entry_idx--; 
+                if (entry_idx > 0) entry_idx--;
                 blink=25;
                 dampen=15;
             }
@@ -448,7 +448,7 @@ void highscore_entry(short foundIdx, u32 crc)
         }
         DS_Print(3,16, 0, (char*)hs_line);
     }
-    
+
     show_scores(foundIdx, true);
 }
 
@@ -458,12 +458,12 @@ void highscore_entry(short foundIdx, u32 crc)
 void highscore_options(short foundIdx, u32 crc)
 {
     u16 options = 0x0000;
-    char notes[21];
+    static char notes[21];
     char bEntryDone = 0;
     char blink=0;
     unsigned short entry_idx=0;
     char dampen=0;
-    
+
     DS_Print(3,16,0, (char*)"NOTE: ");
     DS_Print(3,19,0, (char*)"UP/DN/LEFT/RIGHT ENTER NOTES");
     DS_Print(3,20,0, (char*)"X=TOGGLE SORT, L+R=CLR SCORE");
@@ -472,13 +472,13 @@ void highscore_options(short foundIdx, u32 crc)
 
     strcpy(notes, highscores.highscore_table[foundIdx].notes);
     options = highscores.highscore_table[foundIdx].options;
-    
+
     while (!bEntryDone)
     {
         swiWaitForVBlank();
         if (keysCurrent() & KEY_SELECT) {bEntryDone=1;}
 
-        if (keysCurrent() & KEY_START) 
+        if (keysCurrent() & KEY_START)
         {
             strcpy(highscores.highscore_table[foundIdx].notes, notes);
             highscores.highscore_table[foundIdx].options = options;
@@ -492,14 +492,14 @@ void highscore_options(short foundIdx, u32 crc)
         {
             if ((keysCurrent() & KEY_RIGHT) || (keysCurrent() & KEY_A))
             {
-                if (entry_idx < 19) entry_idx++; 
+                if (entry_idx < 19) entry_idx++;
                 blink=25;
                 dampen=15;
             }
 
-            if (keysCurrent() & KEY_LEFT)  
+            if (keysCurrent() & KEY_LEFT)
             {
-                if (entry_idx > 0) entry_idx--; 
+                if (entry_idx > 0) entry_idx--;
                 blink=25;
                 dampen=15;
             }
@@ -530,7 +530,7 @@ void highscore_options(short foundIdx, u32 crc)
                 dampen=10;
             }
 
-            if (keysCurrent() & KEY_X)  
+            if (keysCurrent() & KEY_X)
             {
                 if ((options & HS_OPT_SORTMASK) == HS_OPT_SORTLOW)
                 {
@@ -553,14 +553,14 @@ void highscore_options(short foundIdx, u32 crc)
                 highscore_showoptions(options);
                 dampen=15;
             }
-            
-            // Clear the entire game of scores... 
+
+            // Clear the entire game of scores...
             if ((keysCurrent() & KEY_L) && (keysCurrent() & KEY_R))
             {
                 highscores.highscore_table[foundIdx].crc = 0x00000000;
                 highscores.highscore_table[foundIdx].options = 0x0000;
                 strcpy(highscores.highscore_table[foundIdx].notes, "                    ");
-                strcpy(notes, "                    ");                
+                strcpy(notes, "                    ");
                 for (int j=0; j<10; j++)
                 {
                     strcpy(highscores.highscore_table[foundIdx].scores[j].score, "000000");
@@ -571,8 +571,8 @@ void highscore_options(short foundIdx, u32 crc)
                     highscores.highscore_table[foundIdx].scores[j].day = 0;
                 }
                 show_scores(foundIdx, false);
-                highscore_save();                    
-            }            
+                highscore_save();
+            }
         }
         else
         {
@@ -586,17 +586,17 @@ void highscore_options(short foundIdx, u32 crc)
         }
         DS_Print(9,16, 0, (char*)hs_line);
     }
-    
+
     show_scores(foundIdx, true);
 }
 
 // ------------------------------------------------------------------------
-// Entry point for the high score table. We are passed in the crc of the 
+// Entry point for the high score table. We are passed in the crc of the
 // current game. We use the crc to check the high score database and see
 // if there is already saved highscore data for this game.  At the point
 // where this is called, the high score init has already been called.
 // ------------------------------------------------------------------------
-void highscore_display(u32 crc) 
+void highscore_display(u32 crc)
 {
     short foundIdx = -1;
     short firstBlank = -1;
@@ -626,12 +626,12 @@ void highscore_display(u32 crc)
             break;
         }
     }
-    
+
     if (foundIdx == -1)
     {
-        foundIdx = firstBlank;   
+        foundIdx = firstBlank;
     }
-    
+
     show_scores(foundIdx, true);
 
     while (!bDone)
@@ -641,7 +641,7 @@ void highscore_display(u32 crc)
         if (keysCurrent() & KEY_X) highscore_entry(foundIdx, crc);
         if (keysCurrent() & KEY_Y) highscore_options(foundIdx, crc);
     }
-    
+
     InitBottomScreen();
 }
 

@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -888,5 +888,6 @@
     case op_ckof:   // No support for external instrutions...
     case op_lrex:   // No support for external instrutions...
     default:
+    debug[3]++;
         AddCycleCount(6);   // Unused instructions seem to chew up 6 cycles... We aren't trapping on any "illegal" opcodes but we might track it someday
         break;

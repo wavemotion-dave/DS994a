@@ -23,7 +23,7 @@ Features :
 
 Copyright :
 -----------------------
-DS99/4a is Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+DS99/4a is Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 
 This program is made up from a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 
@@ -80,11 +80,11 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end. Cause unknown.
-* Borzork has audio squealing during gameplay. Cause unknown.
-* Congo Bongo requires RAM mirrors enabled so it doesn't glitch on Level 2. Use Options to enable.
+* Congo Bongo and Buck Rogers both require RAM mirrors enabled so it doesn't glitch. Use Options to enable if not auto-detected.
 * TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
 * The system will not auto-detect an NTSC vs PAL game. If you are running a game designed for a PAL system, you must manually change the configuration to PAL. 
 * Speaking of PAL, Eric in Monsterland and Inteceptor won't run properly under NTSC (collision detection isn't working). Set these to PAL for now.
+* MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX is not emulated (other MBX-optional titles with 1K of RAM work fine).
 
 
 File Types Supported :
@@ -213,6 +213,12 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.7: ??-???-2024 by wavemotion-dave 
+* Integrated the updated SN sound core for improved sound.
+* Fixed audio squeals and other odd noises in a few games (e.g. Borzork).
+* Fixed RAM mirrors so more games play correctly - DSi defaults to RAM Mirrors ENABLED.
+* Other minor cleanups and tweaks at time permitted.
+
 V1.6: 17-Aug-2023 by wavemotion-dave 
 * New icon for Twilight Menu - woot!
 * Fixed missing arrows on TI-99 Classic Keyboard graphic.

@@ -32,8 +32,7 @@ CFLAGS	:=	-O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $
 CFLAGS	+=	$(INCLUDE) -DARM9
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
-ASFLAGS	:=	-g $(ARCH) -march=armv5te -mtune=arm946e-s
-ASFLAGS	:=	$(ARCH) -march=armv5te -mtune=arm946e-s
+ASFLAGS	:=	$(ARCH) -march=armv5te -mtune=arm946e-s -DSN_UPSHIFT=2
 
 LDFLAGS	=	-specs=ds_arm9.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 

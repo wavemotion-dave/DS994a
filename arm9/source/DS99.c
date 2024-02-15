@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2004 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -39,7 +39,7 @@
 #include "soundbank.h"
 #include "soundbank_bin.h"
 
-u32 debug[8];  // A small bank of 32-bit debug registers we can use for profiling or other sundry debug purposes. Pressing X when loading a game shows the debug registers.
+u32 debug[0x10];  // A small bank of 32-bit debug registers we can use for profiling or other sundry debug purposes. Pressing X when loading a game shows the debug registers.
 
 // ---------------------------------------------------------------------------------------
 // The master sound chip for the TI99. The SN sound chip is the same as the TI9919 chip.
@@ -180,12 +180,12 @@ mm_stream myStream __attribute__((section(".dtcm")));
 // we fill the sound buffer with more samples. They will request 'len' samples and
 // we will fill exactly that many. If the sound is paused, we fill with 'mute' samples.
 // -------------------------------------------------------------------------------------------
-u16 last_sample __attribute__((section(".dtcm"))) = 0;
+s16 last_sample __attribute__((section(".dtcm"))) = 0;
 ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats format)
 {
     if (soundEmuPause)  // If paused, just keep outputting the last sample which will produce no tones
     {
-        u16 *p = (u16*)dest;
+        s16 *p = (s16*)dest;
         for (int i=0; i<len*2; i++)
         {
            *p++ = last_sample;      // To prevent pops and clicks... just keep outputting the last sample
@@ -193,8 +193,8 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
     }
     else
     {
-        sn76496Mixer(len*4, dest, &snti99);         // Otherwise mix the channels into the buffer
-        last_sample = ((u16*)dest)[len*2 - 1];      // And save off the last sample in case we need to mute...
+        sn76496Mixer(len*2, dest, &snti99);         // Otherwise mix the channels into the buffer
+        last_sample = ((s16*)dest)[len*2 - 1];      // And save off the last sample in case we need to mute...
     }
     
     return  len;
@@ -337,7 +337,7 @@ void dsInstallSoundEmuFIFO(void)
 
   sn76496W(0xFF,  &snti99);         // Disable Noise Channel
     
-  sn76496Mixer(8, tmpBuf, &snti99);  // Do an initial mix conversion to clear the output
+  sn76496Mixer(8, (s16*)tmpBuf, &snti99);  // Do an initial mix conversion to clear the output
 
   setupStream();    // Setup maxmod stream...
 
@@ -960,8 +960,27 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
     
   // Force the sound engine to turn on when we start emulation
   bStartSoundEngine = true;
-   
 }
+
+void __attribute__ ((noinline)) ds99_show_debugger(void)
+{
+    u8 idx=0;
+    
+    for (idx=0; idx<16; idx++)
+    {
+        sprintf(tmpBuf, "%-7u %04X", debug[idx], debug[idx]&0x0000FFFF);
+        DS_Print(20,1+idx,6,tmpBuf);
+    }
+
+    idx = 1;
+    sprintf(tmpBuf, "CH0 %04X %04X %04X", snti99.ch0Frq, snti99.ch0Reg, snti99.ch0Att); 
+    DS_Print(0,idx++,6,tmpBuf);
+    sprintf(tmpBuf, "CH1 %04X %04X %04X", snti99.ch1Frq, snti99.ch1Reg, snti99.ch1Att); 
+    DS_Print(0,idx++,6,tmpBuf);
+    sprintf(tmpBuf, "CH2 %04X %04X %04X", snti99.ch2Frq, snti99.ch2Reg, snti99.ch2Att); 
+    DS_Print(0,idx++,6,tmpBuf);
+}
+
 
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the TMS9900, VDP and 
@@ -1007,13 +1026,12 @@ ITCM_CODE void ds99_main(void)
                 if (globalConfig.showFPS)
                 {
                     DisplayFrameCounter(emuActFrames);
-                    }
+                }
                 emuActFrames = 0;
 
                 if (bShowDebug)
                 {
-                    sprintf(tmpBuf, "%u %u %u %u %u", (unsigned int)debug[0], (unsigned int)debug[1], (unsigned int)debug[2], (unsigned int)debug[3], (unsigned int)debug[4]); 
-                    DS_Print(5,0,6,tmpBuf);
+                    ds99_show_debugger();
                 }
             }
             DisplayStatusLine(false);   // This updates twice per second
@@ -1515,7 +1533,7 @@ int main(int argc, char **argv)
       //  We want to start in the directory where the file is being launched...
       if  (strchr(argv[1], '/') != NULL)
       {
-          char  path[128];
+          static char  path[128];
           strcpy(path,  argv[1]);
           char  *ptr = &path[strlen(path)-1];
           while (*ptr !=  '/') ptr--;

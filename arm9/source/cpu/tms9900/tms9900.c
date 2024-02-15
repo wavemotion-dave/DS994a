@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -59,8 +59,8 @@ u16 readSpeech = 999;
 extern char tmpBuf[];
 extern SN76496 snti99;
 
-// Supporting banking up to the full 2MB (256 x 8KB = 2048KB) even though our cart buffer might be smaller
-u8 BankMasks[256];
+// Supporting banking up to 8MB (1024 x 8KB = 8192KB) even though our cart buffer might be smaller
+u16 BankMasks[1024];
 
 // Pre-fill the parity table for fast look-up based on Classic99 'black magic'
 u16 ParityTable[256]     __attribute__((section(".dtcm")));
@@ -387,18 +387,20 @@ void TMS9900_Reset(char *szGame)
 
     // ----------------------------------------------------------------------
     // Fill in the BankMasks[] for any number of possible banks up to the
-    // full limit of 256 banks (2MB of Cart Space!!)
+    // full limit of 1024 banks (8MB of Cart Space!!)
     // ----------------------------------------------------------------------
-    for (u16 numBanks=1; numBanks<=256; numBanks++)
+    for (u16 numBanks=1; numBanks<=1024; numBanks++)
     {
-        if      (numBanks <= 2)    BankMasks[numBanks-1] = 0x01;
-        else if (numBanks <= 4)    BankMasks[numBanks-1] = 0x03;
-        else if (numBanks <= 8)    BankMasks[numBanks-1] = 0x07;
-        else if (numBanks <= 16)   BankMasks[numBanks-1] = 0x0F;
-        else if (numBanks <= 32)   BankMasks[numBanks-1] = 0x1F;
-        else if (numBanks <= 64)   BankMasks[numBanks-1] = 0x3F;
-        else if (numBanks <= 128)  BankMasks[numBanks-1] = 0x7F;
-        else                       BankMasks[numBanks-1] = 0xFF;
+        if      (numBanks <= 2)    BankMasks[numBanks-1] = 0x0001;
+        else if (numBanks <= 4)    BankMasks[numBanks-1] = 0x0003;
+        else if (numBanks <= 8)    BankMasks[numBanks-1] = 0x0007;
+        else if (numBanks <= 16)   BankMasks[numBanks-1] = 0x000F;
+        else if (numBanks <= 32)   BankMasks[numBanks-1] = 0x001F;
+        else if (numBanks <= 64)   BankMasks[numBanks-1] = 0x003F;
+        else if (numBanks <= 128)  BankMasks[numBanks-1] = 0x007F;
+        else if (numBanks <= 256)  BankMasks[numBanks-1] = 0x00FF;
+        else if (numBanks <= 512)  BankMasks[numBanks-1] = 0x01FF;
+        else                       BankMasks[numBanks-1] = 0x03FF;
     }
 
     // ---------------------------------------------------------------------------
@@ -655,9 +657,13 @@ void TMS9900_Reset(char *szGame)
     // ----------------------------------------------------------------
     if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
     {
-        for (u16 address = 0x6000; address < 0x8000; address++)
+        for (u16 address = 0x6000; address < 0x7000; address++)
         {
             MemType[address] = MF_CART_NB;    // We'll do the banking manually for MBX carts
+        }
+        for (u16 address = 0x7000; address < 0x8000; address++)
+        {
+            MemType[address] = MF_CART;    // We'll do the banking manually for MBX carts
         }
         
         if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
@@ -800,20 +806,21 @@ ITCM_CODE void WriteGROM(u8 data)
 // -------------------------------------------------------------------------------------------------------------------------------------------
 inline void WriteBank(u16 address)
 {
-    u8 bank = (address >> 1);                               // Divide by 2 as we are always looking at bit 1 (not bit 0)
+    u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
     bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
     tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
     if (bank == 0) tms9900.cartBankPtr = FastCartBuffer;    // If bank 0 we can use the fast cart buffer...
     else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // Pre-calculate and store a pointer to the start of the right bank
 }
 
-// ------------------------------------------------------------------------
+// --------------------------------------------------------------------------
 // For the MBX, there are up to 4 banks of 4K each... These map into >7000
-// ------------------------------------------------------------------------
+// We treat this like a half-banked cart with only the 4K at >7000 swapping.
+// --------------------------------------------------------------------------
 void WriteBankMBX(u8 bank)
 {
     bank &= 0x3;
-    memcpy(MemCPU+0x7000, MemCART+(bank*0x1000), 0x1000);
+    tms9900.cartBankPtr = MemCART+(bank*0x1000) - 0x1000;    // The -0x1000 offsets by 4K so that the memory fetch works correctly at >7000
 }
 
 // ------------------------------------------------------------------------------------------------------------------------
@@ -829,9 +836,19 @@ inline u16 ReadRAM16(u16 address)
 // ----------------------------------------------------------------------------------------
 // See comment above for ReadRAM16() - not cycle accurate but good enough for WP use...
 // ----------------------------------------------------------------------------------------
-inline void WriteRAM16(u16 address, u16 data)
+ITCM_CODE void WriteRAM16(u16 address, u16 data)
 {
-    *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+    if (!MemType[address] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+    {
+        *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+    }
+    else
+    {
+        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+    }
 }
 
 // ------------------------------------------------------------------------------------------------------------------------
@@ -852,7 +869,7 @@ inline u16 ReadRAM16a(u16 address)
 // ----------------------------------------------------------------------------------------
 // See comment above for ReadRAM16() - not cycle accurate but good enough for WP use...
 // ----------------------------------------------------------------------------------------
-inline void WriteRAM16a(u16 address, u16 data)
+ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
     if (MemType[address] == MF_SAMS8)
     {
@@ -862,7 +879,17 @@ inline void WriteRAM16a(u16 address, u16 data)
     }        
     else
     {
-        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+        if (!MemType[address] && myConfig.RAMMirrors)  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+        {
+            *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+        }
+        else
+        {
+            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+        }
     }
 }
 
@@ -1063,7 +1090,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
         switch (memType)
         {
             case MF_SOUND:
-                sn76496W(data, &snti99);
+                sn76496W(data>>8, &snti99);
                 break;
             case MF_VDP_W:
                 if (address & 2) WrCtrl9918(data>>8);
@@ -1100,16 +1127,19 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
     }
     else    // This has to be workspace RAM which has to deal with mirrors...
     {
-        if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
+        if (address & 0x8000)   // Make sure this is RAM and not Console ROM (also 16-bit)
         {
-            *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
-        }
-        else
-        {
-            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+            if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
+            {
+                *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+            }
+            else
+            {
+                *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+            }
         }
     }
 }
@@ -1166,16 +1196,19 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
     }
     else    // This has to be workspace RAM which has to deal with mirrors...
     {
-        if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
+        if (address & 0x8000)   // Make sure this is RAM and not Console ROM (also 16-bit)
         {
-            MemCPU[0x8000 | (address&0xff)] = data;
-            MemCPU[0x8100 | (address&0xff)] = data;
-            MemCPU[0x8200 | (address&0xff)] = data;
-            MemCPU[0x8300 | (address&0xff)] = data;
-        }
-        else
-        {
-            MemCPU[address] = data;
+            if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
+            {
+                MemCPU[0x8000 | (address&0xff)] = data;
+                MemCPU[0x8100 | (address&0xff)] = data;
+                MemCPU[0x8200 | (address&0xff)] = data;
+                MemCPU[0x8300 | (address&0xff)] = data;
+            }
+            else
+            {
+                MemCPU[address] = data;
+            }
         }
     }
 }

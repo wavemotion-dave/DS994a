@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -1063,6 +1063,15 @@ void MapESDX(void)
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
 
+void SetDiagonals(void) // Useful for games like Q-Bert
+{
+    myConfig.keymap[0]   = JOY1_RIGHT;
+    myConfig.keymap[1]   = JOY1_LEFT; 
+    myConfig.keymap[2]   = JOY1_UP; 
+    myConfig.keymap[3]   = JOY1_DOWN;
+}
+
+
 void SetDefaultGameConfig(void)
 {
     MapPlayer1();
@@ -1073,7 +1082,7 @@ void SetDefaultGameConfig(void)
     myConfig.maxSprites  = globalConfig.maxSprites;
     myConfig.memWipe     = 0;
     myConfig.capsLock    = 0;
-    myConfig.RAMMirrors  = 0;
+    myConfig.RAMMirrors  = (isDSiMode() ? 1:0);    // For DSi we enable the RAM mirrors
     myConfig.overlay     = globalConfig.overlay;
     myConfig.emuSpeed    = 0;
     myConfig.machineType = globalConfig.machineType;
@@ -1091,6 +1100,24 @@ void SetDefaultGameConfig(void)
     myConfig.reservedQ   = 0xFF;
     myConfig.reservedZ   = 0xFF;
     myConfig.reservedA32 = 0x00000000;
+    
+    if (file_crc == 0x48c12b3c) SetDiagonals(); // Q-Bert wants diagonal directions
+    
+    if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
+    if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)    
+    if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly    
+    
+    if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
+    if (file_crc == 0xd872e83e) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM
+    if (file_crc == 0x2807a67f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM
+    if (file_crc == 0x60e66ab1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM
+    if (file_crc == 0xbc245f56) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Honey Hunt requires MBX 1K of RAM
+    if (file_crc == 0x4bb77ca1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM    
+    if (file_crc == 0x962aca6f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM    
+    
+    if (file_crc == 0xc705118e) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
+    
+    if (file_crc == 0x70820e3f) myConfig.isPAL = 1;     // Eric in Monsterland only runs in PAL mode (unsure why)
 }
 
 // -------------------------------------------------------------------------
@@ -1424,7 +1451,7 @@ void tiDSGlobalOptions(void)
 //*****************************************************************************
 void DisplayKeymapName(u32 uY)
 {
-  char szCha[34];
+  static char szCha[34];
 
   sprintf(szCha," PAD UP    : %-17s",szKeyName[myConfig.keymap[0]]);
   DS_Print(1, 6,(uY==  6 ? 2 : 0),szCha);
@@ -1652,7 +1679,7 @@ void ReadFileCRCAndConfig(void)
 // --------------------------------------------------------------------
 void tiDSChangeOptions(void)
 {
-  u32 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 6, bOK=0;
+  u16 ucHaut=0x00, ucBas=0x00,ucA=0x00,ucY= 6, bOK=0;
 
   // Display the screen at the top
   videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
