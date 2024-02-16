@@ -101,20 +101,19 @@ DS994a supports the following file types:
 
 For example, for Tunnels of Doom you might have:
 
-TunnelsOfDoom_g.bin   - The Tunnels of Doom GROM cart
-TunnelsOfDoom_1.dsk   - The Tunnels of Doom disk mounted as DSK1
+- TunnelsOfDoom_g.bin   - The Tunnels of Doom GROM cart
+- TunnelsOfDoom_1.dsk   - The Tunnels of Doom disk mounted as DSK1
 
 When you load Tunnels of Doom, it will automatically mount TunnelsOfDoom_1.dsk
 
 For something like Realms of Antiquity you can have:
 
-roa_8.bin   - The 128K cart
-roa_1.dsk   - The first disk to mount as DSK1
-roa_2.dsk   - The second disk to mount as DSK2
-roa_3.dsk   - The third disk to mount as DSK3
+- roa_8.bin   - The 128K cart
+- roa_1.dsk   - The first disk to mount as DSK1
+- roa_2.dsk   - The second disk to mount as DSK2
+- roa_3.dsk   - The third disk to mount as DSK3
 
 (the underscores are just a personal preference of mine as I find it makes the filenames look cleaner and more clear. It's not required by the DS99/4a emulator)
-
 
 Configuration :
 -----------------------
@@ -233,7 +232,7 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V1.7: ??-???-2024 by wavemotion-dave 
+V1.7: 16-Feb-2024 by wavemotion-dave 
 * Integrated the updated SN sound core for more robust sound.
 * Fixed audio squeals and other odd noises in a few games (e.g. Borzork, Mission Destruct, etc).
 * Fixed RAM mirrors so more games play correctly - DSi defaults to RAM Mirrors ENABLED.
