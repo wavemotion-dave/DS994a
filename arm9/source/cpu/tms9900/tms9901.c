@@ -117,7 +117,7 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
             {
                 disk_cru_write(cruAddress, dataBit);
             }
-            else if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            else if ((cruAddress & 0xFFE) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
             {
                 SAMS_cru_write(cruAddress, dataBit);
             }

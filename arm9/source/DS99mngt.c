@@ -25,9 +25,10 @@
 #include "cpu/tms9900/tms9900.h"
 #include "DS99mngt.h"
 #include "DS99_utils.h"
+#include "disk.h"
 #define NORAM 0xFF
 
-u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game
+u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game. For split files (C/D/G) it will be the CRC of the main file (C or G if no C)
 
 /*********************************************************************************
  * Init TI99 Engine for that game
@@ -70,7 +71,29 @@ u8 TI99Init(char *szGame)
     
   // Perform a standard system RESET
   ResetTI();
-    
+  
+
+  // ---------------------------------------------------------------
+  // Check if there are any .dsk files associated with this load...
+  // ---------------------------------------------------------------
+  extern char tmpBuf[];
+  strcpy(tmpBuf, szGame);
+  tmpBuf[strlen(tmpBuf)-3] = 'd';
+  tmpBuf[strlen(tmpBuf)-2] = 's';
+  tmpBuf[strlen(tmpBuf)-1] = 'k';
+  for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
+  {
+    tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
+      FILE *infile = fopen(tmpBuf, "rb");
+      if (infile) // Does the .dsk file exist?
+      {
+          extern char currentDirDSKs[];
+          fclose(infile);
+          getcwd(currentDirDSKs, MAX_PATH);
+          disk_mount(drivesel, currentDirDSKs, tmpBuf);
+      }  
+  }
+
   // Return with result
   return (0);
 }

@@ -1,7 +1,7 @@
 # DS99/4a
 DS994a - A Texas Instruments TI99/4a Emulator for the DS/DSi
 
-To run requires the TI BIOS ROMS in the /roms/bios directory.
+To run requires the TI BIOS ROMS in the /roms/bios or /roms/ti99 directory.
 See BIOS files further down for the ones you need.
 
 ![TI99/4a Screen](https://github.com/wavemotion-dave/DS994a/blob/main/ti.bmp)
@@ -18,7 +18,7 @@ Features :
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI99 keyboard with classic TI99/4a stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
-* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice)
+* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice except...)
 * A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek and Bigfoot
 
 Copyright :
@@ -77,6 +77,8 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 * 8f7df93f	994aDISK.bin (8K) - this is needed only if you want .DSK support
 ```
 
+BIOS files should be placed in either /roms/bios (recommended - that's where the cool kids keep them) or /roms/ti99 or they can be put in the same directory as your game ROMs.
+
 Known Issues :
 -----------------------
 * The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end. Cause unknown.
@@ -95,6 +97,24 @@ DS994a supports the following file types:
 * All other files are considered '8' files which is non-inverted banking up to 2048K (2MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
+* If you wish to associate a .dsk file with your cart (e.g. Adventure or Tunnels of Doom, etc.) you can name the .dsk files with the same base name as the cart and replace the C/D/G/8 with 1, 2 or 3.
+
+For example, for Tunnels of Doom you might have:
+
+TunnelsOfDoom_g.bin   - The Tunnels of Doom GROM cart
+TunnelsOfDoom_1.dsk   - The Tunnels of Doom disk mounted as DSK1
+
+When you load Tunnels of Doom, it will automatically mount TunnelsOfDoom_1.dsk
+
+For something like Realms of Antiquity you can have:
+
+roa_8.bin   - The 128K cart
+roa_1.dsk   - The first disk to mount as DSK1
+roa_2.dsk   - The second disk to mount as DSK2
+roa_3.dsk   - The third disk to mount as DSK3
+
+(the underscores are just a personal preference of mine as I find it makes the filenames look cleaner and more clear. It's not required by the DS99/4a emulator)
+
 
 Configuration :
 -----------------------
@@ -154,11 +174,11 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 
 How do I play Frogger? :
 -----------------------
-No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine. Star Trek similarly uses P2 controls and you'll want to map a few other keys for Photon Torpedos and Warp to various DS keys for maximum playability.
+No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine. Star Trek similarly uses P2 controls and you'll want to map a few other keys for Photon Torpedos and Warp to various DS keys for maximum playability. If you're using a standard ROM for FFrogger, the emulator should auto-set this by default.
 
 How do I play Q-Bert? :
 -----------------------
-A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision) work. 
+A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision) work. If you're using a standard ROM for Q-Bert, the emulator should auto-set this by default.
 
 How do I play Bigfoot? :
 -----------------------
@@ -214,10 +234,15 @@ And then move the soundbank.h file to the arm9/sources directory
 Versions :
 -----------------------
 V1.7: ??-???-2024 by wavemotion-dave 
-* Integrated the updated SN sound core for improved sound.
-* Fixed audio squeals and other odd noises in a few games (e.g. Borzork).
+* Integrated the updated SN sound core for more robust sound.
+* Fixed audio squeals and other odd noises in a few games (e.g. Borzork, Mission Destruct, etc).
 * Fixed RAM mirrors so more games play correctly - DSi defaults to RAM Mirrors ENABLED.
-* Other minor cleanups and tweaks at time permitted.
+* Fixed SAMS 16-bit memory read access so programs like SAMSTEST4 detect the memory.
+* New classic floppy disk read/write sounds (can be disabled in Global Settings).
+* Added new diagonal DPAD configuration to aid a few of the Q-Bert like games.
+* Added new options for 90% (slower than normal) and up to 150% (faster than normal) emulation.
+* Added the ability to auto-mount disks based on the filename. See File Types Supported in the readme for details.
+* Lots of minor cleanups and tweaks at time permitted.
 
 V1.6: 17-Aug-2023 by wavemotion-dave 
 * New icon for Twilight Menu - woot!

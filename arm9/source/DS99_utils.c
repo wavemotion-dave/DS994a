@@ -105,16 +105,16 @@ const char szKeyName[MAX_KEY_OPTIONS][20] = {
   "KEYBOARD X",
   "KEYBOARD Y",
   "KEYBOARD Z",
-    
+
   "KEYBOARD EQUALS",
   "KEYBOARD SLASH",
   "KEYBOARD PERIOD",
   "KEYBOARD COMMA",
   "KEYBOARD SEMI",
-    
+
   "KEYBOARD PLUS",
   "KEYBOARD MINUS",
-    
+
   "KEYBOARD UP",
   "KEYBOARD DOWN",
   "KEYBOARD LEFT",
@@ -151,7 +151,7 @@ void DrawCleanBackground(void)
 /*********************************************************************************
  * Show A message with YES / NO
  ********************************************************************************/
-u8 showMessage(char *szCh1, char *szCh2) 
+u8 showMessage(char *szCh1, char *szCh2)
 {
   u16 iTx, iTy;
   u8 uRet=ID_SHM_CANCEL;
@@ -384,7 +384,8 @@ void TI99FindFiles(void)
     }
     else {
       if ((strlen(szFile)>4) && (strlen(szFile)<(MAX_ROM_LENGTH-4)) ) {
-        if ( (strcasecmp(strrchr(szFile, '.'), ".bin") == 0) )  {
+        if ( (strcasecmp(strrchr(szFile, '.'), ".bin") == 0) || (strcasecmp(strrchr(szFile, '.'), ".994") == 0) )
+        {
           strcpy(gpFic[uNbFile].szName,szFile);
           gpFic[uNbFile].uType = TI99ROM;
           uNbFile++;
@@ -401,7 +402,7 @@ void TI99FindFiles(void)
   if (countTI)
   {
       qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
-      
+
       // And finally we remove files that are part of the same binary package C/D/G files...
       for (s16 i=0; i<countTI-1; i++)
       {
@@ -482,7 +483,7 @@ char *TILoadDiskFile(void)
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
   DS_Print(7,4,0,"A=SELECT,  B=EXIT");
-    
+
   // Change into the last known DSKs directory
   chdir(currentDirDSKs);
 
@@ -690,7 +691,7 @@ char *TILoadDiskFile(void)
     }
     swiWaitForVBlank();
   }
-    
+
   // If a DSK was selected...
   if (chosenDSK != -1)
   {
@@ -723,7 +724,7 @@ u8 tiDSLoadFile(void)
 
   // Change into the last known ROMs directory
   chdir(currentDirROMs);
-    
+
   TI99FindFiles();
 
   ucGameChoice = -1;
@@ -936,7 +937,7 @@ u8 tiDSLoadFile(void)
 
   // Returns the top screen to bitmap mode
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
-    
+
   // If a game was selected...
   if (ucGameChoice != -1)
   {
@@ -1066,8 +1067,8 @@ void MapESDX(void)
 void SetDiagonals(void) // Useful for games like Q-Bert
 {
     myConfig.keymap[0]   = JOY1_RIGHT;
-    myConfig.keymap[1]   = JOY1_LEFT; 
-    myConfig.keymap[2]   = JOY1_UP; 
+    myConfig.keymap[1]   = JOY1_LEFT;
+    myConfig.keymap[2]   = JOY1_UP;
     myConfig.keymap[3]   = JOY1_DOWN;
 }
 
@@ -1087,36 +1088,57 @@ void SetDefaultGameConfig(void)
     myConfig.emuSpeed    = 0;
     myConfig.machineType = globalConfig.machineType;
     myConfig.cartType    = 0;
-    myConfig.reservedG   = 0;
+    myConfig.dpadDiagonal= 0;
     myConfig.reservedH   = 0;
     myConfig.reservedI   = 0;
     myConfig.reservedJ   = 0;
     myConfig.reservedK   = 0;
     myConfig.reservedL   = 0;
-    myConfig.reservedM   = 1;
-    myConfig.reservedN   = 1;
-    myConfig.reservedO   = 2;
-    myConfig.reservedP   = 0xFF;
+    myConfig.reservedM   = 0;
+    myConfig.reservedN   = 0;
+    myConfig.reservedO   = 1;
+    myConfig.reservedP   = 1;
     myConfig.reservedQ   = 0xFF;
+    myConfig.reservedY   = 0xFF;
     myConfig.reservedZ   = 0xFF;
-    myConfig.reservedA32 = 0x00000000;
-    
+
     if (file_crc == 0x48c12b3c) SetDiagonals(); // Q-Bert wants diagonal directions
-    
+    if (file_crc == 0xf939439d) SetDiagonals(); // Q-Bert wants diagonal directions
+
+    if (file_crc == 0x4152e0e9) MapESDX();      // Tunnels of Doom uses ESDX for movement
+    if (file_crc == 0x163caf9b) MapESDX();      // Tunnels of Doom uses ESDX for movement
+    if (file_crc == 0x128818e2) MapESDX();      // Tunnels of Doom uses ESDX for movement
+    if (file_crc == 0xc4cd53ad) MapESDX();      // Tunnels of Doom uses ESDX for movement    
+
+    if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
+
+    if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
+    if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
+    if (file_crc == 0x3c124691) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
+
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
-    if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)    
-    if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly    
-    
+    if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
+    if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
+
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
+    if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM    
     if (file_crc == 0xd872e83e) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM
+    if (file_crc == 0xc883dde6) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM    
     if (file_crc == 0x2807a67f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM
+    if (file_crc == 0x06da3412) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM    
     if (file_crc == 0x60e66ab1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM
+    if (file_crc == 0xc7f74062) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM    
     if (file_crc == 0xbc245f56) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Honey Hunt requires MBX 1K of RAM
-    if (file_crc == 0x4bb77ca1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM    
-    if (file_crc == 0x962aca6f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM    
-    
+    if (file_crc == 0x2e071ff6) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Honey Hunt requires MBX 1K of RAM
+    if (file_crc == 0x4bb77ca1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM
+    if (file_crc == 0xd35f2c0d) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM    
+    if (file_crc == 0x962aca6f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
+    if (file_crc == 0xb33dabfe) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
+
     if (file_crc == 0xc705118e) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
-    
+    if (file_crc == 0xe0bc224d) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
+    if (file_crc == 0x134144dc) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype   
+
     if (file_crc == 0x70820e3f) myConfig.isPAL = 1;     // Eric in Monsterland only runs in PAL mode (unsure why)
 }
 
@@ -1146,6 +1168,7 @@ void FindAndLoadConfig(void)
             memset(&globalConfig, 0x00, sizeof(globalConfig));
             memset(&AllConfigs, 0x00, sizeof(AllConfigs));
             globalConfig.overlay=1; // TI99 Keyboard
+            globalConfig.floppySound=1; // Enable sounds
             SetDefaultGameConfig();
             SaveConfig(FALSE);
         }
@@ -1193,22 +1216,23 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                  &myConfig.overlay,      2},
-        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                   &myConfig.frameSkip,    3},
-        {"FRAME BLEND",    {"OFF", "ON"},                                                                                     &myConfig.frameBlend,   2},
-        {"MAX SPRITES",    {"4",   "32"},                                                                                     &myConfig.maxSprites,   2},
-        {"TV TYPE",        {"NTSC","PAL"},                                                                                    &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                 &myConfig.machineType,  2},
-        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                            &myConfig.cartType,     5},
-        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT"},                                           &myConfig.emuSpeed,     4},
-        {"CAPS LOCK",      {"OFF", "ON"},                                                                                     &myConfig.capsLock,     2},
-        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                     &myConfig.RAMMirrors,   2},
-        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                              &myConfig.memWipe,      2},
-        {NULL,             {"",      ""},                                                                                     NULL,                   1},
+        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                    &myConfig.overlay,      2},
+        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                     &myConfig.frameSkip,    3},
+        {"FRAME BLEND",    {"OFF", "ON"},                                                                                       &myConfig.frameBlend,   2},
+        {"MAX SPRITES",    {"4",   "32"},                                                                                       &myConfig.maxSprites,   2},
+        {"TV TYPE",        {"NTSC","PAL"},                                                                                      &myConfig.isPAL,        2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                   &myConfig.machineType,  2},
+        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                              &myConfig.cartType,     5},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT"}, &myConfig.emuSpeed,     7},
+        {"CAPS LOCK",      {"OFF", "ON"},                                                                                       &myConfig.capsLock,     2},
+        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                       &myConfig.RAMMirrors,   2},
+        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                &myConfig.memWipe,      2},
+        {"DPAD",           {"NORMAL", "DIAGONALS",},                                                                            &myConfig.dpadDiagonal, 2},
+        {NULL,             {"",      ""},                                                                                       NULL,                   1},
     },
     // Page 2
     {
-        {NULL,             {"",      ""},                                                                                     NULL,                   1},
+        {NULL,             {"",      ""},                                                                                       NULL,                   1},
     }
 };
 
@@ -1340,6 +1364,7 @@ const struct options_t GlobalOption_Table[] =
     {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD"},                        &globalConfig.overlay,       2},
     {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
     {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
+    {"FLOPPY SFX",     {"OFF", "ON"},                                           &globalConfig.floppySound,   2},
 
     {NULL,             {"",      ""},                                           NULL,                        1},
 };
@@ -1602,9 +1627,9 @@ void tiDSChangeKeymap(void)
             MapPlayer2();
         else if (myConfig.keymap[0] == KBD_E)
             MapPlayer1();
-        else 
+        else
             MapESDX();
-        
+
         bIndTch = myConfig.keymap[ucY-6];
         DisplayKeymapName(ucY);
         while (keysCurrent() & KEY_X)
@@ -1641,7 +1666,7 @@ void DisplayFileName(void)
 //*****************************************************************************
 void affInfoOptions(u32 uY)
 {
-    DS_Print(2, 6,(uY== 6 ? 2 : 0),("         LOAD  GAME         "));
+    DS_Print(2, 6,(uY==6  ? 2 : 0),("         LOAD  GAME         "));
     DS_Print(2, 8,(uY==8  ? 2 : 0),("         PLAY  GAME         "));
     DS_Print(2,10,(uY==10 ? 2 : 0),("     REDEFINE  KEYS         "));
     DS_Print(2,12,(uY==12 ? 2 : 0),("         GAME  OPTIONS      "));
@@ -1800,7 +1825,7 @@ void tiDSChangeOptions(void)
             affInfoOptions(ucY);
             DisplayFileName();
             break;
-                
+
           case 16 :     // QUIT EMULATOR
             exit(1);
             break;
@@ -1828,32 +1853,29 @@ void tiDSChangeOptions(void)
 //*****************************************************************************
 // Displays a message on the screen
 //*****************************************************************************
-ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage) 
+ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage)
 {
-  u16 *pusEcran,*pusMap;
+  u16 *pusScreen,*pusMap;
   u16 usCharac;
   char *pTrTxt=szMessage;
-    
+
   if (iScr == 1) return; //TODO: need to decide if we want to support text display on the top screen... probably don't need it
 
-  pusEcran=(u16*) (iScr != 1 ? bgGetMapPtr(bg1b) : bgGetMapPtr(bg1))+iX+(iY<<5);
+  pusScreen=(u16*) (iScr != 1 ? bgGetMapPtr(bg1b) : bgGetMapPtr(bg1))+iX+(iY<<5);
   pusMap=(u16*) (iScr != 1 ? (iScr == 6 ? bgGetMapPtr(bg0b)+24*32 : (iScr == 0 ? bgGetMapPtr(bg0b)+24*32 : bgGetMapPtr(bg0b)+26*32 )) : bgGetMapPtr(bg0)+51*32 );
 
   while((*pTrTxt)!='\0' )
   {
-    char ch = *pTrTxt;
-    if (ch >= 'a' && ch <= 'z') ch -= 32; // Faster than strcpy/strtoupper
-    usCharac=0x0000;
-    if ((ch) == '|')
-      usCharac=*(pusMap);
-    else if (((ch)<' ') || ((ch)>'_'))
-      usCharac=*(pusMap);
+    char ch = *pTrTxt++;
+    if (ch >= 'a' && ch <= 'z') ch -= 32;   // Faster than strcpy/strtoupper
+
+    if (((ch)<' ') || ((ch)>'_'))
+      usCharac=*(pusMap);                   // Will render as a vertical bar
     else if((ch)<'@')
-      usCharac=*(pusMap+(ch)-' ');
+      usCharac=*(pusMap+(ch)-' ');          // Number from 0-9 or punctuation
     else
-      usCharac=*(pusMap+32+(ch)-'@');
-    *pusEcran++=usCharac;
-    pTrTxt++;
+      usCharac=*(pusMap+32+(ch)-'@');       // Character from A-Z
+    *pusScreen++=usCharac;
   }
 }
 

@@ -127,6 +127,8 @@ typedef struct _TMS9900
     u16     accurateEmuFlags;
     u16     gromWriteLoHi;
     u16     gromReadLoHi;
+    u16     lastIllegalOP;
+    u16     illegalOPs;
 } TMS9900;
 
 extern TMS9900 tms9900;
@@ -191,6 +193,11 @@ enum _STATUS_FLAGS
 // --------------------------------------------------------
 #define INT_VDP        2
 #define INT_TIMER      1
+
+// ---------------------------------------------------------------------
+// A sentinal value that we can use for fake-rendering speech samples
+// ---------------------------------------------------------------------
+#define SPEECH_SENTINAL_VAL 999
 
 // -------------------------------------------------------------------------------------------------
 // The memory type tell us what's in a particular memory location. Be careful to keep MF_MEM16

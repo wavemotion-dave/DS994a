@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -17,8 +17,8 @@
 #define MAX_ROM_LENGTH          128
 #define MAX_PATH                128
 
-#define MAX_CONFIGS             750
-#define CONFIG_VER              0x0005
+#define MAX_CONFIGS             800
+#define CONFIG_VER              0x0007
 
 #define TI99ROM                 0x01
 #define DIRECT                  0x02
@@ -55,7 +55,7 @@ struct __attribute__((__packed__)) GlobalConfig_t
     u8  maxSprites;
     u8  machineType;
     u8  overlay;
-    u8  reservedG;
+    u8  floppySound;
     u8  reservedH;
     u8  reservedI;
     u8  reservedJ;
@@ -65,6 +65,7 @@ struct __attribute__((__packed__)) GlobalConfig_t
     u8  reservedN;
     u8  reservedO;
     u8  reservedP;
+    u8  reserved[512+128]; // Not sure what we will use this for... But we had the room
 };
 
 struct __attribute__((__packed__)) Config_t
@@ -82,7 +83,7 @@ struct __attribute__((__packed__)) Config_t
     u8  emuSpeed;
     u8  machineType;
     u8  cartType;
-    u8  reservedG;
+    u8  dpadDiagonal;
     u8  reservedH;
     u8  reservedI;
     u8  reservedJ;
@@ -93,8 +94,8 @@ struct __attribute__((__packed__)) Config_t
     u8  reservedO;
     u8  reservedP;
     u8  reservedQ;
+    u8  reservedY;
     u8  reservedZ;
-    u32 reservedA32;
 };
 
 extern struct Config_t myConfig;

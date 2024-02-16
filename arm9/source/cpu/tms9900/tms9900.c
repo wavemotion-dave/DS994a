@@ -42,7 +42,7 @@ u16          numCartBanks = 1;           // Number of CART banks (8K each)
 
 u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
 u8           *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 2MB/512K (DSi vs DS) banked at >6000
-u32          MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size
+u32          MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size (DSI will bump this to 2MB)
 
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
@@ -53,7 +53,10 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 u16 MemoryRead16(u16 address);
 
-u16 readSpeech = 999;
+u16 readSpeech = SPEECH_SENTINAL_VAL;
+
+u32 num_illegal_op_codes = 0;
+u32 last_illegal_op_code = 0x00;
 
 // A few externs from other modules...
 extern char tmpBuf[];
@@ -430,9 +433,9 @@ void TMS9900_Reset(char *szGame)
     // Now mark off the memory hotspots where we need to take special action on
     // read/write plus all of the possible mirrors, etc. that can be used...
     // ------------------------------------------------------------------------------
-    for (u16 address = 0x8400; address < 0x8800; address += 2)
+    for (u16 address = 0x8400; address < 0x8600; address += 2)
     {
-        MemType[address] = MF_SOUND;   // TI Sound Chip
+        MemType[address] = MF_SOUND;   // TI Sound Chip responds to any even address between >8400 and >85EF
     }
 
     for (u16 address = 0x8800; address < 0x8C00; address += 4)
@@ -501,9 +504,14 @@ void TMS9900_Reset(char *szGame)
     // ---------------------------------------------------------------------------
     if (myConfig.memWipe == 1) // RANDOMize memory if asked for
     {
-        for (u16 addr = 0x8000; addr < 0x8400; addr++)
+        for (u16 addr = 0x8000; addr < 0x8100; addr++)
         {
-            MemCPU[addr] = (rand() & 0xFF);
+            // Same random value shows up in all mirrors....
+            u8 val = rand() & 0xFF;
+            MemCPU[addr | 0x000] = (val);
+            MemCPU[addr | 0x100] = (val);
+            MemCPU[addr | 0x200] = (val);
+            MemCPU[addr | 0x300] = (val);
         }
         for (u16 addr = 0x2000; addr < 0x4000; addr++)
         {
@@ -515,27 +523,38 @@ void TMS9900_Reset(char *szGame)
         }
     }
 
-
     FILE *infile;
 
     // ------------------------------------------------------------------
     // Read in the main 16-bit console ROM and place into our MemCPU[]
     // ------------------------------------------------------------------
     infile = fopen("/roms/bios/994aROM.bin", "rb");
-    fread(&MemCPU[0], 0x2000, 1, infile);
-    fclose(infile);
+    if (!infile) infile = fopen("/roms/ti99/994aROM.bin", "rb");
+    if (!infile) infile = fopen("994aROM.bin", "rb");    
+    if (infile)
+    {
+        fread(&MemCPU[0], 0x2000, 1, infile);
+        fclose(infile);
+    }
 
-    // ----------------------------------------------------------------------------
-    // Read in the main console GROM and place into the 24K of GROM memory space
-    // ----------------------------------------------------------------------------
+    // ---------------------------------------------------------------------------------
+    // Read in the main console GROM and place into the first 24K of GROM memory space
+    // ---------------------------------------------------------------------------------
     infile = fopen("/roms/bios/994aGROM.bin", "rb");
-    fread(&MemGROM[0x0000], 0x6000, 1, infile);
-    fclose(infile);
+    if (!infile) infile = fopen("/roms/ti99/994aGROM.bin", "rb");
+    if (!infile) infile = fopen("994aGROM.bin", "rb");
+    if (infile)
+    {
+        fread(&MemGROM[0x0000], 0x6000, 1, infile);
+        fclose(infile);
+    }
 
     // -------------------------------------------
     // Read the TI Disk DSR into buffered memory
     // -------------------------------------------
     infile = fopen("/roms/bios/994aDISK.bin", "rb");
+    if (!infile) infile = fopen("/roms/ti99/994aDISK.bin", "rb");
+    if (!infile) infile = fopen("994aDISK.bin", "rb");
     if (infile)
     {
         fread(DiskDSR, 0x2000, 1, infile);
@@ -627,7 +646,7 @@ void TMS9900_Reset(char *szGame)
 
     // Put the first 8K bank into fast memory - a bit of a speedup on access and there are plenty of games that only need this 8K
     memcpy(FastCartBuffer, MemCPU+0x6000, 0x2000);
-
+    
     // ------------------------------------------------------
     // Now handle some of the special machine types...
     // ------------------------------------------------------
@@ -674,13 +693,13 @@ void TMS9900_Reset(char *szGame)
                 MemCPU[address] = 0x00;     // Clear out the RAM
             }
         }
-        MemType[0x6ffe] = MF_MBX;   // Special bank switching register...
-        MemType[0x6fff] = MF_MBX;   // Special bank switching register...
+        MemType[0x6ffe] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
+        MemType[0x6fff] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
         WriteBankMBX(0);
     }
     
     // Ensure we are reading status byte
-    readSpeech = 999;
+    readSpeech = SPEECH_SENTINAL_VAL;
     
     // -------------------------------------------------
     // SAMS support... 512K for DS and 1MB for DSi
@@ -691,12 +710,15 @@ void TMS9900_Reset(char *szGame)
     tms9900.cartBankPtr = FastCartBuffer;
 
     // Reset the TMS9901 peripheral IO chip
-    TMS9901_Reset( );
+    TMS9901_Reset();
 
     // And away we go!
     tms9900.WP = MemoryRead16(0);       // Initial WP is from the first word address in memory
     tms9900.PC = MemoryRead16(2);       // Initial PC is from the second word address in memory
     tms9900.ST = 0x3cf0;                // bulWIP uses this - probably doesn't matter... but smart guys know stuff...
+    
+    num_illegal_op_codes = 0;           // In case we hit an illegal op code we track it
+    last_illegal_op_code = 0x0000;      // In case we hit an illegal op code we track it
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -998,10 +1020,11 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return (0x40 | 0x20) << 8;   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
                 break;
             case MF_DISK:
-                return ReadTICCRegister(address) << 8;
+                retVal = ReadTICCRegister(address);
+                return (retVal << 8) | (retVal >> 8);
                 break;
             case MF_SAMS:
-                return (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] << 8);
+                return (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] << 8) | (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] & 0xFF);
                 break;
             default:
                 retVal = *((u16*)(MemCPU+address));
@@ -1045,10 +1068,10 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 // we return that value to the caller - this is often used to read the first byte of Speech ROM to make
                 // sure that it's an 0xAA value and thus produce TI Speech (as a way to detect if the module is attached).
                 // ----------------------------------------------------------------------------------------------------------
-                if (readSpeech != 999)
+                if (readSpeech != SPEECH_SENTINAL_VAL)
                 {
                     u8 data = readSpeech;
-                    readSpeech = 999;
+                    readSpeech = SPEECH_SENTINAL_VAL;
                     return data;
                 }
                 else
@@ -1073,9 +1096,8 @@ ITCM_CODE u8 MemoryRead8(u16 address)
 
 
 // -----------------------------------------------------------------------------------------------------------------------
-// It's unclear as I don't seem to see any 16-bit writes for things like Sound or VDP which makes sense... but I think
-// it's technically allowed so we are doing the same switch checks here as we would in the 8-bit write world... it's
-// probably okay as the switch statement will be unrolled into a jump-table by the GCC compiler anyway.
+// A few games like Borzork use 16-bit writes for things like Sound or VDP so those do need to be handled here along
+// with the more typical 16-bit writes like the internal console RAM...
 // -----------------------------------------------------------------------------------------------------------------------
 ITCM_CODE void MemoryWrite16(u16 address, u16 data)
 {
@@ -1127,7 +1149,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
     }
     else    // This has to be workspace RAM which has to deal with mirrors...
     {
-        if (address & 0x8000)   // Make sure this is RAM and not Console ROM (also 16-bit)
+        if (address & 0x8000)   // Make sure this is RAM and not an inadvertant write to Console ROM (also 16-bit)
         {
             if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
             {
@@ -1196,7 +1218,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
     }
     else    // This has to be workspace RAM which has to deal with mirrors...
     {
-        if (address & 0x8000)   // Make sure this is RAM and not Console ROM (also 16-bit)
+        if (address & 0x8000)   // Make sure this is RAM and not an inadvertant write to Console ROM
         {
             if (myConfig.RAMMirrors)    // We write to all mirrors so that read-back is quick and easy
             {

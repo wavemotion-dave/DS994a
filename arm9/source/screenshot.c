@@ -49,7 +49,7 @@ bool screenshotbmp(const char* filename) {
     else
     {
         extern u8 *MemSAMS;
-        temp = MemSAMS + (400 * 1024);  // Take our chances here... if we're on the DSi and we've got more than 400K of SAMS usage this will not end well
+        temp = MemSAMS + (400 * 1024);  // Take our chances here... if we're on the older DS and we've got more than 400K of SAMS usage this will not end well
     }
 
     if(!temp) {

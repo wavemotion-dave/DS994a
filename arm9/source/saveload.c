@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -28,7 +28,7 @@
 #include "SAMS.h"
 #define NORAM 0xFF
 
-#define TI_SAVE_VER   0x0006        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0007        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -76,8 +76,8 @@ void TI99SaveState()
     uNbO = fwrite(&save_ver, sizeof(u16), 1, handle);
     
     // Write TMS9900 CPU and TMS9901 IO handling memory
-    uNbO = fwrite(&tms9900, sizeof(tms9900), 1, handle);
-    uNbO = fwrite(&tms9901, sizeof(tms9901), 1, handle);
+    if (uNbO) uNbO = fwrite(&tms9900, sizeof(tms9900), 1, handle);
+    if (uNbO) uNbO = fwrite(&tms9901, sizeof(tms9901), 1, handle);
       
     // Write SAMS memory indexes
     if (uNbO) uNbO = fwrite(&theSAMS, sizeof(theSAMS),1, handle); 
@@ -150,7 +150,7 @@ void TI99SaveState()
         }
     }
       
-    // And finally the 'special' memory layout carts...
+    // And finally the 'special' memory layout carts... we only write these if needed
     if (myConfig.cartType == CART_TYPE_SUPERCART)
     {
         if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 

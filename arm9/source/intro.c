@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -39,10 +39,10 @@ void intro_logo(void) {
   irqEnable(IRQ_VBLANK);
   
   // Init BG
-	int bg1 = bgInit(0, BgType_Text8bpp, BgSize_T_256x256, 31,0);
+  int bg1 = bgInit(0, BgType_Text8bpp, BgSize_T_256x256, 31,0);
 
   // Init sub BG
-	int bg1s = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x256, 31,0);
+  int bg1s = bgInitSub(0, BgType_Text8bpp, BgSize_T_256x256, 31,0);
 
   REG_BLDCNT = BLEND_FADE_BLACK | BLEND_SRC_BG0 | BLEND_DST_BG0; REG_BLDY = 16;
   REG_BLDCNT_SUB = BLEND_FADE_BLACK | BLEND_SRC_BG0 | BLEND_DST_BG0; REG_BLDY_SUB = 16;

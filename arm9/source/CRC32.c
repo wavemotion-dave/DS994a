@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -9,6 +9,7 @@
 //
 // Please see the README.md file as it contains much useful info.
 // =====================================================================================
+#include <nds.h>
 #include <stdio.h>
 #include <string.h>
 #include "CRC32.h"
@@ -55,7 +56,7 @@ const u32 crc32_table[256] = {
 // Read the file in and compute CRC... it's a bit slow but good enough and accurate!
 // ------------------------------------------------------------------------------------
 u8 file_crc_buffer[1024];
-u32 getFileCrc(const char* filename)
+ITCM_CODE u32 getFileCrc(const char* filename)
 {
     extern u32 file_size;
     u32 crc = 0xFFFFFFFF;

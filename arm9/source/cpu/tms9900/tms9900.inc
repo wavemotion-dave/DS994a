@@ -888,6 +888,7 @@
     case op_ckof:   // No support for external instrutions...
     case op_lrex:   // No support for external instrutions...
     default:
-    debug[3]++;
+        tms9900.illegalOPs++;        // We use debug register 15 for this
+        tms9900.lastIllegalOP = tms9900.currentOp;
         AddCycleCount(6);   // Unused instructions seem to chew up 6 cycles... We aren't trapping on any "illegal" opcodes but we might track it someday
         break;

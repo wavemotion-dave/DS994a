@@ -26,8 +26,6 @@
 #include "../../DS99_utils.h"
 #include "tms9918a.h"
 
-extern u32 debug[];
-
 u8 MaxSprites[2] __attribute__((section(".dtcm"))) = {4, 32};     // Normally the TMS9918a only shows 4 sprites on a line... for emulation we bump this up if configured
 
 u16 *pVidFlipBuf __attribute__((section(".dtcm"))) = (u16*) (0x06000000);    // Video flipping buffer
