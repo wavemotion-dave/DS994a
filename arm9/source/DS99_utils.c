@@ -1196,6 +1196,7 @@ void FindAndLoadConfig(void)
         memset(&globalConfig, 0x00, sizeof(globalConfig));
         memset(&AllConfigs, 0x00, sizeof(AllConfigs));
         globalConfig.overlay=1; // TI99 Keyboard
+        globalConfig.floppySound=1; // Enable sounds
         SetDefaultGameConfig();
         SaveConfig(FALSE);
     }
