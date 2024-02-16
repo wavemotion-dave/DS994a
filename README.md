@@ -242,6 +242,7 @@ V1.7: 16-Feb-2024 by wavemotion-dave
 * Added new options for 90% (slower than normal) and up to 150% (faster than normal) emulation.
 * Added the ability to auto-mount disks based on the filename. See File Types Supported in the readme for details.
 * Lots of minor cleanups and tweaks at time permitted.
+* Due to the extensive updates, the save states and configuration files have changed and will be wiped when loading this new version.
 
 V1.6: 17-Aug-2023 by wavemotion-dave 
 * New icon for Twilight Menu - woot!
