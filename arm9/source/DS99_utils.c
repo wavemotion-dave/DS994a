@@ -1109,6 +1109,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x163caf9b) MapESDX();      // Tunnels of Doom uses ESDX for movement
     if (file_crc == 0x128818e2) MapESDX();      // Tunnels of Doom uses ESDX for movement
     if (file_crc == 0xc4cd53ad) MapESDX();      // Tunnels of Doom uses ESDX for movement    
+    
+    if (file_crc == 0xc25be90f) MapESDX();      // Restless II uses ESDX for movement
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
 
@@ -1119,6 +1121,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
     if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
+    
+    if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard uses SAMS
 
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM    
