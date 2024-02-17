@@ -35,7 +35,7 @@ u8 XBuf_B[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer B
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
 // Look up table for colors - pre-generated and in VRAM for maximum speed!
-u32 (*lutTablehh)[16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;
+u32 (*lutTablehh)[16][16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;    // this is actually 16x16x16x4 = 16K
 
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
@@ -275,10 +275,10 @@ int ITCM_CODE ScanSprites(byte Y,unsigned int *Mask)
 /** This function is called from RefreshLine#() to refresh  **/
 /** sprites.                                                **/
 /*************************************************************/
-void ITCM_CODE RefreshSprites(byte Y) {
-  byte *PT,*AT;
-  byte *P,*T,C;
-  int L,K,N;
+void ITCM_CODE RefreshSprites(register byte Y) {
+  register byte *PT,*AT;
+  register byte *P,*T,C;
+  register int L,K,N;
   unsigned int M;
 
   /* Find sprites to show, update 5th sprite status */
@@ -396,8 +396,8 @@ void ITCM_CODE RefreshSprites(byte Y) {
 /*************************************************************/
 ITCM_CODE void RefreshLine0(u8 Y) 
 {
-  byte *T,X,K,Offset;
-  byte *P,FC,BC;
+  register byte *T,K,Offset;
+  register byte *P,FC,BC;
 
   P=XBuf+(Y<<8);
   BC = BGColor;
@@ -410,7 +410,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
     T=ChrTab+(Y>>3)*40;
     Offset=Y&0x07;
 
-    for(X=0;X<40;X++)
+    for(int X=0;X<40;X++)
     {
       K=ChrGen[((int)*T<<3)+Offset];
       P[0]=K&0x80? FC:BC;
@@ -422,6 +422,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
       P+=6;T++;
     }
   }
+    
   RefreshBorder(Y);
 }
 
@@ -429,11 +430,11 @@ ITCM_CODE void RefreshLine0(u8 Y)
 /** Refresh line Y (0..191) of SCREEN1, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine1(u8 uY) 
+void ITCM_CODE RefreshLine1(u8 uY) 
 {
-  byte X,K=0,Offset;
-  u8 *T;
-  u32 *P;
+  register byte K=0,Offset,FC,BC;
+  register u8 *T;
+  register u32 *P;
   u8 lastT;
   u32 *ptLut=0;
 
@@ -449,13 +450,16 @@ ITCM_CODE void RefreshLine1(u8 uY)
 
     lastT = ~(*T);
       
-    for(X=0;X<32;X++) 
+    for(int X=0;X<32;X++) 
     {
       if (lastT != *T)
       {
           lastT=*T;
+          BC=ColTab[lastT>>3];
           K=ChrGen[((int)lastT<<3)+Offset];
-          ptLut = (u32*) (lutTablehh[ColTab[lastT>>3]]);
+          FC=BC>>4;
+          BC=BC&0x0F;
+          u32* ptLut = (u32*) (lutTablehh[FC][BC]);
           ptLow = *(ptLut + ((K>>4)));
           ptHigh= *(ptLut + ((K & 0xF)));
       }
@@ -471,10 +475,10 @@ ITCM_CODE void RefreshLine1(u8 uY)
 /** Refresh line Y (0..191) of SCREEN2, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine2(u8 uY) {
+void ITCM_CODE RefreshLine2(u8 uY) {
   u32 *P;
-  byte X,K,*T;
-  u8 lastT;
+  register byte FC,BC;
+  register byte K,*T;
   u16 J,I;
   u32 *ptLut;
 
@@ -484,23 +488,25 @@ ITCM_CODE void RefreshLine2(u8 uY) {
     memset(P,BGColor,256);
   else 
   {
-    u32 ptLow, ptHigh;
+    u32 ptLow = 0; u32 ptHigh = 0;
       
     J   = ((u16)((u16)uY&0xC0)<<5)+(uY&0x07);
     T   = ChrTab+((u16)((u16)uY&0xF8)<<2);
-    lastT = ~(*T);
+    u8 lastT = ~(*T);
 
-    for(X=0;X<32;X++)
+    for(int X=0;X<32;X++)
     {
       if (lastT != *T)
       {
           lastT = *T;
           I    = (u16)lastT<<3;
           K    = ColTab[(J+I)&ColTabM];
-          ptLut = (u32*)(lutTablehh[K]);
+          FC   = (K>>4);
+          BC   = K & 0x0F;
           K    = ChrGen[(J+I)&ChrGenM];
+          u32* ptLut = (u32*)(lutTablehh[FC][BC]);
           ptLow = *(ptLut + ((K>>4)));
-          ptHigh = *(ptLut + ((K&0xF)));
+          ptHigh = *(ptLut + ((K & 0xF)));
       } 
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -663,9 +669,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
 /*************************************************************/
 ITCM_CODE byte RdData9918(void) 
 {
-  byte data;
-
-  data      = VDPDlatch;
+  byte data = VDPDlatch;
   VDPDlatch = pVDPVidMem[VAddr];
   VAddr     = (VAddr+1)&0x3FFF;
   VDPCtrlLatch = 0;
@@ -835,22 +839,23 @@ void Reset9918(void)
     int colfg,colbg;
     for (colfg=0;colfg<16;colfg++) {
         for (colbg=0;colbg<16;colbg++) {
-          lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
-          lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
-          lutTablehh[(colfg<<4) | colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
-          lutTablehh[(colfg<<4) | colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
-          lutTablehh[(colfg<<4) | colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
-          lutTablehh[(colfg<<4) | colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
-          lutTablehh[(colfg<<4) | colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
-          lutTablehh[(colfg<<4) | colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
-          lutTablehh[(colfg<<4) | colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
-          lutTablehh[(colfg<<4) | colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
-          lutTablehh[(colfg<<4) | colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
-          lutTablehh[(colfg<<4) | colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
-          lutTablehh[(colfg<<4) | colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
-          lutTablehh[(colfg<<4) | colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
-          lutTablehh[(colfg<<4) | colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
-          lutTablehh[(colfg<<4) | colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
+          lutTablehh[colfg][colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
+          lutTablehh[colfg][colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
+          lutTablehh[colfg][colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
+          lutTablehh[colfg][colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
+          lutTablehh[colfg][colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
+          lutTablehh[colfg][colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
+          lutTablehh[colfg][colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
+          lutTablehh[colfg][colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
+
+          lutTablehh[colfg][colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
+          lutTablehh[colfg][colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
+          lutTablehh[colfg][colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
+          lutTablehh[colfg][colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
+          lutTablehh[colfg][colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
+          lutTablehh[colfg][colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
+          lutTablehh[colfg][colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
+          lutTablehh[colfg][colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
         }
     }
 }

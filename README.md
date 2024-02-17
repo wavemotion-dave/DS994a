@@ -244,6 +244,8 @@ V1.7: 16-Feb-2024 by wavemotion-dave
 * Lots of minor cleanups and tweaks at time permitted.
 * Due to the extensive updates, the save states and configuration files have changed and will be wiped when loading this new version.
 
+Version 1.7a improves speed of VDP rendering to help DS-Lite/Phat.
+
 V1.6: 17-Aug-2023 by wavemotion-dave 
 * New icon for Twilight Menu - woot!
 * Fixed missing arrows on TI-99 Classic Keyboard graphic.

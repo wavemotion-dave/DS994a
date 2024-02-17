@@ -1064,6 +1064,23 @@ void MapESDX(void)
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
 
+void MapSTSOS(void)
+{
+    myConfig.keymap[0]   = KBD_K;        // NDS D-Pad UP
+    myConfig.keymap[1]   = KBD_X;        // NDS D-Pad DOWN
+    myConfig.keymap[2]   = KBD_S;        // NDS D-Pad LEFT
+    myConfig.keymap[3]   = KBD_D;        // NDS D-Pad RIGHT
+    myConfig.keymap[4]   = KBD_J;        // NDS A Button
+    myConfig.keymap[5]   = KBD_L;        // NDS B Button
+    myConfig.keymap[6]   = KBD_H;        // NDS X Button
+    myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
+
+    myConfig.keymap[8]   = KBD_FNCT;     // NDS L
+    myConfig.keymap[9]   = KBD_SHIFT;    // NDS R
+    myConfig.keymap[10]  = KBD_ENTER;    // NDS Start  mapped to ENTER
+    myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
+}
+
 void SetDiagonals(void) // Useful for games like Q-Bert
 {
     myConfig.keymap[0]   = JOY1_RIGHT;
@@ -1111,6 +1128,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0xc4cd53ad) MapESDX();      // Tunnels of Doom uses ESDX for movement    
     
     if (file_crc == 0xc25be90f) MapESDX();      // Restless II uses ESDX for movement
+    
+    if (file_crc == 0x742f88ce) MapSTSOS();     // Star Trek SOS maps keys uniquely
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
 

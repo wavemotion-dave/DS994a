@@ -901,17 +901,17 @@ ITCM_CODE void WriteRAM16a(u16 address, u16 data)
     }        
     else
     {
-        if (!MemType[address] && myConfig.RAMMirrors)  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+        if (myConfig.RAMMirrors)
         {
-            *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+            if (!MemType[address])  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+            {
+                *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
+                *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+            } // Else fall through and perform normal write below
         }
-        else
-        {
-            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
-        }
+        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
     }
 }
 
@@ -1523,7 +1523,7 @@ void TMS9900_RunAccurate(void)
         {
             u8 data8;
             u16 data16;
-            if (tms9900.PC == 0x40e8) HandleTICCSector();
+            if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
             tms9900.currentOp = ReadPC16();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
             switch (op8)
@@ -1573,7 +1573,7 @@ ITCM_CODE void TMS9900_Run(void)
         u8 data8;
         u16 data16;
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
-        if (tms9900.PC == 0x40e8) HandleTICCSector();
+        if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
         tms9900.currentOp = ReadPC16_Fast();
         u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
         switch (op8)
