@@ -44,6 +44,8 @@ u32 (*lutTablehh)[16][16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
 
+u8 scan_collisions_every __attribute__((section(".dtcm"))) = 8;
+
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
 // Screen modes are confusing as different documentation (MSX, Coleco, VDP manuals, etc)
@@ -784,7 +786,7 @@ ITCM_CODE byte Loop9918(void)
       // we are the older DS-Lite/Phat). This is somewhat CPU intensive so
       // we are careful how often we run it - especially on older hardware.
       // ---------------------------------------------------------------------
-      if ((CurLine % (isDSiMode() ? 8:64)) == 0)
+      if ((CurLine % scan_collisions_every) == 0)
       {
           if(!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
           {
@@ -856,6 +858,11 @@ void Reset9918(void)
     
     tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
     
+    scan_collisions_every = (isDSiMode() ? 8: 64);
+    
+    extern u32 file_crc;
+    if (file_crc == 0x2715313f) scan_collisions_every = 8; // The megademo needs it this fast at least
+        
     // ---------------------------------------------------------------
     // Our background/foreground color table makes computations FAST!
     // ---------------------------------------------------------------
