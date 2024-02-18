@@ -1642,10 +1642,10 @@ int main(int argc, char **argv)
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
 
-  // Setup the cart memory - for the DSi we can support 2MB and for the DS we can support 512K
+  // Setup the cart memory - for the DSi we can support 8MB and for the DS we can support 512K
   if (isDSiMode())
   {
-      MAX_CART_SIZE = (u32)(2048 * 1024);
+      MAX_CART_SIZE = (u32)(8192 * 1024);
       MemCART = malloc(MAX_CART_SIZE);
   }
   else

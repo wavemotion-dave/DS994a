@@ -9,7 +9,7 @@ See BIOS files further down for the ones you need.
 Features :
 -----------------------
 * Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
-* Cart loads up to 2048K (2MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
+* Cart loads up to 8192K (8MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
 * 32K RAM Expansion built-in
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type
@@ -91,7 +91,7 @@ File Types Supported :
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
 * Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
-* All other files are considered '8' files which is non-inverted banking up to 2048K (2MB) for the DSi and up to 512K for the older DS hardware.
+* All other files are considered '8' files which is non-inverted banking up to 8192K (8MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
 * If you wish to associate a .dsk file with your cart (e.g. Adventure or Tunnels of Doom, etc.) you can name the .dsk files with the same base name as the cart and replace the C/D/G/8 with 1, 2 or 3.
@@ -229,6 +229,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.8: ??-???-2024 by Wavemotion Dave
+* Fixes for the TMS9918 emulation to improve 5th sprite handling and collision detection. Megademo, Eric in Monsterland and Interceptor all work correctly now.
+* DSi now supports up to 8192K (8MB) banked ROMs (the older DS still supports 512K). The Dragon's Lair demo will run but won't process speech/sound as the emulation is not fast enough.
+* Improved VDP rendering and CPU memory read/writes to be a bit faster to help with older DS-Lite/Phat.
+
 V1.7: 16-Feb-2024 by wavemotion-dave 
 * Integrated the updated SN sound core for more robust sound.
 * Fixed audio squeals and other odd noises in a few games (e.g. Borzork, Mission Destruct, etc).
@@ -240,8 +245,6 @@ V1.7: 16-Feb-2024 by wavemotion-dave
 * Added the ability to auto-mount disks based on the filename. See File Types Supported in the readme for details.
 * Lots of minor cleanups and tweaks at time permitted.
 * Due to the extensive updates, the save states and configuration files have changed and will be wiped when loading this new version.
-
-Version 1.7a improves speed of VDP rendering to help DS-Lite/Phat.
 
 V1.6: 17-Aug-2023 by wavemotion-dave 
 * New icon for Twilight Menu - woot!

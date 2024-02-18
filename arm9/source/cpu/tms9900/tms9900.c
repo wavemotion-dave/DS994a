@@ -491,7 +491,7 @@ void TMS9900_Reset(char *szGame)
     // ---------------------------------------------------------
     // Now setup for all the CART and Console roms ...
     // ---------------------------------------------------------
-    memset(MemCART,         0xFF, MAX_CART_SIZE);   // The cart is not inserted to start...
+    memset(MemCART,         0xFF,(512*1024));       // The cart is not inserted to start... We map larger than this, but don't waste time clearing more than 512K
     memset(MemCPU,          0xFF, 0x10000);         // Set all of memory to 0xFF (nothing mapped until proven otherwise)
     memset(MemGROM,         0xFF, 0x10000);         // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
     memset(&MemCPU[0x8000], 0x00, 0x400);           // Mark off RAM area by clearing bytes

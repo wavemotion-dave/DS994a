@@ -1,6 +1,6 @@
 /******************************************************************************
-*  ColecoDS TMS9918A (video) file
-*  Ver 1.0
+*  DS994a - TMS9918A (video) file
+*  Ver 1.1
 *
 ** File: tms9928a.c -- software implementation of the Texas Instruments
 **                     TMS9918A used by the Colecovision.
@@ -38,13 +38,15 @@ u8 XBuf_A[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer A
 u8 XBuf_B[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer B
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
-// Look up table for colors - pre-generated and in VRAM for maximum speed!
-u32 (*lutTablehh)[16][16] __attribute__((section(".dtcm"))) = (void*)0x068A0000;    // this is actually 16x16x16x4 = 16K
+// Look up table for colors - pre-generated for maximum speed!
+u32 lutTablehh[256][16];
 
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
 
-u8 scan_collisions_every __attribute__((section(".dtcm"))) = 8;
+u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
+
+extern u32 debug[];
 
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
@@ -79,7 +81,7 @@ u16 CurLine     __attribute__((section(".dtcm")));      // Current scanline
 u8 VDP[16]      __attribute__((section(".dtcm")));      // VDP Registers
 u8 VDPStatus    __attribute__((section(".dtcm")));      // VDP Status
 u8 VDPDlatch    __attribute__((section(".dtcm")));      // VDP register D Latch
-u16 VAddr       __attribute__((section(".dtcm")));      // Storage for VIDRAM addresses
+u16 VAddr       __attribute__((section(".dtcm")));      // VDP Video Address
 u8 VDPCtrlLatch __attribute__((section(".dtcm")));      // VDP control latch key
 u8 *ChrGen      __attribute__((section(".dtcm")));      // VDP tables (screens)
 u8 *ChrTab      __attribute__((section(".dtcm")));      // VDP tables (screens)
@@ -127,6 +129,7 @@ ITCM_CODE void RefreshBorder(byte Y)
       for(J=N;J;J--) *P++=BGColor;
     }
 }
+
 
 /** CheckSprites() ***********************************************/
 /** This function is periodically called to check for sprite    **/
@@ -398,7 +401,6 @@ void ITCM_CODE RefreshSprites(register byte Y)
   }
 }
 
-
 /** RefreshLine0() *******************************************/
 /** Refresh line Y (0..191) of SCREEN0, including sprites   **/
 /** in this line.                                           **/
@@ -419,15 +421,33 @@ ITCM_CODE void RefreshLine0(u8 Y)
     T=ChrTab+(Y>>3)*40;
     Offset=Y&0x07;
 
+    u8 lastT = ~(*T);
+    
+    u16 word1, word2, word3;
     for(int X=0;X<40;X++)
     {
-      K=ChrGen[((int)*T<<3)+Offset];
-      P[0]=K&0x80? FC:BC;
-      P[1]=K&0x40? FC:BC;
-      P[2]=K&0x20? FC:BC;
-      P[3]=K&0x10? FC:BC;
-      P[4]=K&0x08? FC:BC;
-      P[5]=K&0x04? FC:BC;
+      if (lastT != *T)
+      {
+          lastT=*T;
+          K=ChrGen[((int)*T<<3)+Offset];
+          P[0]=K&0x80? FC:BC;
+          P[1]=K&0x40? FC:BC;
+          P[2]=K&0x20? FC:BC;
+          P[3]=K&0x10? FC:BC;
+          P[4]=K&0x08? FC:BC;
+          P[5]=K&0x04? FC:BC;
+          // Save the data as we are likely to just repeat it...
+          word1 = *((u16*)(P+0));
+          word2 = *((u16*)(P+2));
+          word3 = *((u16*)(P+4));
+      }
+      else // No change so we can just blast repeat the 6 bytes (16-bits at at time). This occurs frequently and saves us time.
+      {
+          u16 *destPtr = (u16*)P;
+          *destPtr++ = word1;
+          *destPtr++ = word2;
+          *destPtr   = word3;
+      }
       P+=6;T++;
     }
   }
@@ -445,7 +465,6 @@ void ITCM_CODE RefreshLine1(u8 uY)
   register u8 *T;
   register u32 *P;
   u8 lastT;
-  u32 *ptLut=0;
 
   P=(u32*) (XBuf+(uY<<8));
   u32 ptLow = 0; u32 ptHigh = 0;
@@ -466,11 +485,9 @@ void ITCM_CODE RefreshLine1(u8 uY)
           lastT=*T;
           BC=ColTab[lastT>>3];
           K=ChrGen[((int)lastT<<3)+Offset];
-          FC=BC>>4;
-          BC=BC&0x0F;
-          u32* ptLut = (u32*) (lutTablehh[FC][BC]);
-          ptLow = *(ptLut + ((K>>4)));
-          ptHigh= *(ptLut + ((K & 0xF)));
+          u32* ptLut = (u32*) (lutTablehh[BC]);
+          ptLow  = lutTablehh[BC][K>>4];
+          ptHigh = lutTablehh[BC][K&0xF];
       }
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -484,12 +501,12 @@ void ITCM_CODE RefreshLine1(u8 uY)
 /** Refresh line Y (0..191) of SCREEN2, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine2(u8 uY) {
+void ITCM_CODE RefreshLine2(u8 uY) 
+{
   u32 *P;
   register byte FC,BC;
   register byte K,*T;
   u16 J,I;
-  u32 *ptLut;
 
   P=(u32*)(XBuf+(uY<<8));
 
@@ -508,15 +525,12 @@ void ITCM_CODE RefreshLine2(u8 uY) {
       if (lastT != *T)
       {
           lastT = *T;
-          I    = (u16)lastT<<3;
-          K    = ColTab[(J+I)&ColTabM];
-          FC   = (K>>4);
-          BC   = K & 0x0F;
-          K    = ChrGen[(J+I)&ChrGenM];
-          u32* ptLut = (u32*)(lutTablehh[FC][BC]);
-          ptLow = *(ptLut + ((K>>4)));
-          ptHigh = *(ptLut + ((K & 0xF)));
-      } 
+          I      = (u16)lastT<<3;
+          K      = ColTab[(J+I)&ColTabM];
+          u8 K2  = ChrGen[(J+I)&ChrGenM];
+          ptLow  = lutTablehh[K][K2>>4];
+          ptHigh = lutTablehh[K][K2&0xF];
+      }
       *P++ = ptLow;
       *P++ = ptHigh;
       T++;
@@ -530,7 +544,8 @@ void ITCM_CODE RefreshLine2(u8 uY) {
 /** Refresh line Y (0..191) of SCREEN3, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine3(u8 uY) {
+ITCM_CODE void RefreshLine3(u8 uY) 
+{
   byte X,K,Offset;
   byte *P,*T;
   u8 lastT;
@@ -544,6 +559,7 @@ ITCM_CODE void RefreshLine3(u8 uY) {
     T=ChrTab+((int)(uY&0xF8)<<2);
     lastT = ~(*T);
     Offset=(uY&0x1C)>>2;
+    u32 dword1, dword2;
     for(X=0;X<32;X++) 
     {
       if (lastT != *T)
@@ -552,9 +568,17 @@ ITCM_CODE void RefreshLine3(u8 uY) {
           K=ChrGen[((int)lastT<<3)+Offset];
           ptLow = K>>4;
           ptHigh = K&0x0F;
+          P[0]=P[1]=P[2]=P[3]=ptLow;
+          P[4]=P[5]=P[6]=P[7]=ptHigh;
+          dword1 = *((u32*)(P+0));
+          dword2 = *((u32*)(P+4));
       }
-      P[0]=P[1]=P[2]=P[3]=ptLow;
-      P[4]=P[5]=P[6]=P[7]=ptHigh;
+      else
+      {
+          u32 *destPtr = (u32*)P;
+          *destPtr++ = dword1;
+          *destPtr   = dword2;          
+      }
       P+=8;T++;
     }
     RefreshSprites(uY);
@@ -687,20 +711,8 @@ ITCM_CODE byte RdData9918(void)
 }
 
 
-/** WrData9918() *********************************************/
-/** Write a value V to the VDP Data Port.                   **/
-/*************************************************************/
-ITCM_CODE void WrData9918(byte value)
-{
-    VDPDlatch = pVDPVidMem[VAddr] = value;
-    VAddr     = (VAddr+1)&0x3FFF;
-    VDPCtrlLatch = 0;
-}
-
-
 extern void TMS9901_RaiseVDPInterrupt(void);
 extern void TMS9901_ClearVDPInterrupt(void);
-
 
 /** WrCtrl9918() *********************************************/
 /** Write a value V to the VDP Control Port. Enabling IRQs  **/
@@ -780,17 +792,16 @@ ITCM_CODE byte Loop9918(void)
           RefreshLine(CurLine - tms_start_line);
       }
 
-      // ---------------------------------------------------------------------
-      // Some programs require that we handle collisions more frequently
-      // than just end of line. So we check every 8 scanlines (or 64 if 
-      // we are the older DS-Lite/Phat). This is somewhat CPU intensive so
-      // we are careful how often we run it - especially on older hardware.
-      // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------------
+      // Some programs require that we handle collisions more frequently than just
+      // end of line. So we check every X scanlines. This is somewhat CPU intensive
+      // so we are careful how often we run it - especially on older hardware.
+      // ---------------------------------------------------------------------------
       if ((CurLine % scan_collisions_every) == 0)
       {
           if(!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
           {
-            if(CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
+             if (CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
           }
       }
   }
@@ -830,7 +841,14 @@ ITCM_CODE byte Loop9918(void)
 void Reset9918(void) 
 {
     memset(VDP,0x00,sizeof(VDP));       // Initialize VDP registers
-    VDP[1] = 0x80;                      // Force 16K Video Memory
+    VDP[0] = 0x00;                      // Control Bits I:  Graphics Mode 1 (M3... M1,M2 in VDP[1])
+    VDP[1] = 0x80;                      // Control Bits II: Force 16K Video Memory (M2,M3 zero)
+    VDP[2] = 0x06;                      // Default for pattern table base address
+    VDP[3] = 0x80;                      // Default for color table base address
+    VDP[4] = 0x00;                      // Default for pattern generator base address
+    VDP[5] = 0x36;                      // Default for sprite attribute table base address
+    VDP[6] = 0x07;                      // Default for sprite generator table base address
+    VDP[7] = 0x00;                      // FG color and BG color both 0x00 to start        
     memset(pVDPVidMem, 0x00, 0x4000);   // Reset Video memory 
     VDPCtrlLatch=0;                     // VDP control latch (flip-flop)
     VDPStatus=0x00;                     // VDP status register
@@ -858,10 +876,11 @@ void Reset9918(void)
     
     tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
     
-    scan_collisions_every = (isDSiMode() ? 8: 64);
+    scan_collisions_every = (isDSiMode() ? 32 : 64);  // Reasonable values for DSi vs DS-Lite/Phat on how often to check for collisions
     
     extern u32 file_crc;
-    if (file_crc == 0x2715313f) scan_collisions_every = 8; // The megademo needs it this fast at least
+    if (file_crc == 0x2715313f) scan_collisions_every = 8; // The megademo ROM needs it this fast at least
+    if (file_crc == 0xe92f15ff) scan_collisions_every = 8; // The megademo DSK needs it this fast at least
         
     // ---------------------------------------------------------------
     // Our background/foreground color table makes computations FAST!
@@ -869,23 +888,23 @@ void Reset9918(void)
     int colfg,colbg;
     for (colfg=0;colfg<16;colfg++) {
         for (colbg=0;colbg<16;colbg++) {
-          lutTablehh[colfg][colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
-          lutTablehh[colfg][colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
-          lutTablehh[colfg][colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
-          lutTablehh[colfg][colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
-          lutTablehh[colfg][colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
-          lutTablehh[colfg][colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
-          lutTablehh[colfg][colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
-          lutTablehh[colfg][colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
+          lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
+          lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
+          lutTablehh[(colfg<<4) | colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
+          lutTablehh[(colfg<<4) | colbg][ 3] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 0 0 1 1
+          lutTablehh[(colfg<<4) | colbg][ 4] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 0 1 0 0
+          lutTablehh[(colfg<<4) | colbg][ 5] = (colbg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 0 1 0 1
+          lutTablehh[(colfg<<4) | colbg][ 6] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 0 1 1 0
+          lutTablehh[(colfg<<4) | colbg][ 7] = (colbg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 0 1 1 1
 
-          lutTablehh[colfg][colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
-          lutTablehh[colfg][colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
-          lutTablehh[colfg][colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
-          lutTablehh[colfg][colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
-          lutTablehh[colfg][colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
-          lutTablehh[colfg][colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
-          lutTablehh[colfg][colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
-          lutTablehh[colfg][colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
+          lutTablehh[(colfg<<4) | colbg][ 8] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 1 0 0 0
+          lutTablehh[(colfg<<4) | colbg][ 9] = (colfg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 1 0 0 1
+          lutTablehh[(colfg<<4) | colbg][10] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 1 0 1 0
+          lutTablehh[(colfg<<4) | colbg][11] = (colfg<<0) | (colbg<<8) | (colfg<<16) | (colfg<<24); // 1 0 1 1
+          lutTablehh[(colfg<<4) | colbg][12] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colbg<<24); // 1 1 0 0
+          lutTablehh[(colfg<<4) | colbg][13] = (colfg<<0) | (colfg<<8) | (colbg<<16) | (colfg<<24); // 1 1 0 1
+          lutTablehh[(colfg<<4) | colbg][14] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colbg<<24); // 1 1 1 0
+          lutTablehh[(colfg<<4) | colbg][15] = (colfg<<0) | (colfg<<8) | (colfg<<16) | (colfg<<24); // 1 1 1 1
         }
     }
 }
