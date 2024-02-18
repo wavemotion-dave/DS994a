@@ -1051,7 +1051,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
     DS_Print(0,idx++,6,tmpBuf);
     sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[12], VDP[13], VDP[14], VDP[15]); 
     DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP AD=%04X  %02X %02X", VAddr, VDPStatus, VDPDlatch);
+    sprintf(tmpBuf, "VDP AD=%04X ST=%02X", VAddr, VDPStatus);
     DS_Print(0,idx++,6,tmpBuf);
     idx++;
    

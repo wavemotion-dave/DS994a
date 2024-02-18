@@ -185,16 +185,16 @@ void SAMS_MapDSR(u8 dataBit)
 {
     if (dataBit == 1) // Mapping DSR in
     {
-        for (u16 address = 0x4000; address < 0x4020; address += 2)
+        for (u16 address = 0x4000; address < 0x4020; address += 16)
         {
-            MemType[address] = MF_SAMS;    // SAMS expanded memory handling
+            MemType[address>>4] = MF_SAMS;    // SAMS expanded memory handling
         }
     }
     else // Mapping DSR out
     {
-        for (u16 address = 0x4000; address < 0x4020; address += 2)
+        for (u16 address = 0x4000; address < 0x4020; address += 16)
         {
-            MemType[address] = MF_UNUSED;    // Map back to original handling (disk controller sits here by default)
+            MemType[address>>4] = MF_UNUSED;    // Map back to original handling (unused)
         }
     }
 }

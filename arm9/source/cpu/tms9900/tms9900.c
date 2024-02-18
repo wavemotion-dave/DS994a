@@ -36,7 +36,7 @@
 // -------------------------------------------------------------------
 u8           MemCPU[0x10000];            // 64K of CPU MemCPU Space
 u8           MemGROM[0x10000];           // 64K of GROM MemCPU Space
-u8           MemType[0x10000];           // Memory type for each address
+u8           MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
 u8           DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
 u16          numCartBanks = 1;           // Number of CART banks (8K each)
 
@@ -303,7 +303,7 @@ void TMS9900_buildopcodes(void)
     // us take any TMS9900 16-bit Opcode and turn it into
     // a simple enum lookup for relatively blazing speed.
     // -----------------------------------------------------
-    for (i=0; i<65536; i++)
+    for (i=0; i<0x10000; i++)
     {
         in=(u16)i;
 
@@ -411,7 +411,7 @@ void TMS9900_Reset(char *szGame)
     // ---------------------------------------------------------------------------
     for (u32 address=0x0000; address<0x10000; address++)
     {
-        MemType[address] = MF_UNUSED;
+        MemType[address>>4] = MF_UNUSED;
     }
 
     // ------------------------------------------------------------------------------
@@ -421,12 +421,12 @@ void TMS9900_Reset(char *szGame)
     // ------------------------------------------------------------------------------
     for(u16 address = 0x0000; address < 0x2000; address++)
     {
-        MemType[address] = MF_MEM16;
+        MemType[address>>4] = MF_MEM16;
     }
 
     for(u16 address = 0x8000; address < 0x8400; address++ )
     {
-        MemType[address] = MF_MEM16;
+        MemType[address>>4] = MF_MEM16;
     }
 
     // ------------------------------------------------------------------------------
@@ -435,57 +435,57 @@ void TMS9900_Reset(char *szGame)
     // ------------------------------------------------------------------------------
     for (u16 address = 0x8400; address < 0x8600; address += 2)
     {
-        MemType[address] = MF_SOUND;   // TI Sound Chip responds to any even address between >8400 and >85EF
+        MemType[address>>4] = MF_SOUND;   // TI Sound Chip responds to any even address between >8400 and >85EF
     }
 
     for (u16 address = 0x8800; address < 0x8C00; address += 4)
     {
-        MemType[address+0] = MF_VDP_R;    // VDP Read Data
-        MemType[address+2] = MF_VDP_R;    // VDP Read Status
+        MemType[(address+0)>>4] = MF_VDP_R;    // VDP Read Data
+        MemType[(address+2)>>4] = MF_VDP_R;    // VDP Read Status
     }
 
     for (u16 address = 0x8C00; address < 0x9000; address += 4)
     {
-        MemType[address+0] = MF_VDP_W;   // VDP Write Data
-        MemType[address+2] = MF_VDP_W;   // VDP Write Address
+        MemType[(address+0)>>4] = MF_VDP_W;   // VDP Write Data
+        MemType[(address+2)>>4] = MF_VDP_W;   // VDP Write Address
     }
 
     for (u16 address = 0x9000; address < 0x9800; address += 4)
     {
-        MemType[address+0] = MF_SPEECH;   // Speech Synth Read
-        MemType[address+2] = MF_SPEECH;   // Speech Synth Write
+        MemType[(address+0)>>4] = MF_SPEECH;   // Speech Synth Read
+        MemType[(address+2)>>4] = MF_SPEECH;   // Speech Synth Write
     }
 
     for (u16 address = 0x9800; address < 0x9C00; address += 4)
     {
-        MemType[address+0] = MF_GROMR;   // GROM Read Data
-        MemType[address+2] = MF_GROMR;   // GROM Read Address
+        MemType[(address+0)>>4] = MF_GROMR;   // GROM Read Data
+        MemType[(address+2)>>4] = MF_GROMR;   // GROM Read Address
     }
 
     for (u16 address = 0x9C00; address < 0xA000; address += 4)
     {
-        MemType[address+0] = MF_GROMW;   // GROM Write Data
-        MemType[address+2] = MF_GROMW;   // GROM Write Address
+        MemType[(address+0)>>4] = MF_GROMW;   // GROM Write Data
+        MemType[(address+2)>>4] = MF_GROMW;   // GROM Write Address
     }
 
     for (u16 address = 0x5ff0; address < 0x6000; address++)
     {
-        MemType[address] = MF_DISK;     // TI Disk Controller area
+        MemType[address>>4] = MF_DISK;     // TI Disk Controller area
     }
 
     for (u16 address = 0x6000; address < 0x8000; address++)
     {
-        MemType[address] = MF_CART;   // Cart Read Access and Bank Write
+        MemType[address>>4] = MF_CART;   // Cart Read Access and Bank Write
     }
 
     for (u16 address = 0x2000; address < 0x4000; address++)
     {
-        MemType[address] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (low area) - could be SAMS mapped
+        MemType[address>>4] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (low area) - could be SAMS mapped
     }
 
     for (u32 address = 0xA000; address < 0x10000; address++)
     {
-        MemType[address] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (high area) - could be SAMS mapped
+        MemType[address>>4] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (high area) - could be SAMS mapped
     }
 
     // ---------------------------------------------------------
@@ -654,7 +654,7 @@ void TMS9900_Reset(char *szGame)
     {
         for (u16 address = 0x6000; address < 0x8000; address++)
         {
-            MemType[address] = MF_RAM8; // Supercart maps ram into the cart slot
+            MemType[address>>4] = MF_RAM8; // Supercart maps ram into the cart slot
         }
         memset(MemCPU+0x6000, 0x00, 0x2000);
     }
@@ -666,7 +666,7 @@ void TMS9900_Reset(char *szGame)
     {
         for (u16 address = 0x7000; address < 0x8000; address++)
         {
-            MemType[address] = MF_RAM8; // Mini Memory maps ram into the upper half of the cart slot
+            MemType[address>>4] = MF_RAM8; // Mini Memory maps ram into the upper half of the cart slot
         }
         memset(MemCPU+0x7000, 0x00, 0x1000);
     }
@@ -678,23 +678,24 @@ void TMS9900_Reset(char *szGame)
     {
         for (u16 address = 0x6000; address < 0x7000; address++)
         {
-            MemType[address] = MF_CART_NB;    // We'll do the banking manually for MBX carts
+            MemType[address>>4] = MF_CART_NB;    // We'll do the banking manually for MBX carts
         }
         for (u16 address = 0x7000; address < 0x8000; address++)
         {
-            MemType[address] = MF_CART;    // We'll do the banking manually for MBX carts
+            MemType[address>>4] = MF_CART;    // We'll do the banking manually for MBX carts
         }
         
         if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
         {
             for (u16 address = 0x6C00; address < 0x7000; address++)
             {
-                MemType[address] = MF_RAM8; // MBX carts have 1K of memory... with the last word at >6ffe being the bank switch
+                MemType[address>>4] = MF_RAM8; // MBX carts have 1K of memory... with the last word at >6ffe being the bank switch
                 MemCPU[address] = 0x00;     // Clear out the RAM
             }
         }
-        MemType[0x6ffe] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
-        MemType[0x6fff] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
+        
+        MemType[0x6ffe>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
+        MemType[0x6fff>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
         WriteBankMBX(0);
     }
     
@@ -766,10 +767,11 @@ static inline u8 ReadGROM(void)
     return MemGROM[tms9900.gromAddress++];
 }
 
-// -------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // The GROM address is 16 bits but is always read/written 8-bits at a time
 // so we have to handle the high byte and low byte transfers...
-// -------------------------------------------------------------------------
+// The hardware will wrap the 13-bit counter but we are ignoring that for speed
+// ------------------------------------------------------------------------------
 ITCM_CODE u8 ReadGROMAddress(void)
 {
     u8 data;
@@ -796,7 +798,7 @@ ITCM_CODE u8 ReadGROMAddress(void)
 // The GROM address is 16 bits but is always read/written 8-bits at a time
 // so we have to handle the high byte and low byte transfers...
 // -------------------------------------------------------------------------
-ITCM_CODE void WriteGROMAddress(u8 data)
+inline void WriteGROMAddress(u8 data)
 {
     tms9900.gromReadLoHi = 0;
 
@@ -815,7 +817,7 @@ ITCM_CODE void WriteGROMAddress(u8 data)
 }
 
 
-ITCM_CODE void WriteGROM(u8 data)
+void WriteGROM(u8 data)
 {
     // Does nothing... should we chew up cycles?
 }
@@ -839,7 +841,7 @@ inline void WriteBank(u16 address)
 // For the MBX, there are up to 4 banks of 4K each... These map into >7000
 // We treat this like a half-banked cart with only the 4K at >7000 swapping.
 // --------------------------------------------------------------------------
-void WriteBankMBX(u8 bank)
+inline void WriteBankMBX(u8 bank)
 {
     bank &= 0x3;
     tms9900.cartBankPtr = MemCART+(bank*0x1000) - 0x1000;    // The -0x1000 offsets by 4K so that the memory fetch works correctly at >7000
@@ -860,7 +862,7 @@ inline u16 ReadRAM16(u16 address)
 // ----------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16(u16 address, u16 data)
 {
-    if (!MemType[address] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+    if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
     {
         *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
         *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
@@ -880,7 +882,8 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
 // ------------------------------------------------------------------------------------------------------------------------
 inline u16 ReadRAM16a(u16 address)
 {
-    if (MemType[address] == MF_SAMS8)
+    debug[0]++;
+    if (MemType[address>>4] == MF_SAMS8)
     {
         u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
         return (data16 << 8) | (data16 >> 8);
@@ -893,17 +896,19 @@ inline u16 ReadRAM16a(u16 address)
 // ----------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
-    if (MemType[address] == MF_SAMS8)
+    if (MemType[address>>4] == MF_SAMS8)
     {
+        debug[1]++;
         u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
         *ptr++ = (data>>8);
         *ptr = (data & 0xFF);
     }        
     else
     {
+        debug[2]++;
         if (myConfig.RAMMirrors)
         {
-            if (!MemType[address])  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+            if (!MemType[address>>4])  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
             {
                 *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
                 *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
@@ -927,50 +932,44 @@ ITCM_CODE u16 ReadPC16(void)
     // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
     if (address & 0xE000)
     {
-        u8 memType = MemType[address];
+        u8 memType = MemType[address>>4];
         if (memType)
         {
             AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
             if (memType == MF_CART)
             {
-                u16 data16 = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
-                return (data16 << 8) | (data16 >> 8);
-
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
             }
             else if (memType == MF_SAMS8)
             {
-                u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
-                return (data16 << 8) | (data16 >> 8);
+                return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
             }
         }
     }
-    u16 data16 = *((u16*)(MemCPU+address));
-    return (data16 << 8) | (data16 >> 8);
+    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
 }
 
 // ------------------------------------------------------------------------------------------------------
 // Here we're not a SAMS game so we don't have to check for or process indexing into SAMS banked memory.
 // ------------------------------------------------------------------------------------------------------
-ITCM_CODE u16 ReadPC16_Fast(void)
+inline u16 ReadPC16_Fast(void)
 {
     u16 address = tms9900.PC; tms9900.PC+=2;
 
     // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
     if (address & 0xE000)
     {
-        u8 memType = MemType[address];
+        u8 memType = MemType[address>>4];
         if (memType)
         {
             AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
             if (memType == MF_CART)
             {
-                u16 data16 = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
-                return (data16 << 8) | (data16 >> 8);
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
             }
         }
     }
-    u16 data16 = *((u16*)(MemCPU+address));
-    return (data16 << 8) | (data16 >> 8);
+    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
 }
 
 
@@ -980,7 +979,7 @@ ITCM_CODE u16 ReadPC16_Fast(void)
 // -----------------------------------------------------------------------------------------
 inline void MemoryReadHidden(u16 address)
 {
-    if (MemType[address]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
+    if (MemType[address>>4]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
 }
 
 // -------------------------------------------------------------------------------------------
@@ -991,7 +990,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
 {
     u16 retVal;
     address &= 0xFFFE;
-    u8 memType = MemType[address];
+    u8 memType = MemType[address>>4];
 
     if (memType)
     {
@@ -1000,8 +999,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
         switch (memType)
         {
             case MF_CART:
-                retVal = *((u16*)(tms9900.cartBankPtr + (address&0x1FFF)));
-                return (retVal << 8) | (retVal >> 8);
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
                 break;
             case MF_SAMS8:
                 retVal = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
@@ -1040,7 +1038,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
 
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
-    u8 memType = MemType[address];
+    u8 memType = MemType[address>>4];
 
     if (memType)
     {
@@ -1103,7 +1101,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
 {
     address &= 0xFFFE;
 
-    u8 memType = MemType[address];
+    u8 memType = MemType[address>>4];
 
     if (memType)
     {
@@ -1129,8 +1127,12 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 SAMS_WriteBank(address, data>>8);
                 break;
             case MF_MBX:
-                WriteBankMBX(data>>8);
-                if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) MemCPU[address] = data>>8;
+                if (address >= 0x6ffe) WriteBankMBX(data>>8);
+                if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) // If it's got RAM mapped here... we treat it like RAM8
+                {
+                    MemCPU[address] = (data>>8);
+                    MemCPU[address+1] = data & 0xFF;
+                }
                 break;
             case MF_SAMS8:
                 {
@@ -1168,7 +1170,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
 
 ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 {
-    u8 memType = MemType[address];
+    u8 memType = MemType[address>>4];
 
     if (memType)
     {
@@ -1197,7 +1199,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 SAMS_WriteBank(address, data);
                 break;
             case MF_MBX:
-                WriteBankMBX(data);
+                if (address >= 0x6ffe) WriteBankMBX(data);
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) MemCPU[address] = data;
                 break;
             case MF_DISK:
