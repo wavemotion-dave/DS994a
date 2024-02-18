@@ -81,11 +81,8 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* The 512K megademo8.bin will play (and is really cool!) but fails when it gets to the scanline stuff near the end. Cause unknown.
 * Congo Bongo and Buck Rogers both require RAM mirrors enabled so it doesn't glitch. Use Options to enable if not auto-detected.
 * TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
-* The system will not auto-detect an NTSC vs PAL game. If you are running a game designed for a PAL system, you must manually change the configuration to PAL. 
-* Speaking of PAL, Eric in Monsterland and Inteceptor won't run properly under NTSC (collision detection isn't working). Set these to PAL for now.
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX is not emulated (other MBX-optional titles with 1K of RAM work fine).
 
 
