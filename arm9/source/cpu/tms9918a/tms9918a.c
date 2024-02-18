@@ -48,6 +48,8 @@ u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
 
 extern u32 debug[];
 
+u8 CollisionCheckEvery[] = {4, 8, 16, 32, 64, 255};
+
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
 // Screen modes are confusing as different documentation (MSX, Coleco, VDP manuals, etc)
@@ -876,12 +878,15 @@ void Reset9918(void)
     
     tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
     
-    scan_collisions_every = (isDSiMode() ? 32 : 64);  // Reasonable values for DSi vs DS-Lite/Phat on how often to check for collisions
-    
-    extern u32 file_crc;
-    if (file_crc == 0x2715313f) scan_collisions_every = 8; // The megademo ROM needs it this fast at least
-    if (file_crc == 0xe92f15ff) scan_collisions_every = 8; // The megademo DSK needs it this fast at least
-        
+    if (myConfig.spriteCheck) // Force a specific collision check value?
+    {
+        scan_collisions_every = CollisionCheckEvery[myConfig.spriteCheck];
+    }
+    else // Use "normal" default values
+    {
+        scan_collisions_every = (isDSiMode() ? 32 : 64);  // Reasonable values for DSi vs DS-Lite/Phat on how often to check for collisions
+    }
+
     // ---------------------------------------------------------------
     // Our background/foreground color table makes computations FAST!
     // ---------------------------------------------------------------

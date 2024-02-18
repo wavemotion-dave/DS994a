@@ -1104,9 +1104,9 @@ void SetDefaultGameConfig(void)
     myConfig.overlay     = globalConfig.overlay;
     myConfig.emuSpeed    = 0;
     myConfig.machineType = globalConfig.machineType;
-    myConfig.cartType    = 0;
-    myConfig.dpadDiagonal= 0;
-    myConfig.reservedH   = 0;
+    myConfig.cartType    = 0;   // Normal
+    myConfig.dpadDiagonal= 0;   // Normal
+    myConfig.spriteCheck = 0;   // Normal
     myConfig.reservedI   = 0;
     myConfig.reservedJ   = 0;
     myConfig.reservedK   = 0;
@@ -1133,9 +1133,12 @@ void SetDefaultGameConfig(void)
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
 
-    if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
-    if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
-    if (file_crc == 0x3c124691) myConfig.dpadDiagonal = 1;   // Topper wants to use diagonal directions
+    if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
+    if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
+    if (file_crc == 0x3c124691) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
+    
+    if (file_crc == 0x2715313f) myConfig.spriteCheck = 2;   // The megademo ROM needs it this fast at least
+    if (file_crc == 0xe92f15ff) myConfig.spriteCheck = 2;   // The megademo DSK needs it this fast at least            
 
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
@@ -1238,23 +1241,24 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                    &myConfig.overlay,      2},
-        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                     &myConfig.frameSkip,    3},
-        {"FRAME BLEND",    {"OFF", "ON"},                                                                                       &myConfig.frameBlend,   2},
-        {"MAX SPRITES",    {"4",   "32"},                                                                                       &myConfig.maxSprites,   2},
-        {"TV TYPE",        {"NTSC","PAL"},                                                                                      &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                   &myConfig.machineType,  2},
-        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                              &myConfig.cartType,     5},
-        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT"}, &myConfig.emuSpeed,     7},
-        {"CAPS LOCK",      {"OFF", "ON"},                                                                                       &myConfig.capsLock,     2},
-        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                       &myConfig.RAMMirrors,   2},
-        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                &myConfig.memWipe,      2},
-        {"DPAD",           {"NORMAL", "DIAGONALS",},                                                                            &myConfig.dpadDiagonal, 2},
-        {NULL,             {"",      ""},                                                                                       NULL,                   1},
+        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                                 &myConfig.overlay,      2},
+        {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                  &myConfig.frameSkip,    3},
+        {"FRAME BLEND",    {"OFF", "ON"},                                                                                                    &myConfig.frameBlend,   2},
+        {"MAX SPRITES",    {"4",   "32"},                                                                                                    &myConfig.maxSprites,   2},
+        {"TV TYPE",        {"NTSC","PAL"},                                                                                                   &myConfig.isPAL,        2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                                &myConfig.machineType,  2},
+        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                                           &myConfig.cartType,     5},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT"},              &myConfig.emuSpeed,     7},
+        {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
+        {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},
+        {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                             &myConfig.memWipe,      2},
+        {"DPAD",           {"NORMAL", "DIAGONALS",},                                                                                         &myConfig.dpadDiagonal, 2},
+        {"SPRITE CHECK",   {"NORMAL (32/64)", "4 SCANLINES", "8 SCANLINES", "16 SCANLINES", "32 SCANLINES", "64 SCANLINES", "END OF FRAME"}, &myConfig.spriteCheck,  7},
+        {NULL,             {"",      ""},                                                                                                    NULL,                   1},
     },
     // Page 2
     {
-        {NULL,             {"",      ""},                                                                                       NULL,                   1},
+        {NULL,             {"",      ""},                                                                                                    NULL,                   1},
     }
 };
 

@@ -84,7 +84,7 @@ struct __attribute__((__packed__)) Config_t
     u8  machineType;
     u8  cartType;
     u8  dpadDiagonal;
-    u8  reservedH;
+    u8  spriteCheck;
     u8  reservedI;
     u8  reservedJ;
     u8  reservedK;
