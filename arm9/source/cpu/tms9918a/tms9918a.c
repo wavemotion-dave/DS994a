@@ -266,7 +266,7 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
         else // This is undocumented behavior but a real VDP will behave like this and Miner 2049er will rely on it
         {
             VDPStatus &= ~TMS9918_STAT_5THNUM;          // Clear out any previous sprite number
-            VDPStatus |= (sprite < 32) ? sprite:31;     // Set the 5th sprite number to the last visible sprite on this line or 31 if no sprites visible
+            VDPStatus |= (sprite < 32) ? sprite:31;     // Set the 5th sprite number to the last scanned sprite on this line or 31 if no sprites on this line
         }
     }
 
