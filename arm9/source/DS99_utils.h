@@ -85,7 +85,7 @@ struct __attribute__((__packed__)) Config_t
     u8  cartType;
     u8  dpadDiagonal;
     u8  spriteCheck;
-    u8  reservedI;
+    u8  noExtSpeech;
     u8  reservedJ;
     u8  reservedK;
     u8  reservedL;

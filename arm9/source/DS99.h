@@ -15,8 +15,10 @@
 #include <nds.h>
 #include <string.h>
 
-extern u32 MAX_CART_SIZE;   // Dynamic buffer size - if DSi we go to 2MB and for DS only 512K
-extern u8  *MemCART;        // The actual cart buffer
+extern u32 MAX_CART_SIZE;   // Dynamic buffer size - if DSi we go to 8MB and for DS only 512K
+extern u8  *MemCART;        // The actual cart buffer gets allocated here.
+extern char tmpBuf[256];    // For simple printf-type output and other sundry uses.
+extern u8 fileBuf[4096];    // For DSK sector cache and file CRC generation use.
 
 #define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
 
@@ -34,42 +36,10 @@ enum
     JOY2_FIRE,
     KBD_SPACE,
     KBD_ENTER,
-    KBD_1,
-    KBD_2,
-    KBD_3,
-    KBD_4,
-    KBD_5,
-    KBD_6,
-    KBD_7,
-    KBD_8,
-    KBD_9,
-    KBD_0,
-    KBD_A,
-    KBD_B,
-    KBD_C,
-    KBD_D,
-    KBD_E,
-    KBD_F,
-    KBD_G,
-    KBD_H,
-    KBD_I,
-    KBD_J,
-    KBD_K,
-    KBD_L,
-    KBD_M,
-    KBD_N,
-    KBD_O,
-    KBD_P,
-    KBD_Q,
-    KBD_R,
-    KBD_S,
-    KBD_T,
-    KBD_U,
-    KBD_V,
-    KBD_W,
-    KBD_X,
-    KBD_Y,
-    KBD_Z,
+    KBD_1, KBD_2, KBD_3, KBD_4, KBD_5, KBD_6, KBD_7, KBD_8, KBD_9, KBD_0,
+    KBD_A, KBD_B, KBD_C, KBD_D, KBD_E, KBD_F, KBD_G, KBD_H, KBD_I, KBD_J,
+    KBD_K, KBD_L, KBD_M, KBD_N, KBD_O, KBD_P, KBD_Q, KBD_R, KBD_S, KBD_T,
+    KBD_U, KBD_V, KBD_W, KBD_X, KBD_Y, KBD_Z,
     KBD_EQUALS,
     KBD_SLASH,
     KBD_PERIOD,

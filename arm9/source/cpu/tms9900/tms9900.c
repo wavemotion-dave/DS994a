@@ -34,16 +34,15 @@
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
 // -------------------------------------------------------------------
-u8           MemCPU[0x10000];            // 64K of CPU MemCPU Space
-u8           MemGROM[0x10000];           // 64K of GROM MemCPU Space
-u8           MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
-u8           DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
-u16          numCartBanks = 1;           // Number of CART banks (8K each)
-
-u8           FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
-u8           *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 2MB/512K (DSi vs DS) banked at >6000
-u32          MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size (DSI will bump this to 2MB)
-
+u8      MemCPU[0x10000];            // 64K of CPU MemCPU Space
+u8      MemGROM[0x10000];           // 64K of GROM MemCPU Space
+u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
+u8      DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
+        
+u8      FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
+u8      *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
+u32     MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size (DSI will bump this to 8MB)
+        
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
@@ -55,11 +54,7 @@ u16 MemoryRead16(u16 address);
 
 u16 readSpeech = SPEECH_SENTINAL_VAL;
 
-u32 num_illegal_op_codes = 0;
-u32 last_illegal_op_code = 0x00;
-
 // A few externs from other modules...
-extern char tmpBuf[];
 extern SN76496 snti99;
 
 // Supporting banking up to 8MB (1024 x 8KB = 8192KB) even though our cart buffer might be smaller
@@ -374,9 +369,8 @@ void TMS9900_buildopcodes(void)
 
 // ----------------------------------------------------------------------------------------------------
 // Called when a new CART is loaded and the game system needs to be started at a RESET condition.
-// Caller passes in the game filename (ROM) they wish to load... C/D/G files will find their siblings.
 // ----------------------------------------------------------------------------------------------------
-void TMS9900_Reset(char *szGame)
+void TMS9900_Reset(void)
 {
     // -------------------------------------------------------------------------------------------------
     // Clear out the entire TMS9900 registers, helper vars and such... we'll update what we need below.
@@ -523,203 +517,16 @@ void TMS9900_Reset(char *szGame)
         }
     }
 
-    FILE *infile;
-
-    // ------------------------------------------------------------------
-    // Read in the main 16-bit console ROM and place into our MemCPU[]
-    // ------------------------------------------------------------------
-    infile = fopen("/roms/bios/994aROM.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aROM.bin", "rb");
-    if (!infile) infile = fopen("994aROM.bin", "rb");    
-    if (infile)
-    {
-        fread(&MemCPU[0], 0x2000, 1, infile);
-        fclose(infile);
-    }
-
-    // ---------------------------------------------------------------------------------
-    // Read in the main console GROM and place into the first 24K of GROM memory space
-    // ---------------------------------------------------------------------------------
-    infile = fopen("/roms/bios/994aGROM.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aGROM.bin", "rb");
-    if (!infile) infile = fopen("994aGROM.bin", "rb");
-    if (infile)
-    {
-        fread(&MemGROM[0x0000], 0x6000, 1, infile);
-        fclose(infile);
-    }
-
-    // -------------------------------------------
-    // Read the TI Disk DSR into buffered memory
-    // -------------------------------------------
-    infile = fopen("/roms/bios/994aDISK.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aDISK.bin", "rb");
-    if (!infile) infile = fopen("994aDISK.bin", "rb");
-    if (infile)
-    {
-        fread(DiskDSR, 0x2000, 1, infile);
-        fclose(infile);
-    }
-    else
-    {
-        memset(DiskDSR, 0xFF, 0x2000);
-    }
-
-    // -----------------------------------------------------------------------------
-    // We're going to be manipulating the filename a bit so copy it into a buffer
-    // -----------------------------------------------------------------------------
-    strcpy(tmpBuf, szGame);
-
-    u8 fileType = toupper(tmpBuf[strlen(tmpBuf)-5]);
-
-    if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
-    {
-        tms9900.bankMask = 0x003F;
-        tmpBuf[strlen(tmpBuf)-5] = 'C';   // Try to find a 'C' file
-        infile = fopen(tmpBuf, "rb");
-        if (infile != NULL)
-        {
-            int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);     // Whole cart C memory as needed...
-            fclose(infile);
-            if (numRead <= 0x2000)   // If 8K... repeat
-            {
-                memcpy(MemCART+0x2000, MemCART, 0x2000);
-                memcpy(MemCART+0x4000, MemCART, 0x2000);
-                memcpy(MemCART+0x6000, MemCART, 0x2000);
-                memcpy(MemCART+0x8000, MemCART, 0x2000);
-                memcpy(MemCART+0xA000, MemCART, 0x2000);
-                memcpy(MemCART+0xC000, MemCART, 0x2000);
-                memcpy(MemCART+0xE000, MemCART, 0x2000);
-                tms9900.bankMask = 0x0007;
-            }
-            else // More than 8K needs banking support
-            {
-                u16 numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
-                tms9900.bankMask = BankMasks[numCartBanks-1];
-            }
-        }
-
-        tmpBuf[strlen(tmpBuf)-5] = 'D';   // Try to find a 'D' file
-        infile = fopen(tmpBuf, "rb");
-        if (infile != NULL)
-        {
-            tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 2 banks
-            fread(MemCART+0x2000, 0x2000, 1, infile);   // Read 'D' file
-            fclose(infile);
-        }
-        memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-
-        // And see if there is a GROM file to go along with this load...
-        tmpBuf[strlen(tmpBuf)-5] = 'G';
-        infile = fopen(tmpBuf, "rb");
-        if (infile != NULL)
-        {
-            fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM
-            fclose(infile);
-        }
-    }
-    else // Full Load
-    {
-        infile = fopen(tmpBuf, "rb");
-        int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
-        fclose(infile);
-        numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
-        tms9900.bankMask = BankMasks[numCartBanks-1];
-        
-        if (numCartBanks > 1)
-        {
-            // If the image is inverted we need to swap 8K banks
-            if ((fileType == '3') || (fileType == '9'))
-            {
-                for (u16 i=0; i<numCartBanks/2; i++)
-                {
-                    // Swap 8k bank...
-                    memcpy(FastCartBuffer, MemCART + (i*0x2000), 0x2000);  
-                    memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
-                    memcpy(MemCART + ((numCartBanks-i-1)*0x2000), FastCartBuffer, 0x2000);
-                }
-            }
-        }
-        
-        memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-    }
-
-    // Put the first 8K bank into fast memory - a bit of a speedup on access and there are plenty of games that only need this 8K
-    memcpy(FastCartBuffer, MemCPU+0x6000, 0x2000);
-    
-    // ------------------------------------------------------
-    // Now handle some of the special machine types...
-    // ------------------------------------------------------
-    if (myConfig.cartType == CART_TYPE_SUPERCART)
-    {
-        for (u16 address = 0x6000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_RAM8; // Supercart maps ram into the cart slot
-        }
-        memset(MemCPU+0x6000, 0x00, 0x2000);
-    }
-
-    // ------------------------------------------------------------
-    // Mini Memory maps RAM into the upper 4K of the cart slot...
-    // ------------------------------------------------------------
-    if (myConfig.cartType == CART_TYPE_MINIMEM)
-    {
-        for (u16 address = 0x7000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_RAM8; // Mini Memory maps ram into the upper half of the cart slot
-        }
-        memset(MemCPU+0x7000, 0x00, 0x1000);
-    }
-
-    // ----------------------------------------------------------------
-    // MBX usually has 1K of RAM mapped in... plus odd bank switching.
-    // ----------------------------------------------------------------
-    if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-    {
-        for (u16 address = 0x6000; address < 0x7000; address++)
-        {
-            MemType[address>>4] = MF_CART_NB;    // We'll do the banking manually for MBX carts
-        }
-        for (u16 address = 0x7000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_CART;    // We'll do the banking manually for MBX carts
-        }
-        
-        if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-        {
-            for (u16 address = 0x6C00; address < 0x7000; address++)
-            {
-                MemType[address>>4] = MF_RAM8; // MBX carts have 1K of memory... with the last word at >6ffe being the bank switch
-                MemCPU[address] = 0x00;     // Clear out the RAM
-            }
-        }
-        
-        MemType[0x6ffe>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
-        MemType[0x6fff>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
-        WriteBankMBX(0);
-    }
-    
-    // Ensure we are reading status byte
-    readSpeech = SPEECH_SENTINAL_VAL;
-    
-    // -------------------------------------------------
-    // SAMS support... 512K for DS and 1MB for DSi
-    // -------------------------------------------------
-    SAMS_Initialize();   // Make sure we have the memory... and map in SAMS if enabled globally
-
-    // Ensure we're in the first bank...
-    tms9900.cartBankPtr = FastCartBuffer;
-
     // Reset the TMS9901 peripheral IO chip
     TMS9901_Reset();
+}
 
+void TMS9900_Kickoff(void)
+{
     // And away we go!
     tms9900.WP = MemoryRead16(0);       // Initial WP is from the first word address in memory
     tms9900.PC = MemoryRead16(2);       // Initial PC is from the second word address in memory
     tms9900.ST = 0x3cf0;                // bulWIP uses this - probably doesn't matter... but smart guys know stuff...
-    
-    num_illegal_op_codes = 0;           // In case we hit an illegal op code we track it
-    last_illegal_op_code = 0x0000;      // In case we hit an illegal op code we track it
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -882,7 +689,6 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
 // ------------------------------------------------------------------------------------------------------------------------
 inline u16 ReadRAM16a(u16 address)
 {
-    debug[0]++;
     if (MemType[address>>4] == MF_SAMS8)
     {
         u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
@@ -898,14 +704,12 @@ ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
     if (MemType[address>>4] == MF_SAMS8)
     {
-        debug[1]++;
         u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
         *ptr++ = (data>>8);
         *ptr = (data & 0xFF);
     }        
     else
     {
-        debug[2]++;
         if (myConfig.RAMMirrors)
         {
             if (!MemType[address>>4])  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
@@ -1015,7 +819,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return retVal;
                 break;
             case MF_SPEECH:
-                return (0x40 | 0x20) << 8;   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                return ((0x40 | 0x20) << 8) | (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
                 break;
             case MF_DISK:
                 retVal = ReadTICCRegister(address);

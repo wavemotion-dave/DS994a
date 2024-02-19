@@ -104,6 +104,7 @@ extern u8   MemGROM[];
 extern u8   DiskDSR[];
 extern u8   FastCartBuffer[];
 extern u8   MemType[];
+extern u16  BankMasks[];
 
 // ----------------------------------------------------------------------------
 // The entire state of the TMS9900 so we can easily save/load for save states.
@@ -231,8 +232,9 @@ extern u32 SAMS_Read32(u32 address);
 extern void SAMS_Write32(u32 address, u32 data);
 extern void SAMS_MapDSR(u8 dataBit);
 
-extern void TMS9900_Reset(char *szGame);
+extern void TMS9900_Reset(void);
 extern void TMS9900_Run(void);
+extern void TMS9900_Kickoff(void);
 extern void TMS9900_RaiseInterrupt(u16 iMask);
 extern void TMS9900_ClearInterrupt(u16 iMask);
 extern void TMS9900_SetAccurateEmulationFlag(u16 flag);

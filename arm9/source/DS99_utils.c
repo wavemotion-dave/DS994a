@@ -49,7 +49,6 @@ struct GlobalConfig_t globalConfig;
 struct Config_t AllConfigs[MAX_CONFIGS];
 struct Config_t myConfig __attribute((aligned(4))) __attribute__((section(".dtcm")));
 extern u32 file_crc;
-extern char tmpBuf[];
 
 extern char myDskFile[];
 extern char myDskPath[];
@@ -1107,7 +1106,7 @@ void SetDefaultGameConfig(void)
     myConfig.cartType    = 0;   // Normal
     myConfig.dpadDiagonal= 0;   // Normal
     myConfig.spriteCheck = 0;   // Normal
-    myConfig.reservedI   = 0;
+    myConfig.noExtSpeech = 0;   // Default to having speech module attached
     myConfig.reservedJ   = 0;
     myConfig.reservedK   = 0;
     myConfig.reservedL   = 0;
@@ -1138,7 +1137,10 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x3c124691) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
     
     if (file_crc == 0x2715313f) myConfig.spriteCheck = 2;   // The megademo ROM needs it this fast at least
-    if (file_crc == 0xe92f15ff) myConfig.spriteCheck = 2;   // The megademo DSK needs it this fast at least            
+    if (file_crc == 0xe92f15ff) myConfig.spriteCheck = 2;   // The megademo DSK needs it this fast at least
+    
+    if (file_crc == 0xf93533e9) myConfig.noExtSpeech = 1;   // Robots of Death II will not run with our fake Speech module (32K Ver)
+    if (file_crc == 0xbc95d21f) myConfig.noExtSpeech = 1;   // Robots of Death II will not run with our fake Speech module (512K Ver)
 
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
@@ -1252,8 +1254,9 @@ const struct options_t Option_Table[2][20] =
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},
         {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                             &myConfig.memWipe,      2},
-        {"DPAD",           {"NORMAL", "DIAGONALS",},                                                                                         &myConfig.dpadDiagonal, 2},
         {"SPRITE CHECK",   {"NORMAL (32/64)", "4 SCANLINES", "8 SCANLINES", "16 SCANLINES", "32 SCANLINES", "64 SCANLINES", "END OF FRAME"}, &myConfig.spriteCheck,  7},
+        {"SPEECH MODL",    {"INSTALLED", "NOT INSTALLED"},                                                                                   &myConfig.noExtSpeech,  2},        
+        {"NDS DPAD",       {"NORMAL", "DIAGONALS",},                                                                                         &myConfig.dpadDiagonal, 2},
         {NULL,             {"",      ""},                                                                                                    NULL,                   1},
     },
     // Page 2

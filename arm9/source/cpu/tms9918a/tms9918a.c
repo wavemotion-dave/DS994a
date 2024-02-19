@@ -3,25 +3,26 @@
 *  DS994a - TMS9918A (video) file
 *  Ver 1.1
 *
-** File: tms9928a.c -- software implementation of the Texas Instruments
-**                     TMS9918A used by the Colecovision.
-**
-** All undocumented features as described in the following file
-** should be emulated.
-**
-** http://www.msxnet.org/tech/tms9918a.txt
-**
-** Note: much of this file is from the ColEM emulator core by Marat Fayzullin
-**       but heavily modified for specific NDS use. If you want to use this
-**       code, you are advised to seek out the latest ColEM core online.
-**       We've added the VDP Control Latch reset on data read/write and
-**       on control reads - this was missing from the ColEM handlers. 
-**       The Scanning of sprites for the 5th sprite is also overhauled
-**       as that was not accurate - the 5S flag should be set and latched
-**       and neither the sprite number nor the flag should be touched 
-**       until the status register is read.
-**       We've also patched in a lutTablehh[] for very fast color handling.
-**
+* File: tms9928a.c -- software implementation of the Texas Instruments TMS9918A.
+*
+* Note: much of this file is from the ColEM emulator core by Marat Fayzullin
+*       but heavily modified for specific NDS use. If you want to use this
+*       code, you are advised to seek out the latest ColEM core online.
+* 
+*       I've added proper init of the VDP[] registers per findings on real
+*       hardware and the VDP Control Latch reset on data read/write and
+*       on control reads - this was missing from the original ColEM handlers. 
+*
+*       The Scanning of sprites for the 5th sprite is also overhauled
+*       as that was not accurate - the 5S flag should be set and latched
+*       and neither the sprite number nor the flag should be touched 
+*       until the status register is read.
+* 
+*       We've also patched in a lutTablehh[] for very fast color handling and
+*       check that the FG/BG colors have changed before going back through 
+*       a semi-CPU-expensive fetch into VDP memory. This gives us the much
+*       needed speed for the older DS hardware.
+*
 ******************************************************************************/
 #include <nds.h>
 #include <stdio.h>
@@ -139,7 +140,7 @@ void RefreshBorder(byte Y)
 /** collisions. The caller of this will set the flag as needed. **/
 /** Returning zero (0) means no collision. Otherwise collision. **/
 /*****************************************************************/
-byte ITCM_CODE CheckSprites(void) 
+ITCM_CODE byte CheckSprites(void) 
 {
   unsigned int I,J,LS,LD;
   byte *S,*D,*PS,*PD,*T;
@@ -220,7 +221,7 @@ byte ITCM_CODE CheckSprites(void)
 /** Returns the first sprite to show or -1 if none shown.   **/
 /** Also updates 5th sprite fields in the status register.  **/
 /*************************************************************/
-int ITCM_CODE ScanSprites(byte Y, unsigned int *Mask)
+ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
 {
     byte *AT;
     u8 sprite,C1,C2;
@@ -290,7 +291,7 @@ int ITCM_CODE ScanSprites(byte Y, unsigned int *Mask)
 /** This function is called from RefreshLine#() to refresh  **/
 /** and draw sprites to a given pixel line.                 **/
 /*************************************************************/
-void ITCM_CODE RefreshSprites(register byte Y) 
+ITCM_CODE void RefreshSprites(register byte Y) 
 {
   register byte *PT,*AT;
   register byte *P,*T,C;
@@ -463,7 +464,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
 /** Refresh line Y (0..191) of SCREEN1, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine1(u8 uY) 
+ITCM_CODE void RefreshLine1(u8 uY) 
 {
   register byte K=0,Offset,BC;
   register u8 *T;
@@ -511,7 +512,7 @@ void ITCM_CODE RefreshLine1(u8 uY)
 /** Refresh line Y (0..191) of SCREEN2, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-void ITCM_CODE RefreshLine2(u8 uY) 
+ITCM_CODE void RefreshLine2(u8 uY) 
 {
   u32 *P;
   register byte K,BC,*T;
@@ -613,6 +614,8 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
   int newMode;
   int VRAMMask;
   byte bIRQ;
+  
+  debug[1]++;
     
   iReg &= 0x07;
   value &= VDP_RegisterMasks[iReg];
@@ -801,7 +804,7 @@ ITCM_CODE byte Loop9918(void)
       if ((frameSkipIdx & frameSkip[myConfig.frameSkip]) == 0)
       {
           unsigned int tmp;
-          ScanSprites(CurLine - tms_start_line, &tmp);    // Skip rendering - but still scan sprites for collisions
+          ScanSprites(CurLine - tms_start_line, &tmp);    // Skip rendering - but still scan sprites for 5th sprite flag
       }
       else
       {
@@ -815,7 +818,7 @@ ITCM_CODE byte Loop9918(void)
       // ---------------------------------------------------------------------------
       if ((CurLine % scan_collisions_every) == 0)
       {
-          if(!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
+          if (!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
           {
              if (CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
           }
@@ -839,9 +842,9 @@ ITCM_CODE byte Loop9918(void)
       VDPStatus|=TMS9918_STAT_VBLANK;
 
       /* At the end of a frame, we always do one more collision check */
-      if(!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
+      if (!(VDPStatus&TMS9918_STAT_OVRLAP)) // If not already in collision...
       {
-        if(CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
+        if (CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
       }
   }
     
@@ -876,21 +879,20 @@ void Reset9918(void)
     SprTab=SprGen=pVDPVidMem;           // VDP tables (sprites)
     VDPDlatch = 0;                      // VDP Data latch
    
-    ChrGenM = 0x3FFF;                   // Full mask
-    ColTabM = 0x3FFF;                   // Full mask
-    ChrGenM = 0x3FFF;                   // Full mask
-    SprTabM = 0x3FFF;                   // Full mask
+    ChrGenM = 0x3FFF;                   // Full mask by default
+    ColTabM = 0x3FFF;                   // Full mask by default
+    ChrGenM = 0x3FFF;                   // Full mask by default
+    SprTabM = 0x3FFF;                   // Full mask by default
     
     BG_PALETTE[0] = RGB15(0x00,0x00,0x00);
     
     // ------------------------------------------------------------
     // Determine if we are PAL vs NTSC and adjust line timing...
     // ------------------------------------------------------------
-    tms_start_line = (myConfig.isPAL ? TMS9929_START_LINE   :   TMS9918_START_LINE);
-    tms_end_line   = (myConfig.isPAL ? TMS9929_END_LINE     :   TMS9918_END_LINE);
-    tms_num_lines  = (myConfig.isPAL ? TMS9929_LINES        :   TMS9918_LINES);
-    
-    tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
+    tms_start_line = (myConfig.isPAL ? TMS9929_START_LINE  :  TMS9918_START_LINE);
+    tms_end_line   = (myConfig.isPAL ? TMS9929_END_LINE    :  TMS9918_END_LINE);
+    tms_num_lines  = (myConfig.isPAL ? TMS9929_LINES       :  TMS9918_LINES);
+    tms_cpu_line   = (myConfig.isPAL ? TMS9929_LINE        :  TMS9918_LINE);
     
     // -----------------------------------------------------------------------
     // Determine how often we should check for sprite collisions. Some clever 
@@ -909,9 +911,11 @@ void Reset9918(void)
     // Our background/foreground color table makes computations FAST!
     // ---------------------------------------------------------------
     int colfg,colbg;
-    for (colfg=0;colfg<16;colfg++) {
-        for (colbg=0;colbg<16;colbg++) {
-          fastBackgroundLut[(colfg<<4) | colbg]        = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
+    for (colfg=0;colfg<16;colfg++) 
+    {
+        for (colbg=0;colbg<16;colbg++) 
+        {
+          fastBackgroundLut[(colfg<<4) | colbg] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0 - this one is called often enough that we keep it in fast DTCM memory
           
           lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
           lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1

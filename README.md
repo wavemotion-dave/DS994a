@@ -84,6 +84,7 @@ Known Issues :
 * Congo Bongo and Buck Rogers both require RAM mirrors enabled so it doesn't glitch. Use Options to enable if not auto-detected.
 * TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX is not emulated (other MBX-optional titles with 1K of RAM work fine).
+* Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
 
 File Types Supported :
@@ -230,9 +231,10 @@ And then move the soundbank.h file to the arm9/sources directory
 Versions :
 -----------------------
 V1.8: ??-???-2024 by Wavemotion Dave
-* Fixes for the TMS9918 emulation to improve 5th sprite handling and collision detection. Megademo, Eric in Monsterland and Interceptor all work correctly now.
+* Improvements to the TMS9918a emulation to fix 5th sprite handling and improve collision detection. Megademo, Eric in Monsterland and Interceptor all work correctly now.
+* Fix for Robots of Death II so it starts properly (was hanging on Speech detection).
 * DSi now supports up to 8192K (8MB) banked ROMs (the older DS still supports 512K). The Dragon's Lair demo will run but won't process speech/sound as the emulation is not fast enough.
-* Improved VDP rendering and CPU memory read/writes to be a bit faster to help with older DS-Lite/Phat.
+* Optimized VDP rendering and CPU memory read/writes to be a bit faster to help with older DS-Lite/Phat. The megademo will sustain 60fps throughout.
 
 V1.7: 16-Feb-2024 by wavemotion-dave 
 * Integrated the updated SN sound core for more robust sound.

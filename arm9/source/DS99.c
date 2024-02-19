@@ -69,7 +69,8 @@ u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;        // 0 if Alpha 
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 
-u8 tmpBuf[512];                // For simple printf-type output and other sundry uses. Make this at least the size of 1 disk sector (256 bytes)
+char tmpBuf[256];              // For simple printf-type output and other sundry uses.
+u8 fileBuf[4096];              // For DSK sector cache and file CRC generation use.
 
 u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
@@ -562,10 +563,10 @@ void ShowDiskListing(void)
             if (sectorPtr == 0) break;
             if (disk_drive_select == DSK3)
             {
-                ReadSector(disk_drive_select, sectorPtr, tmpBuf);
+                ReadSector(disk_drive_select, sectorPtr, fileBuf);
                 for (u8 j=0; j<10; j++) 
                 {
-                    dsk_listing[dsk_num_files][j] = tmpBuf[j];
+                    dsk_listing[dsk_num_files][j] = fileBuf[j];
                 }
             }
             else
@@ -1777,11 +1778,13 @@ void _putchar(char character) {};   // Not used but needed to link printf()
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 ITCM_CODE void WriteSpeechData(u8 data)
 {
+    if (myConfig.noExtSpeech) return;
+    
     // Reading Address 0 from the Speech ROM
     if ((speechData32 == 0x40404040) && (data == 0x10))
     {
-        readSpeech = 0xAA;      // The first byte of the actual speech ROM is 0xAA and this will be enough to fool many games into thinking a Speech Synth module is attached.
-    } else readSpeech = 999;    // This indicates just normal status read...
+        readSpeech = 0xAA;                      // The first byte of the actual speech ROM is 0xAA and this will be enough to fool many games into thinking a Speech Synth module is attached.
+    } else readSpeech = SPEECH_SENTINAL_VAL;    // This indicates just normal status read...
     
     speechData32 = (speechData32 << 8) | data;
     
