@@ -1141,6 +1141,7 @@ void SetDefaultGameConfig(void)
     
     if (file_crc == 0xf93533e9) myConfig.noExtSpeech = 1;   // Robots of Death II will not run with our fake Speech module (32K Ver)
     if (file_crc == 0xbc95d21f) myConfig.noExtSpeech = 1;   // Robots of Death II will not run with our fake Speech module (512K Ver)
+    if (file_crc == 0xb9cd2072) myConfig.noExtSpeech = 1;   // Nuts V1.1 (AKA Fox&Goat) (2023)(TMOP) will not run with our fake Speech module
 
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
