@@ -114,10 +114,12 @@ ITCM_CODE void RefreshBorder(byte Y)
 
     /* Skip down to the right position vertically */
     P+=256*Y;
+    
+    memset(P, BGColor, 8);
 
     /* Refresh right border - this is the only one we really care about */
-    P+=256-16;
-    memset(P, BGColor, 16);
+    P+=256-8;
+    memset(P, BGColor, 8);
 }
 
 
@@ -415,6 +417,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
     u8 lastT = ~(*T);
     
     u16 word1=0, word2=0, word3=0;
+    P += 8;
     for(int X=0;X<40;X++)
     {
       if (lastT != *T)
