@@ -105,19 +105,20 @@ u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 
 /** RefreshBorder() ******************************************/
 /** This function is called from RefreshLine#() to refresh  **/
-/** the screen border.                                      **/
+/** the left and right screen borders for TEXT modes.       **/
 /*************************************************************/
 ITCM_CODE void RefreshBorder(byte Y)
 {
     /* Screen buffer */
     byte *P=XBuf;
 
-    /* Skip down to the right position vertically */
+    /* Skip down to the correct position vertically */
     P+=256*Y;
     
+    /* Refresh left border 8 pixels */
     memset(P, BGColor, 8);
 
-    /* Refresh right border - this is the only one we really care about */
+    /* Refresh right border 8 pixels */
     P+=256-8;
     memset(P, BGColor, 8);
 }
@@ -206,7 +207,7 @@ ITCM_CODE byte CheckSprites(void)
 
 /** ScanSprites() ********************************************/
 /** Compute bitmask of sprites shown in a given scanline.   **/
-/** Returns the first sprite to show or -1 if none shown.   **/
+/** Returns the last sprite to show or -1 if none shown.    **/
 /** Also updates 5th sprite fields in the status register.  **/
 /*************************************************************/
 ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
