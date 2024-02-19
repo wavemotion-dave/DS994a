@@ -121,6 +121,8 @@ There are two levels of configuration:
 
 Be sure to use the START button to save out your configuration options so they persist on future launches of the emulator.
 
+![Options Screen](https://github.com/wavemotion-dave/DS994a/blob/main/options.png)
+
 Emulated Disk Drives :
 -----------------------
 DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. The first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a modification to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
