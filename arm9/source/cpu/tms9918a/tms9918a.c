@@ -1,4 +1,5 @@
 /******************************************************************************
+/******************************************************************************
 *  DS994a - TMS9918A (video) file
 *  Ver 1.1
 *
@@ -38,8 +39,8 @@ u8 XBuf_A[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer A
 u8 XBuf_B[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer B
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
-// Look up table for colors - pre-generated for maximum speed!
-u32 lutTablehh[256][16];
+u32 lutTablehh[256][16];    // Look up table for colors - pre-generated for maximum speed!
+u32 fastBackgroundLut[256] __attribute__((section(".dtcm"))); // For when the color is background - hapens often enough
 
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
@@ -48,7 +49,7 @@ u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
 
 extern u32 debug[];
 
-u8 CollisionCheckEvery[] = {4, 8, 16, 32, 64, 255};
+u8 CollisionCheckEvery[] = {255, 4, 8, 16, 32, 64, 255};
 
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
@@ -105,7 +106,7 @@ u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 /** This function is called from RefreshLine#() to refresh  **/
 /** the screen border.                                      **/
 /*************************************************************/
-ITCM_CODE void RefreshBorder(byte Y)
+void RefreshBorder(byte Y)
 {
     if (ScrMode == 0)
     {
@@ -403,6 +404,7 @@ void ITCM_CODE RefreshSprites(register byte Y)
   }
 }
 
+
 /** RefreshLine0() *******************************************/
 /** Refresh line Y (0..191) of SCREEN0, including sprites   **/
 /** in this line.                                           **/
@@ -425,7 +427,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
 
     u8 lastT = ~(*T);
     
-    u16 word1, word2, word3;
+    u16 word1=0, word2=0, word3=0;
     for(int X=0;X<40;X++)
     {
       if (lastT != *T)
@@ -463,7 +465,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
 /*************************************************************/
 void ITCM_CODE RefreshLine1(u8 uY) 
 {
-  register byte K=0,Offset,FC,BC;
+  register byte K=0,Offset,BC;
   register u8 *T;
   register u32 *P;
   u8 lastT;
@@ -487,9 +489,15 @@ void ITCM_CODE RefreshLine1(u8 uY)
           lastT=*T;
           BC=ColTab[lastT>>3];
           K=ChrGen[((int)lastT<<3)+Offset];
-          u32* ptLut = (u32*) (lutTablehh[BC]);
-          ptLow  = lutTablehh[BC][K>>4];
-          ptHigh = lutTablehh[BC][K&0xF];
+          if (K)
+          {
+              ptLow  = lutTablehh[BC][K>>4];
+              ptHigh = lutTablehh[BC][K&0xF];
+          }
+          else // It's all background
+          {
+              ptLow = ptHigh = fastBackgroundLut[BC];
+          }
       }
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -506,8 +514,7 @@ void ITCM_CODE RefreshLine1(u8 uY)
 void ITCM_CODE RefreshLine2(u8 uY) 
 {
   u32 *P;
-  register byte FC,BC;
-  register byte K,*T;
+  register byte K,BC,*T;
   u16 J,I;
 
   P=(u32*)(XBuf+(uY<<8));
@@ -527,11 +534,18 @@ void ITCM_CODE RefreshLine2(u8 uY)
       if (lastT != *T)
       {
           lastT = *T;
-          I      = (u16)lastT<<3;
-          K      = ColTab[(J+I)&ColTabM];
-          u8 K2  = ChrGen[(J+I)&ChrGenM];
-          ptLow  = lutTablehh[K][K2>>4];
-          ptHigh = lutTablehh[K][K2&0xF];
+          I     = (u16)lastT<<3;
+          BC    = ColTab[(J+I)&ColTabM];
+          K     = ChrGen[(J+I)&ChrGenM];
+          if (K)
+          {
+              ptLow  = lutTablehh[BC][K>>4];
+              ptHigh = lutTablehh[BC][K&0xF];
+          }
+          else // It's all background
+          {
+              ptLow = ptHigh = fastBackgroundLut[BC];
+          }
       }
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -561,7 +575,7 @@ ITCM_CODE void RefreshLine3(u8 uY)
     T=ChrTab+((int)(uY&0xF8)<<2);
     lastT = ~(*T);
     Offset=(uY&0x1C)>>2;
-    u32 dword1, dword2;
+    u32 dword1=0, dword2=0;
     for(X=0;X<32;X++) 
     {
       if (lastT != *T)
@@ -878,6 +892,10 @@ void Reset9918(void)
     
     tms_cpu_line = (myConfig.isPAL ? TMS9929_LINE     :   TMS9918_LINE);
     
+    // -----------------------------------------------------------------------
+    // Determine how often we should check for sprite collisions. Some clever 
+    // demos and games require that we check more often than end of frame. 
+    // -----------------------------------------------------------------------
     if (myConfig.spriteCheck) // Force a specific collision check value?
     {
         scan_collisions_every = CollisionCheckEvery[myConfig.spriteCheck];
@@ -893,6 +911,8 @@ void Reset9918(void)
     int colfg,colbg;
     for (colfg=0;colfg<16;colfg++) {
         for (colbg=0;colbg<16;colbg++) {
+          fastBackgroundLut[(colfg<<4) | colbg]        = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
+          
           lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
           lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
           lutTablehh[(colfg<<4) | colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
@@ -913,6 +933,5 @@ void Reset9918(void)
         }
     }
 }
-
 
 // End of file

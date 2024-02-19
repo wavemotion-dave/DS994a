@@ -49,7 +49,7 @@ struct GlobalConfig_t globalConfig;
 struct Config_t AllConfigs[MAX_CONFIGS];
 struct Config_t myConfig __attribute((aligned(4))) __attribute__((section(".dtcm")));
 extern u32 file_crc;
-extern u8 tmpBuf[];
+extern char tmpBuf[];
 
 extern char myDskFile[];
 extern char myDskPath[];
@@ -472,7 +472,7 @@ void TI99FindDskFiles(void)
 }
 
 
-char *TILoadDiskFile(void)
+void TILoadDiskFile(void)
 {
   u8 bDone=false;
   u16 ucHaut=0x00, ucBas=0x00, ucSHaut=0x00, ucSBas=0x00, romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;

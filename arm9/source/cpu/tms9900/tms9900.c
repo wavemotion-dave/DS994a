@@ -1425,7 +1425,7 @@ ITCM_CODE void TsTd_Accurate(void)
 // The context switch saves the WP, PC and Status and sets up for the new workspace.
 // Classic99 checks for a return address of zero but we don't handle that in DS99/4a.
 // --------------------------------------------------------------------------------------
-ITCM_CODE void TMS9900_ContextSwitch(u16 address)
+void TMS9900_ContextSwitch(u16 address)
 {
     // Do it the Classic99 way...
     u16 x1 = tms9900.WP;                        // Save old WP

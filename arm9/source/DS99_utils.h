@@ -119,7 +119,7 @@ extern void DrawCleanBackground(void);
 extern void DS_Print(int iX,int iY,int iScr,char *szMessage);
 extern unsigned int crc32 (unsigned int crc, const unsigned char *buf, unsigned int len);
 
-extern char *TILoadDiskFile(void);
+extern void TILoadDiskFile(void);
 
 extern void FadeToColor(unsigned char ucSens, unsigned short ucBG, unsigned char ucScr, unsigned char valEnd, unsigned char uWait);
 extern void DisplayFileName(void);
