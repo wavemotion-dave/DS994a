@@ -107,31 +107,17 @@ u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 /** This function is called from RefreshLine#() to refresh  **/
 /** the screen border.                                      **/
 /*************************************************************/
-void RefreshBorder(byte Y)
+ITCM_CODE void RefreshBorder(byte Y)
 {
-    if (ScrMode == 0)
-    {
-      byte *P;
-      int J,N;
+    /* Screen buffer */
+    byte *P=XBuf;
 
-      /* Screen buffer */
-      P=XBuf;
-      J=256*Y;
+    /* Skip down to the right position vertically */
+    P+=256*Y;
 
-      /* For the first line, refresh top border */
-      if(Y) P+=J;
-      else for(;J;J--) P++;
-
-      /* Calculate number of pixels */
-      N=16;
-
-      /* Refresh left border */
-      for(J=N;J;J--) P++;
-
-      /* Refresh right border */
-      P+=256-(N<<1);
-      for(J=N;J;J--) *P++=BGColor;
-    }
+    /* Refresh right border - this is the only one we really care about */
+    P+=256-16;
+    memset(P, BGColor, 16);
 }
 
 
@@ -615,8 +601,6 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
   int VRAMMask;
   byte bIRQ;
   
-  debug[1]++;
-    
   iReg &= 0x07;
   value &= VDP_RegisterMasks[iReg];
     

@@ -11,7 +11,7 @@ include $(DEVKITARM)/ds_rules
 
 export TARGET		:=	DS994a
 export TOPDIR		:=	$(CURDIR)
-export VERSION		:=  1.7e
+export VERSION		:=  1.7f
 
 ICON 		:= -b $(CURDIR)/logo.bmp "DS994a $(VERSION);wavemotion-dave;https://github.com/wavemotion-dave/DS994a" 
 
