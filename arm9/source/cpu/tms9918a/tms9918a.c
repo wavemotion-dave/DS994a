@@ -5,23 +5,42 @@
 *
 * File: tms9928a.c -- software implementation of the Texas Instruments TMS9918A.
 *
-* Note: much of this file is from the ColEM emulator core by Marat Fayzullin
+* Note: Most of this file is from the ColEm emulator core by Marat Fayzullin
 *       but heavily modified for specific NDS use. If you want to use this
-*       code, you are advised to seek out the latest ColEM core online.
+*       code, you are advised to seek out the ColEm core and contact Marat.
 * 
 *       I've added proper init of the VDP[] registers per findings on real
 *       hardware and the VDP Control Latch reset on data read/write and
-*       on control reads - this was missing from the original ColEM handlers. 
+*       on control reads - this was not quite accurate in the ColEm handlers.
 *
 *       The Scanning of sprites for the 5th sprite is also overhauled
-*       as that was not accurate - the 5S flag should be set and latched
-*       and neither the sprite number nor the flag should be touched 
-*       until the status register is read.
+*       for improved accuracy - the 5S flag should be set and latched
+*       and neither the sprite number nor the flag should be cleared
+*       until the status register is read (or the VDP is reset).
 * 
-*       We've also patched in a lutTablehh[] for very fast color handling and
-*       check that the FG/BG colors have changed before going back through 
-*       a semi-CPU-expensive fetch into VDP memory. This gives us the much
-*       needed speed for the older DS hardware.
+*       There is one caveat here, however: the 5th sprite number acts
+*       like a counter when the 5S flag is not set - it will represent
+*       the last sprite scanned on a line (either 31 or the one where
+*       the Y coordinate is 208).
+* 
+*       Some improvements have been made to the undocumented VDP modes
+*       which are used by a few homebrews and are now properly rendered.
+* 
+*       Border refresh has been overhauled - it's only used in TEXT 
+*       mode and handles the first and last 8 pixels on a line using
+*       a memcpy() which is pretty fast.
+* 
+*       We've also patched in several color tables for very fast color 
+*       handling and check that the FG/BG colors have changed before
+*       going back through a semi-CPU-expensive fetch into VDP memory. 
+*       Whenever possible, we also write 16-bits or 32-bits at a time
+*       since the 16-bit writes are exactly as CPU intensive as the 
+*       8-bit variety on the DS hardware (and 32-bit writes are slightly
+*       faster than two 16-bit writes).
+* 
+*       I've added the tms9918a.txt file to the github repository that
+*       also houses this emulator - it's a wealth of info on the VDP 
+*       including many things that the original TI manuals did not tell us.
 *
 ******************************************************************************/
 #include <nds.h>
@@ -47,10 +66,9 @@ u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
 
 u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
+u8 CollisionCheckEvery[] = {255, 4, 8, 16, 32, 64, 255};
 
 extern u32 debug[];
-
-u8 CollisionCheckEvery[] = {255, 4, 8, 16, 32, 64, 255};
 
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
@@ -207,47 +225,52 @@ ITCM_CODE byte CheckSprites(void)
 
 /** ScanSprites() ********************************************/
 /** Compute bitmask of sprites shown in a given scanline.   **/
-/** Returns the last sprite to show or -1 if none shown.    **/
+/** Returns the last sprite to be scanned or -1 if none.    **/
 /** Also updates 5th sprite fields in the status register.  **/
 /*************************************************************/
 ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
 {
     byte *AT;
-    u8 sprite,C1,C2;
+    u8 sprite,MS,S5;
     s16 K;
-    u32 M;
     
-    /* Must have MODE1+ and screen enabled - otherwise no sprites rendered */
+    // Assume no sprites shown - we OR in a '1' for each visible sprite
+    *Mask = 0x00000000;
+    
+    // Must have MODE1+ and screen enabled - otherwise no sprites rendered 
     if(!ScrMode || !TMS9918_ScreenON)
     {
-        *Mask = 0x00000000;
         return(-1);
-    }    
+    }
 
     s16 fifth_sprite_num =-1;                   // Used to detect the 5th sprite on a line
-    AT = SprTab;                                // Pointer to the sprite table
-    C1 = MaxSprites[myConfig.maxSprites]+1;     // We either render 4 sprites (normal - this is how an 9918 would work) or 32 sprites (enhanded mode for emulation only)
-    C2 = 5;                                     // We always want to trap on the 5th sprite
-    M  = 0x00000000;                            // The sprite mask starts as zero and we accumualte sprite bits that will be rendered
-
-    // For each sprite
+    AT = SprTab;                                // Pointer to the sprite table in VDP memory
+    MS = MaxSprites[myConfig.maxSprites]+1;     // We either render 4 sprites (normal - this is how an 9918 would work) or 32 sprites (enhanded mode for emulation only)
+    S5 = 5;                                     // We always want to trap on the 5th sprite
+    u8 last = 31;                               // The last sprite number is 31 but we may break early if Y==208
+    
+    // ------------------------------------------------------------------
+    // Scan through all possible 32 sprites to see what's being shown...
+    // ------------------------------------------------------------------
     for(sprite=0;sprite<32;++sprite,AT+=4)
     {
-        K=AT[0];             /* K = sprite Y coordinate */
-        if(K==208) break;    /* Iteration terminates if Y=208 */
-        if(K>256-IH) K-=256; /* Y coordinate may be negative */
+        K=AT[0];                            // K = sprite Y coordinate 
+        if(K==208) {last=sprite; break;}    // Iteration terminates if Y=208 and we save the last scanned sprite 
+        if(K>256-IH) K-=256;                // Y coordinate may be negative
 
-        /* Mark all valid sprites with 1s, break at MaxSprites */
+        // -------------------------------------------------------------------------------------------
+        // Mark all valid sprites with 1s, break at MaxSprites. Track last scanned sprite for 5S num
+        // -------------------------------------------------------------------------------------------
         if((Y>K)&&(Y<=K+OH))
         {
-            /* If we exceed four sprites per line, set 5th sprite number */
-            if(!--C2) fifth_sprite_num = sprite;
+            // If we exceed four sprites per line, set 5th sprite number
+            if(!--S5) fifth_sprite_num = sprite;
 
-            /* If we exceed maximum number of sprites per line, stop here */
-            if(!--C1) break;
+            // If we exceed maximum number of sprites per line, stop here
+            if(!--MS) break;
 
-            /* Mark sprite as ready to draw */
-            M |= (1<<sprite);
+            // Mark sprite as ready to draw
+            *Mask |= (1<<sprite);
         }
     }
 
@@ -265,13 +288,12 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
         }
         else // This is undocumented behavior but a real VDP will behave like this and Miner 2049er will rely on it
         {
-            VDPStatus &= ~TMS9918_STAT_5THNUM;          // Clear out any previous sprite number
-            VDPStatus |= (sprite < 32) ? sprite:31;     // Set the 5th sprite number to the last scanned sprite on this line or 31 if no sprites on this line
+            VDPStatus &= ~TMS9918_STAT_5THNUM;      // Clear out any previous sprite number
+            VDPStatus |= last;                      // Set the 5th sprite number to the last scanned sprite on the line (the one with Y==208 or else sprite 31)
         }
     }
 
-  /* Return last shown sprite and bit mask of shown sprites */
-  *Mask=M;
+  // Return last scanned sprite - the caller's Mask is also filled in with a list of all shown sprites 
   return(sprite-1);
 }
 
@@ -403,6 +425,7 @@ ITCM_CODE void RefreshLine0(u8 Y)
 {
   register byte *T,K,Offset;
   register byte *P,FC,BC;
+  u16 word1=0, word2=0, word3=0;
 
   P=XBuf+(Y<<8);
   BC = BGColor;
@@ -417,11 +440,11 @@ ITCM_CODE void RefreshLine0(u8 Y)
 
     u8 lastT = ~(*T);
     
-    u16 word1=0, word2=0, word3=0;
-    P += 8;
+    P += 8;     // For this TEXT mode, we shift in 8 pixels to center the screen. RefreshBorder() will fix the first 8 pixels and last 8 pixels on a line.
+    
     for(int X=0;X<40;X++)
     {
-      if (lastT != *T)
+      if (lastT != *T) // Is this set of pixels different than the last one?
       {
           lastT=*T;
           K=ChrGen[((int)*T<<3)+Offset];
@@ -475,20 +498,13 @@ ITCM_CODE void RefreshLine1(u8 uY)
       
     for(int X=0;X<32;X++) 
     {
-      if (lastT != *T)
+      if (lastT != *T) // Is this set of pixels different than the last one?
       {
           lastT=*T;
           BC=ColTab[lastT>>3];
           K=ChrGen[((int)lastT<<3)+Offset];
-          if (K)
-          {
-              ptLow  = lutTablehh[BC][K>>4];
-              ptHigh = lutTablehh[BC][K&0xF];
-          }
-          else // It's all background
-          {
-              ptLow = ptHigh = fastBackgroundLut[BC];
-          }
+          ptLow  = lutTablehh[BC][K>>4];
+          ptHigh = lutTablehh[BC][K&0xF];
       }
       *P++ = ptLow;
       *P++ = ptHigh;
@@ -522,7 +538,7 @@ ITCM_CODE void RefreshLine2(u8 uY)
 
     for(int X=0;X<32;X++)
     {
-      if (lastT != *T)
+      if (lastT != *T) // Is this set of pixels different than the last one?
       {
           lastT = *T;
           I     = (u16)lastT<<3;
@@ -561,7 +577,8 @@ ITCM_CODE void RefreshLine3(u8 uY)
   if(!TMS9918_ScreenON) {
     memset(P,BGColor,256);
   }
-  else {
+  else 
+  {
     u8 ptLow = 0; u8 ptHigh = 0;
     T=ChrTab+((int)(uY&0xF8)<<2);
     lastT = ~(*T);
@@ -569,7 +586,7 @@ ITCM_CODE void RefreshLine3(u8 uY)
     u32 dword1=0, dword2=0;
     for(X=0;X<32;X++) 
     {
-      if (lastT != *T)
+      if (lastT != *T) // Is this set of pixels different than the last one?
       {
           lastT = *T;
           K=ChrGen[((int)lastT<<3)+Offset];

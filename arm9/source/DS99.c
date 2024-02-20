@@ -315,8 +315,8 @@ void setupStream(void)
 
 // ------------------------------------------------------------------------
 // We setup the sound chips - disabling all volumes to start.
-// The TI9919 sound chip is basically the same as the Colecovision
-// SN76496 chip and we already have a driver for that one and will use it.
+// The TI9919 sound chip is basically the same as the Colecovision SN76496
+// chip and we already have a driver for that one and will use it.
 // ------------------------------------------------------------------------
 void dsInstallSoundEmuFIFO(void) 
 {
@@ -1012,6 +1012,8 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
   bStartSoundEngine = true;
 }
 
+char *VDP_Mode_Str[] = {"G1","G2","MC","HB","TX","--","HB","--"};
+
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {
     extern u16 last_illegal_op_code;
@@ -1044,7 +1046,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
     idx++;
 
     // Video Chip (VDP) debug
-    sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[0], VDP[1], VDP[2], VDP[3]); 
+    sprintf(tmpBuf, "VDP %02X %02X %02X %02X %2s", VDP[0], VDP[1], VDP[2], VDP[3], VDP_Mode_Str[TMS9918_Mode]); 
     DS_Print(0,idx++,6,tmpBuf);
     sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[4], VDP[5], VDP[6], VDP[7]); 
     DS_Print(0,idx++,6,tmpBuf);
