@@ -106,6 +106,9 @@ extern u8   FastCartBuffer[];
 extern u8   MemType[];
 extern u16  BankMasks[];
 
+extern u16* DSR1;
+extern u16* DSR2;
+
 // ----------------------------------------------------------------------------
 // The entire state of the TMS9900 so we can easily save/load for save states.
 // ----------------------------------------------------------------------------
@@ -224,6 +227,7 @@ enum _MEM_TYPE
     MF_SAMS,        // This is the SAMS memory expanded access registers at >4000
     MF_SAMS8,       // This is RAM8 except that it's banked into a larger SAMS memory pool
     MF_MBX,         // This is the MBX register that causes a bank switch at >7000
+    MF_PERIF,       // This is possibly Peripheral ROM space (Disk Controller DSR)
     MF_UNUSED,      // This is some unused memory space... will return 0xFF
 };
 

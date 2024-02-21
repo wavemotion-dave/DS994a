@@ -194,7 +194,7 @@ void SAMS_MapDSR(u8 dataBit)
     {
         for (u16 address = 0x4000; address < 0x4020; address += 16)
         {
-            MemType[address>>4] = MF_UNUSED;    // Map back to original handling (unused)
+            MemType[address>>4] = MF_PERIF;    // Map back to original handling (peripheral ROM)
         }
     }
 }

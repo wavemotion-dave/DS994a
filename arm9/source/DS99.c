@@ -1012,7 +1012,7 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
   bStartSoundEngine = true;
 }
 
-char *VDP_Mode_Str[] = {"G1","G2","MC","HB","TX","--","HB","--"};
+char *VDP_Mode_Str[] = {"G1","G2","MC","BT","TX","--","HB","--"};
 
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {

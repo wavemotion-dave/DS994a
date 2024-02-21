@@ -260,6 +260,13 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
 
         // -------------------------------------------------------------------------------------------
         // Mark all valid sprites with 1s, break at MaxSprites. Track last scanned sprite for 5S num
+        // At first this looked wrong as if it was off by 1 for comparing the Y (scanline) number
+        // with the sprite Y coordinate but the Y position is tricky. A coordinate of 0 means draw
+        // at the first pixel line (one below the top-most pixel line of the screen). A 255 means
+        // draw at the 0th top-most pixel line of the screen. Y positions below 255 but above 208 are
+        // negative indexes which allow for the sprite to be positioned partially cropped at the top.
+        // Finally, the reason 208 was chosen by TI as the sentinal value is that it's 16 pixels below
+        // the lowest pixel row of 192 and the sprite would be completely off-screen. Tricky...
         // -------------------------------------------------------------------------------------------
         if((Y>K)&&(Y<=K+OH))
         {
@@ -640,21 +647,21 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
     case 1: /* Mode register 1 */
     // Figure out new screen mode number:
     //              M1      M2      M3      VDP Mode
-    //      0x00    0       0       0       Mode 0   - MSX SCREEN 1
-    //      0x01    0       0       1       Mode 3   - MSX SCREEN 2
-    //      0x02    0       1       0       Mode 2   - MSX SCREEN 3
-    //      0x04    1       0       0       Mode 1   - MSX SCREEN 0
-    //      0x06    1       1       0       Mode 1+2 - Undocumented. Like Mode 1.
-    //      0x03    0       1       1       Mode 2+3 - Undocumented. Like Mode 3.
+    //      0x00    0       0       0       Mode 0   - MSX SCREEN 1 aka "GRAPHIC 1"
+    //      0x01    0       0       1       Mode 3   - MSX SCREEN 2 aka "GRAPHIC 2"
+    //      0x02    0       1       0       Mode 2   - MSX SCREEN 3 aka "MULTICOLOR"
+    //      0x04    1       0       0       Mode 1   - MSX SCREEN 0 aka "TEXT"
+    //      0x06    1       1       0       Mode 1+2 - Undocumented. Like Mode 1 aka "HALF BITMAP"
+    //      0x03    0       1       1       Mode 2+3 - Undocumented. Like Mode 3 aka "BITMAP TEXT"
       switch(TMS9918_Mode) 
       {
-        case 0x00: newMode=1;break;         /* VDP Mode 0 aka MSX SCREEN 1 aka "GRAPHIC 1"     */
-        case 0x01: newMode=2;break;         /* VDP Mode 3 aka MSX SCREEN 2 aka "GRAPHIC 2"     */
-        case 0x02: newMode=3;break;         /* VDP Mode 2 aka MSX SCREEN 3 aka "MULTICOLOR"    */
-        case 0x04: newMode=0;break;         /* VDP Mode 1 aka MSX SCREEN 0 aka "TEXT 1"        */
-        case 0x06: newMode=0;break;         /* Undocumented Mode 1+2 is like Mode 1 (SCREEN 0) */
-        case 0x03: newMode=2;break;         /* Undocumented Mode 2+3 is like Mode 3 (SCREEN 2) */
-        default:   newMode=ScrMode;break;   /* Best we can do - just keep screen mode as-is    */
+        case 0x00: newMode=1;break;         /* VDP Mode 0 aka MSX SCREEN 1 aka "GRAPHIC 1"        */
+        case 0x01: newMode=2;break;         /* VDP Mode 3 aka MSX SCREEN 2 aka "GRAPHIC 2"        */
+        case 0x02: newMode=3;break;         /* VDP Mode 2 aka MSX SCREEN 3 aka "MULTICOLOR"       */
+        case 0x04: newMode=0;break;         /* VDP Mode 1 aka MSX SCREEN 0 aka "TEXT"             */
+        case 0x06: newMode=0;break;         /* Undocumented Mode 1+2 is like Mode 1 (HALF BITMAP) */
+        case 0x03: newMode=2;break;         /* Undocumented Mode 2+3 is like Mode 3 (BITMAP TEXT) */
+        default:   newMode=ScrMode;break;   /* Illegal mode. Just keep screen mode as-is.         */
       }
           
       /* If mode was changed or VRAM size changed: recompute table addresses */

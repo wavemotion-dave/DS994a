@@ -48,6 +48,9 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
 
+u16* DSR1  = ((u16*)0x068A0000);   // 8K of fast VDP memory for the first DSR (Disk Controller)
+u16* DSR2  = ((u16*)0x068C0000);   // 8K of fast VDP memory for the second DSR (Future use)
+
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
 u16 MemoryRead16(u16 address);
@@ -417,11 +420,20 @@ void TMS9900_Reset(void)
     {
         MemType[address>>4] = MF_MEM16;
     }
-
+    
     for(u16 address = 0x8000; address < 0x8400; address++ )
     {
         MemType[address>>4] = MF_MEM16;
     }
+
+    // ----------------------------------------------------------
+    // The 8K at >4000 is for Peripheral ROM use (Disk DSR, etc)
+    // ----------------------------------------------------------
+    for(u16 address = 0x4000; address < 0x6000; address++)
+    {
+        MemType[address>>4] = MF_PERIF;
+    }
+    
 
     // ------------------------------------------------------------------------------
     // Now mark off the memory hotspots where we need to take special action on

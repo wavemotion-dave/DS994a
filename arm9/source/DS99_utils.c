@@ -351,7 +351,17 @@ int TI99Filescmp (const void *c1, const void *c2)
       return -1;
   if ((p2->uType == DIRECT) && !(p1->uType == DIRECT))
       return 1;
-  return strcasecmp (p1->szName, p2->szName);
+      
+  // We want to do a simple string compare at this point but we want to force '0' files to sort lower
+  char saveCh1 = p1->szName[strlen(p1->szName)-5];
+  char saveCh2 = p2->szName[strlen(p2->szName)-5];
+  if (saveCh1 == '0') p1->szName[strlen(p1->szName)-5] = 'Z';
+  if (saveCh2 == '0') p2->szName[strlen(p2->szName)-5] = 'Z';
+  int retVal = strcasecmp (p1->szName, p2->szName);
+  if (saveCh1 == '0') p1->szName[strlen(p1->szName)-5] = '0';
+  if (saveCh2 == '0') p2->szName[strlen(p2->szName)-5] = '0';
+  
+  return retVal;
 }
 
 /*********************************************************************************
@@ -375,6 +385,10 @@ void TI99FindFiles(void)
     {
       if (!( (szFile[0] == '.') && (strlen(szFile) == 1)))
       {
+        // Filter out the emulator directories from the list
+        if (strcasecmp(szFile, "SAV") == 0) continue;
+        if (strcasecmp(szFile, "sav") == 0) continue;
+          
         strcpy(gpFic[uNbFile].szName,szFile);
         gpFic[uNbFile].uType = DIRECT;
         uNbFile++;
@@ -442,6 +456,10 @@ void TI99FindDskFiles(void)
     {
       if (!( (szFile[0] == '.') && (strlen(szFile) == 1)))
       {
+        // Filter out the emulator directories from the list
+        if (strcasecmp(szFile, "SAV") == 0) continue;
+        if (strcasecmp(szFile, "sav") == 0) continue;
+          
         strcpy(gpDsk[uNbFile].szName,szFile);
         gpDsk[uNbFile].uType = DIRECT;
         uNbFile++;
@@ -466,7 +484,7 @@ void TI99FindDskFiles(void)
   // ----------------------------------------------
   if (countDSK)
   {
-    qsort (gpDsk, countDSK, sizeof(FIC_TI99), TI99Filescmp);
+    qsort(gpDsk, countDSK, sizeof(FIC_TI99), TI99Filescmp);
   }
 }
 

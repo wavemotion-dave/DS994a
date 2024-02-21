@@ -109,7 +109,7 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         u16 dataBit = (data & (1<<bitNum)) ? 1:0;  // Get the status of this data bit
         
         // --------------------------------------------------------------------------------------
-        // Enable or Disable the TI Disk DSR... pass this request along to the disk controller.
+        // Check to see if we're in the external peripheral area - this is for Disk DSR and SAMS
         // --------------------------------------------------------------------------------------
         if (cruAddress & 0xFC00)
         {

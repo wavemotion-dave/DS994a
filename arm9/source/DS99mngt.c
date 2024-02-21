@@ -123,6 +123,7 @@ u8 TI99Init(char *szGame)
     {
         memset(DiskDSR, 0xFF, 0x2000);
     }
+    memcpy(DSR1, DiskDSR, 0x2000);
 
     // -----------------------------------------------------------------------------
     // We're going to be manipulating the filename a bit so copy it into a buffer
@@ -178,7 +179,7 @@ u8 TI99Init(char *szGame)
             fclose(infile);
         }
     }
-    else // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
+    else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
     {
         infile = fopen(tmpBuf, "rb");
         int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
@@ -206,6 +207,18 @@ u8 TI99Init(char *szGame)
 
     // Put the first 8K bank into fast memory - a bit of a speedup on access and there are plenty of games that only need this 8K
     memcpy(FastCartBuffer, MemCPU+0x6000, 0x2000);
+    
+    // --------------------------------------------------------
+    // Look for a special '0' file that we will try to load 
+    // into GROM bank 0,1,2 to replace System GROMs (e.g. SOB)
+    // --------------------------------------------------------
+    tmpBuf[strlen(tmpBuf)-5] = '0';
+    infile = fopen(tmpBuf, "rb");
+    if (infile != NULL)
+    {
+        fread(&MemGROM[0x0000], 0x6000, 1, infile);
+        fclose(infile);
+    }    
     
     // ------------------------------------------------------
     // Now handle some of the special machine types...

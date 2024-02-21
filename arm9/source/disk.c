@@ -99,15 +99,13 @@ u8 disk_cru_read(u16 address)
 
 void disk_cru_write(u16 address, u8 data)
 {
-    extern u8 DiskDSR[];
-    
     switch (address & 0x07)
     {
         case 0:
             bDiskDeviceInstalled = data;
             if (data)
             {
-                memcpy(&MemCPU[0x4000], DiskDSR, 0x2000);
+                memcpy(&MemCPU[0x4000], DSR1, 0x2000);
             }
             else
             {
