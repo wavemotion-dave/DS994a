@@ -30,6 +30,7 @@
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
 #include "disk.h"
+#include "SAMS.h"
 #include "intro.h"
 #include "ds99kbd.h"
 #include "ti99kbd.h"
@@ -527,15 +528,15 @@ void KeyPushFilename(char *filename)
 }
 
 
-#define MAX_FILES_PER_DSK           32         // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen
-char dsk_listing[MAX_FILES_PER_DSK][12];       // And room for 16 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
+#define MAX_FILES_PER_DSK           32         // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen comfortably
+char dsk_listing[MAX_FILES_PER_DSK][12];       // And room for 12 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
 u8   dsk_num_files = 0;
 void ShowDiskListing(void)
 {
     // Clear the screen...
-    for (u8 i=0; i<19; i++)
+    for (u8 i=0; i<20; i++)
     {
-        DS_Print(1,4+i,6, "                                ");
+        DS_Print(1,3+i,6, "                                ");
     }
 
     while (keysCurrent()) WAITVBL; // While any key is pressed...
@@ -549,7 +550,8 @@ void ShowDiskListing(void)
     }
 
     u8 idx=0;
-    DS_Print(5,5,6,      "=== DISK CONTENTS ===");
+    DS_Print(5,4,6,      "=== DISK CONTENTS ===");
+    DS_Print(1,23,6,     "PRESS A TO PUT IN PASTE BUFFER");
     dsk_num_files = 0;
     if (Disk[disk_drive_select].isMounted)
     {
@@ -598,8 +600,8 @@ void ShowDiskListing(void)
                 for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
                 {
                     sprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
-                    if (i < (MAX_FILES_PER_DSK/2)) DS_Print(5, 7+i, (i==sel)?2:0, tmpBuf);
-                    else DS_Print(18, 7+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
+                    if (i < (MAX_FILES_PER_DSK/2)) DS_Print(5, 6+i, (i==sel)?2:0, tmpBuf);
+                    else DS_Print(18, 6+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
                 }
                 last_sel = sel;
             }
@@ -641,19 +643,36 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     if (Disk[disk_drive_select].isMounted)
     {
         u16 numSectors = (Disk[disk_drive_select].image[0x0A] << 8) | Disk[disk_drive_select].image[0x0B];
+        u16 usedSectors = 0;
+        for (u16 i=0; i<numSectors/8; i++)
+        {
+            usedSectors += __builtin_popcount(Disk[disk_drive_select].image[0x38+i]);
+        }
+
         sprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", disk_drive_select+1, (Disk[disk_drive_select].image[0x12] == 2 ? "DS":"SS"), (Disk[disk_drive_select].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
-        DS_Print(4,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
+        DS_Print(16-(strlen(tmpBuf)/2),8+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
+        sprintf(tmpBuf, "(%dKB USED - %dKB FREE)", (usedSectors*256)/1024, (((numSectors-usedSectors)*256)+1023)/1024);
+        DS_Print(16-(strlen(tmpBuf)/2),9+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
         
         u8 col=0;
-        strncpy(tmpBuf, Disk[disk_drive_select].filename, 32);
-        tmpBuf[31] = 0;
+        if (strlen(Disk[disk_drive_select].filename) < 32)
+        {
+            strncpy(tmpBuf, Disk[disk_drive_select].filename, 32);
+            tmpBuf[31] = 0;
+        }
+        else
+        {
+            strncpy(&tmpBuf[128], Disk[disk_drive_select].filename, 25);
+            tmpBuf[25] = 0;
+            sprintf(tmpBuf, "%s...dsk", &tmpBuf[128]);
+        }
         if (strlen(tmpBuf) < 32) col=16-(strlen(tmpBuf)/2);
         if (strlen(tmpBuf) & 1) col--;
         DS_Print(col,9+disk_menu_items+3,(sel==disk_menu_items)?2:0,tmpBuf);   
     } 
     else
     {
-        DS_Print(3,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,"      DISK NOT MOUNTED       ");
+        DS_Print(1,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,"      DISK NOT MOUNTED       ");
     }
     
     DS_Print(2,22,0, "A TO SELECT, X SWITCH DRIVES");
@@ -1050,11 +1069,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
     DS_Print(0,idx++,6,tmpBuf);
     sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[4], VDP[5], VDP[6], VDP[7]); 
     DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[8], VDP[9], VDP[10], VDP[11]); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[12], VDP[13], VDP[14], VDP[15]); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP AD=%04X ST=%02X", VAddr, VDPStatus);
+    sprintf(tmpBuf, "VDP AD=%04X  ST=%02X", VAddr, VDPStatus);
     DS_Print(0,idx++,6,tmpBuf);
     idx++;
    
@@ -1075,10 +1090,146 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
     DS_Print(0,idx++,6,tmpBuf);
     sprintf(tmpBuf, "CPU.Cycl %10u", tms9900.cycles); 
     DS_Print(0,idx++,6,tmpBuf);
-    
-    
+    idx++;
+    sprintf(tmpBuf, "SAMS %02X %02X %02X %02X %02X %02X %02X %02X H%02X", theSAMS.bankMapSAMS[2], theSAMS.bankMapSAMS[3], 
+            theSAMS.bankMapSAMS[0xA], theSAMS.bankMapSAMS[0xB], theSAMS.bankMapSAMS[0xC], theSAMS.bankMapSAMS[0xD], theSAMS.bankMapSAMS[0xE], theSAMS.bankMapSAMS[0xF], sams_highwater_bank); 
+    DS_Print(0,idx++,6,tmpBuf);
 }
 
+u8 handle_touch_input(void)
+{
+    touchPosition touch;
+    touchRead(&touch);
+    u16 iTx = touch.px;
+    u16 iTy = touch.py;
+      
+    // ---------------------------------
+    // Check the Keyboard for input...
+    // ---------------------------------
+    u8 meta = CheckKeyboardInput(iTy, iTx);
+
+    switch (meta)
+    {
+        case META_KEY_QUIT:
+        {
+          //  Stop sound
+          SoundPause();
+
+          //  Ask for verification
+          if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES) 
+          { 
+              memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
+              return 1;
+          }
+          showMainMenu();
+          DisplayStatusLine(true);            
+          SoundUnPause();
+        }
+        break;
+            
+        case META_KEY_HIGHSCORE:
+        {
+          //  Stop sound
+          SoundPause();
+          highscore_display(file_crc);
+          DisplayStatusLine(true);
+          SoundUnPause();
+        }
+        break;
+
+        case META_KEY_SAVESTATE:
+        {
+          // Stop sound
+          SoundPause();
+          if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
+          {                      
+            TI99SaveState();
+          }
+          SoundUnPause();
+        }
+        break;
+
+        case META_KEY_LOADSTATE:
+        {
+          // Stop sound
+          SoundPause();
+          if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
+          {                      
+            TI99LoadState();
+          }
+          SoundUnPause();
+        }
+        break;
+            
+        case META_KEY_DISKMENU:
+            DiskMenu();
+            break;             
+            
+        case META_KEY_ALPHALOCK:
+            if (handling_meta == 0)
+            {
+                alpha_lock = alpha_lock^1;
+                DisplayStatusLine(false);
+                handling_meta = 1;
+            }
+            break;
+        case META_KEY_SHIFT:
+            if (handling_meta == 0)
+            {
+                if (meta_next_key == META_KEY_SHIFT) meta_next_key = 0;
+                else meta_next_key = META_KEY_SHIFT;
+                tms9901.Keyboard[TMS_KEY_SHIFT]=1;
+                DisplayStatusLine(false);
+                handling_meta = 1;
+            }
+            else if (handling_meta == 2)
+            {
+                tms9901.Keyboard[TMS_KEY_SHIFT]=0;
+                meta_next_key = 0;
+                handling_meta = 0;
+                DisplayStatusLine(false);
+                handling_meta = 3;
+            }
+            break;
+        case META_KEY_CONTROL:
+            if (handling_meta == 0)
+            {
+                if (meta_next_key == META_KEY_CONTROL) meta_next_key = 0;
+                else meta_next_key = META_KEY_CONTROL;
+                tms9901.Keyboard[TMS_KEY_CONTROL]=1;
+                DisplayStatusLine(false);
+                handling_meta = 1;
+            }
+            else if (handling_meta == 2)
+            {
+                tms9901.Keyboard[TMS_KEY_CONTROL]=0;
+                meta_next_key = 0;
+                handling_meta = 0;
+                DisplayStatusLine(false);
+                handling_meta = 3;
+            }
+            break;
+        case META_KEY_FUNCTION:
+            if (handling_meta == 0)
+            {
+                if (meta_next_key == META_KEY_FUNCTION) meta_next_key = 0;
+                else meta_next_key = META_KEY_FUNCTION;
+                tms9901.Keyboard[TMS_KEY_FUNCTION]=1;
+                meta_next_key = META_KEY_FUNCTION;
+                handling_meta = 1;
+                DisplayStatusLine(false);
+            } 
+            else if (handling_meta == 2)
+            {
+                tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
+                meta_next_key = 0;
+                handling_meta = 0;
+                DisplayStatusLine(false);
+                handling_meta = 3;
+            }
+            break;
+    }
+}
 
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the TMS9900, VDP and 
@@ -1091,8 +1242,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
 ITCM_CODE void ds99_main(void) 
 {
   u8 dampen = 0;
-  u16 iTx,  iTy;
-    
+      
   ds99_main_setup();    // Stuff we don't need in ITCM fast memory...
     
   // -------------------------------------------------------------------
@@ -1183,139 +1333,9 @@ ITCM_CODE void ds99_main(void)
         
       if (keysCurrent() & KEY_TOUCH)
       {
-        touchPosition touch;
-        touchRead(&touch);
-        iTx = touch.px;
-        iTy = touch.py;
-          
-        // ---------------------------------
-        // Check the Keyboard for input...
-        // ---------------------------------
-        u8 meta = CheckKeyboardInput(iTy, iTx);
-
-        switch (meta)
-        {
-            case META_KEY_QUIT:
-            {
-              //  Stop sound
-              SoundPause();
-
-              //  Ask for verification
-              if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES) 
-              { 
-                  memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
-                  return;
-              }
-              showMainMenu();
-              DisplayStatusLine(true);            
-              SoundUnPause();
-            }
-            break;
-                
-            case META_KEY_HIGHSCORE:
-            {
-              //  Stop sound
-              SoundPause();
-              highscore_display(file_crc);
-              DisplayStatusLine(true);
-              SoundUnPause();
-            }
-            break;
-
-            case META_KEY_SAVESTATE:
-            {
-              // Stop sound
-              SoundPause();
-              if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
-              {                      
-                TI99SaveState();
-              }
-              SoundUnPause();
-            }
-            break;
-
-            case META_KEY_LOADSTATE:
-            {
-              // Stop sound
-              SoundPause();
-              if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
-              {                      
-                TI99LoadState();
-              }
-              SoundUnPause();
-            }
-            break;
-                
-            case META_KEY_DISKMENU:
-                DiskMenu();
-                break;             
-                
-            case META_KEY_ALPHALOCK:
-                if (handling_meta == 0)
-                {
-                    alpha_lock = alpha_lock^1;
-                    DisplayStatusLine(false);
-                    handling_meta = 1;
-                }
-                break;
-            case META_KEY_SHIFT:
-                if (handling_meta == 0)
-                {
-                    if (meta_next_key == META_KEY_SHIFT) meta_next_key = 0;
-                    else meta_next_key = META_KEY_SHIFT;
-                    tms9901.Keyboard[TMS_KEY_SHIFT]=1;
-                    DisplayStatusLine(false);
-                    handling_meta = 1;
-                }
-                else if (handling_meta == 2)
-                {
-                    tms9901.Keyboard[TMS_KEY_SHIFT]=0;
-                    meta_next_key = 0;
-                    handling_meta = 0;
-                    DisplayStatusLine(false);
-                    handling_meta = 3;
-                }
-                break;
-            case META_KEY_CONTROL:
-                if (handling_meta == 0)
-                {
-                    if (meta_next_key == META_KEY_CONTROL) meta_next_key = 0;
-                    else meta_next_key = META_KEY_CONTROL;
-                    tms9901.Keyboard[TMS_KEY_CONTROL]=1;
-                    DisplayStatusLine(false);
-                    handling_meta = 1;
-                }
-                else if (handling_meta == 2)
-                {
-                    tms9901.Keyboard[TMS_KEY_CONTROL]=0;
-                    meta_next_key = 0;
-                    handling_meta = 0;
-                    DisplayStatusLine(false);
-                    handling_meta = 3;
-                }
-                break;
-            case META_KEY_FUNCTION:
-                if (handling_meta == 0)
-                {
-                    if (meta_next_key == META_KEY_FUNCTION) meta_next_key = 0;
-                    else meta_next_key = META_KEY_FUNCTION;
-                    tms9901.Keyboard[TMS_KEY_FUNCTION]=1;
-                    meta_next_key = META_KEY_FUNCTION;
-                    handling_meta = 1;
-                    DisplayStatusLine(false);
-                } 
-                else if (handling_meta == 2)
-                {
-                    tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
-                    meta_next_key = 0;
-                    handling_meta = 0;
-                    DisplayStatusLine(false);
-                    handling_meta = 3;
-                }
-                break;
-        }
-      } // No Screen Touch...
-      else  
+          if (handle_touch_input()) return;
+      }
+      else  // No Screen Touch...
       {
           if (handling_meta < 4)
           {
@@ -1480,7 +1500,7 @@ void TI99DSInit(void)
   vramSetBankF(VRAM_F_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000 (used for opcode tables)
   vramSetBankG(VRAM_G_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (used for opcode tables)
   vramSetBankH(VRAM_H_LCD );                 // Not using this for video but 32K of faster RAM always useful!  Mapped at 0x06898000 (used for opcode tables)
-  vramSetBankI(VRAM_I_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x068A0000 (used for VDP look-up table)
+  vramSetBankI(VRAM_I_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x068A0000 (used for DSR cache)
 
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;

@@ -49,7 +49,7 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
 
 u16* DSR1  = ((u16*)0x068A0000);   // 8K of fast VDP memory for the first DSR (Disk Controller)
-u16* DSR2  = ((u16*)0x068C0000);   // 8K of fast VDP memory for the second DSR (Future use)
+u16* DSR2  = ((u16*)0x068A2000);   // 8K of fast VDP memory for the second DSR (Future use)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -646,6 +646,10 @@ void WriteGROM(u8 data)
 // the memory access) but sucks if there is a lot of bank switching going on... turns out carts like Donkey Kong and Dig Dug were doing a
 // ton of bankswitches and the memory copy was too slow to render those games... so we have to do this using a cart offset which is fast
 // enough to render those games full-speed but does mean our memory reads and PC fetches are a little more complicated...
+//
+// Anyway... the maximum cart size that can be supported by this traditional banking scheme is (8192 / 2 = 4096 banks of 8K or 32MB!).
+// That's huge - larger than all of the available 16MB of RAM on a DSi and way bigger than the 4MB of RAM on a DS-Lite/Phat. We don't 
+// support that large but it's okay - 99% of all carts are less than 512K.
 // -------------------------------------------------------------------------------------------------------------------------------------------
 inline void WriteBank(u16 address)
 {
@@ -1059,7 +1063,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------
-ITCM_CODE void Ts_Accurate(u16 bytes)
+ITCM_CODE void Ts_NoInline(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1135,7 +1139,7 @@ inline void Ts(u16 bytes)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------------
-ITCM_CODE void Td_Accurate(u16 bytes)
+ITCM_CODE void Td_NoInline(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
@@ -1158,7 +1162,6 @@ ITCM_CODE void Td_Accurate(u16 bytes)
 
         default: // *Rx+   10c
             tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
-            // Post increment should happen LATER - unsure what this will cause... see Classic99 to improve but don't want the complexity yet...
             WriteRAM16a(WP_REG(rData), (tms9900.dstAddress + bytes));
             AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
@@ -1196,7 +1199,6 @@ inline void Td(u16 bytes)
 
         default: // *Rx+   10c
             tms9900.dstAddress = ReadRAM16(WP_REG(rData));
-            // Post increment should happen LATER - unsure what this will cause... see Classic99 to improve but don't want the complexity yet...
             WriteRAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
             AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
@@ -1231,10 +1233,10 @@ ITCM_CODE void TsTd(void)
 // and for this decoding mode, we will look at the current
 // opcode to determine if this is byte or word addressing...
 // ----------------------------------------------------------
-ITCM_CODE void TsTd_Accurate(void)
+ITCM_CODE void TsTd_NoInline(void)
 {
     u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
-    Ts_Accurate(bytes); Td_Accurate(bytes);
+    Ts_NoInline(bytes); Td_NoInline(bytes);
 }
 
 // --------------------------------------------------------------------------------------
@@ -1299,9 +1301,9 @@ void ExecuteOneInstructionAccurate(u16 opcode)
     u8 op8 = (u8)OpcodeLookup[opcode];
     switch (op8)
     {
-#define Ts Ts_Accurate
-#define Td Td_Accurate
-#define TsTd TsTd_Accurate
+#define Ts Ts_NoInline
+#define Td Td_NoInline
+#define TsTd TsTd_NoInline
 #define ReadRAM16 ReadRAM16a
 #define WriteRAM16 WriteRAM16a
     #include "tms9900.inc"
@@ -1346,9 +1348,9 @@ void TMS9900_RunAccurate(void)
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
             switch (op8)
             {
-#define Ts Ts_Accurate
-#define Td Td_Accurate
-#define TsTd TsTd_Accurate
+#define Ts Ts_NoInline
+#define Td Td_NoInline
+#define TsTd TsTd_NoInline
 #define ReadRAM16 ReadRAM16a
 #define WriteRAM16 WriteRAM16a
 #define ExecuteOneInstruction ExecuteOneInstructionAccurate

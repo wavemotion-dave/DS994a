@@ -26,6 +26,8 @@ typedef struct _SAMS
 
 extern SAMS theSAMS;
 
+extern u8 sams_highwater_bank;
+
 extern void SAMS_Initialize(void);
 extern void SAMS_WriteBank(u16 address, u8 data);
 extern u8   SAMS_cru_read(u16 cruAddress);

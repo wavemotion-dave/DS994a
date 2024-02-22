@@ -34,8 +34,7 @@ void write32(void *address, u32 value) {
 bool screenshotbmp(const char* filename) {
     FILE *file = fopen(filename, "wb");
 
-    if(!file)
-        return false;
+    if(!file)  return false;
 
     REG_DISPCAPCNT = DCAP_BANK(DCAP_BANK_VRAM_B) | DCAP_SIZE(DCAP_SIZE_256x192) | DCAP_ENABLE;
     while(REG_DISPCAPCNT & DCAP_ENABLE);
@@ -49,7 +48,7 @@ bool screenshotbmp(const char* filename) {
     else
     {
         extern u8 *MemSAMS;
-        temp = MemSAMS + (400 * 1024);  // Take our chances here... if we're on the older DS and we've got more than 400K of SAMS usage this will not end well
+        temp = MemSAMS + (412 * 1024);  // Take our chances here... if we're on the older DS and we've got more than 412K of SAMS usage this will not end well
     }
 
     if(!temp) {

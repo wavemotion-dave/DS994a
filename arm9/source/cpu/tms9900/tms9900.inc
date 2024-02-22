@@ -583,8 +583,9 @@
     case op_szc:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
+            Td_NoInline(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             data16 = (~sData) & dData;
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
@@ -595,8 +596,9 @@
     case op_szcb:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
+            Td_NoInline(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
             data8 = (~sData) & dData;
             tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
@@ -607,8 +609,9 @@
     case op_s:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
+            Td_NoInline(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             data16 = dData - sData;
             MemoryWrite16(tms9900.dstAddress, data16);
@@ -623,8 +626,9 @@
     case op_sb:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
+            Td_NoInline(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
             data8 = dData - sData;
             MemoryWrite8(tms9900.dstAddress, data8);
@@ -639,8 +643,9 @@
     case op_c:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
+            Td_NoInline(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
 
             // Set the status flags the Classic99 way...
@@ -661,8 +666,9 @@
     case op_cb:
         {
             AddCycleCount(14);
-            TsTd();
+            Ts_NoInline(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
+            Td_NoInline(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
 
             // Set the status flags the Classic99 way...
@@ -684,8 +690,9 @@
     case op_a:
         {
             AddCycleCount(14);
-            Ts(SOURCE_WORD); Td(SOURCE_WORD);
+            Ts(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
+            Td(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             data16 = sData + dData;
             MemoryWrite16(tms9900.dstAddress, data16);
@@ -700,8 +707,9 @@
     case op_ab:
         {
             AddCycleCount(14);
-            Ts(SOURCE_BYTE); Td(SOURCE_BYTE);
+            Ts(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
+            Td(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
             data8 = sData + dData;
             MemoryWrite8(tms9900.dstAddress, data8);
@@ -716,25 +724,27 @@
     // In experiments the mov and movb instructions are heavy hitters on the TI99... look to optimize this as much as possible...
     case op_mov:
         AddCycleCount(14);
-        Ts(SOURCE_WORD); Td(SOURCE_WORD);
+        Ts(SOURCE_WORD);
         data16 = MemoryRead16(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
+        Td(SOURCE_WORD);
         MemoryReadHidden(tms9900.dstAddress);
         MemoryWrite16(tms9900.dstAddress, data16);
         break;
 
     case op_movb:
         AddCycleCount(14);
-        Ts(SOURCE_BYTE); Td(SOURCE_BYTE);
+        Ts(SOURCE_BYTE);
         data8 = MemoryRead8(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
+        Td(SOURCE_BYTE);
         MemoryReadHidden(tms9900.dstAddress);
         MemoryWrite8(tms9900.dstAddress, data8);
         break;
 
     case op_soc:
         AddCycleCount(14);
-        TsTd();
+        TsTd(); // Not quite accurate as the source and dest should be split but good enough
         data16 = MemoryRead16(tms9900.srcAddress) | MemoryRead16(tms9900.dstAddress);
         tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         MemoryWrite16(tms9900.dstAddress, data16);
@@ -742,7 +752,7 @@
 
     case op_socb:
         AddCycleCount(14);
-        TsTd();
+        TsTd(); // Not quite accurate as the source and dest should be split but good enough
         data8 = MemoryRead8(tms9900.srcAddress) | MemoryRead8(tms9900.dstAddress);
         tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
         MemoryWrite8(tms9900.dstAddress, data8);

@@ -30,6 +30,8 @@ u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // Allocated to suppo
 
 SAMS theSAMS    __attribute__((section(".dtcm")));         // The entire state of the SAMS memory map handler
 
+u8 sams_highwater_bank __attribute__((section(".dtcm"))) = 0; // To track how far into SAMS memory we used
+
 // ---------------------------------------------------------
 // Allocate enough memory for a SAMS 512K (DS) or 1MB (DSi)
 // ---------------------------------------------------------
@@ -83,6 +85,8 @@ void SAMS_Initialize(void)
         SAMS_cru_write(0,0);    // Swap out the DSR
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode)
     }
+    
+    sams_highwater_bank = 0x00;
 }
 
 
@@ -96,6 +100,7 @@ inline void SAMS_SwapBank(u8 memory_region, u8 bank)
     if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
     {
         theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
+        if (bank > sams_highwater_bank) sams_highwater_bank = bank;
     }
 }
 

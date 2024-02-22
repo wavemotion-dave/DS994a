@@ -69,9 +69,11 @@ u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
 _Disk Disk[MAX_DSKS];           // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 u8 Disk1_ImageBuf[MAX_DSK_SIZE];// Full buffering
 u8 Disk2_ImageBuf[MAX_DSK_SIZE];// Full buffering
-u8 Disk3_ImageBuf[512];         // First two sectors only
+u8 Disk3_ImageBuf[512];         // First two sectors only - but as a bonus, DSK3 can hold 400K (max 1600 sectors allowed by TI controller)
 
 char backup_filename[MAX_PATH];
+
+u16 max_sectors[MAX_DSKS] = {1440, 1440, 1600}; // For DSK1 and DSK2 we support 1440x256=360K and for DSK3 we allow the full 1600x256=400K
 
 #define ERR_DEVICEERROR     6
 
@@ -97,7 +99,7 @@ u8 disk_cru_read(u16 address)
     return 1;   // For now... until we want to be more sophisticated
 }
 
-void disk_cru_write(u16 address, u8 data)
+ITCM_CODE void disk_cru_write(u16 address, u8 data)
 {
     switch (address & 0x07)
     {
@@ -105,24 +107,20 @@ void disk_cru_write(u16 address, u8 data)
             bDiskDeviceInstalled = data;
             if (data)
             {
+                // The Disk Controller DSR is visible
                 memcpy(&MemCPU[0x4000], DSR1, 0x2000);
             }
             else
             {
+                // The Disk Controller DSR is not visible
                 memset(&MemCPU[0x4000], 0xFF, 0x2000);
             }
             break;
             
         case 4:     // select drive 1
-            driveSelected = 1;
-            break;
-
         case 5:     // select drive 2
-            driveSelected = 2;
-            break;
-
         case 6:     // select drive 3
-            driveSelected = 3;
+            driveSelected = 1 + (address & 0x03);
             break;
             
         case 7: 
@@ -231,22 +229,36 @@ void WriteTICCRegister(u16 address, u8 val)
     }
 }
 
+// --------------------------------------------------------------------------
+// This is really only used for DSK3 which is not fully buffered in memory.
+// --------------------------------------------------------------------------
 ITCM_CODE void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
+    u8 error = true; // Until proven otherwise...
+    
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
-    // Seek to the right sector and read in 256 bytes...
-    FILE *infile = fopen(Disk[drive].filename, "rb");
-    if (infile)
+    // Make sure the sector being asked for is sensible...
+    if (sector < max_sectors[drive])
     {
-        fseek(infile, (256*sector), SEEK_SET);
-        fread(buf, 1, 256, infile);
-        fclose(infile);
+        // Seek to the right sector and read in 256 bytes...
+        FILE *infile = fopen(Disk[drive].filename, "rb");
+        if (infile)
+        {
+            if (!fseek(infile, (256*sector), SEEK_SET))
+            {
+                fread(buf, 1, 256, infile);
+                error = false;
+            }
+            fclose(infile);
+        }
     }
-    else
+    
+    // If we had any error, clear the buffer
+    if (error)
     {
-        memset(buf, 0x00, 256);
+        memset(buf, 0x00, 256); // Just return zeros... good enough on failure        
     }
 }
 
@@ -283,44 +295,55 @@ ITCM_CODE void HandleTICCSector(void)
     if ((drive == 1) || (drive == 2) || (drive == 3))
     {
         drive = drive-1;    // Zero based for struct array lookup
-        if (isRead)
+        
+        // --------------------------------------------------
+        // Make sure the sector asked for is within reason...
+        // --------------------------------------------------
+        if (sectorNumber >= max_sectors[drive])
         {
-            // -----------------------------------------------------------------
-            // Move the 256 byte sector from the .DSK image to the VDP memory
-            // -----------------------------------------------------------------
-            if (drive == DSK3)
+            success = false;
+        }
+        else
+        {
+            if (isRead)
             {
-                // Change into the last known DSKs directory for this file
-                chdir(Disk[drive].path);
-
-                // Seek to the right sector and read in 256 bytes...
-                FILE *infile = fopen(Disk[drive].filename, "rb");
-                if (infile)
+                // -----------------------------------------------------------------
+                // Move the 256 byte sector from the .DSK image to the VDP memory
+                // -----------------------------------------------------------------
+                if (drive == DSK3)
                 {
-                    fseek(infile, index, SEEK_SET);
-                    fread(&pVDPVidMem[destVDP], 1, 256, infile);
-                    fclose(infile);
+                    // Change into the last known DSKs directory for this file
+                    chdir(Disk[drive].path);
+
+                    // Seek to the right sector and read in 256 bytes...
+                    FILE *infile = fopen(Disk[drive].filename, "rb");
+                    if (infile)
+                    {
+                        fseek(infile, index, SEEK_SET);
+                        fread(&pVDPVidMem[destVDP], 1, 256, infile);
+                        fclose(infile);
+                    }
                 }
-            }
-            else
-            {
-                memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
-            }
-            *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
-            Disk[drive].driveReadCounter = 2;            // briefly show that we are reading from the disk
-            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
-        } 
-        else  // Must be write
-        {
-            if (drive != DSK3)
-            {
-                memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
+                else
+                {
+                    memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
+                }
                 *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
-                Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
-                Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
-            }
-            MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
-        } 
+                Disk[drive].driveReadCounter = 2;            // briefly show that we are reading from the disk
+                MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
+            } 
+            else  // Must be write
+            {
+                if (drive != DSK3)
+                {
+                    memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
+                    *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
+                    Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
+                    Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
+                }
+                MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
+            } 
+        }
     } else success = false;
 
     
@@ -404,7 +427,7 @@ void disk_read_from_sd(u8 drive)
         }
         else
         {
-            fread(Disk[drive].image, 512, 1, infile);   // Just the first two sectors for DSK3
+            fread(Disk[drive].image, 1, 512, infile);   // Just the first two sectors for DSK3
         }
         fclose(infile);
     }
