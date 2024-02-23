@@ -1057,12 +1057,49 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
     }
 }
 
+
 // ------------------------------------------------------------------------------------------------
 // Source Address extracted from the Opcode. For this addressing mode the opcode is in the format:
 // 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------
+static inline void Ts(u16 bytes)
+{
+    u16 rData = REG_GET_FROM_OPCODE();
+
+    switch ((tms9900.currentOp >> 4) & 0x03)
+    {
+        case 0: // Rx  2c
+            tms9900.srcAddress = WP_REG(rData);
+            break;
+
+        case 1: // *Rx  6c
+            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
+            AddCycleCount(4);
+            break;
+
+        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+            tms9900.srcAddress = ReadPC16();
+            if (rData) tms9900.srcAddress += ReadRAM16(WP_REG(rData));
+            AddCycleCount(8);
+            break;
+
+        default: // *Rx+   10c
+            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
+            WriteRAM16(WP_REG(rData), (tms9900.srcAddress + bytes));
+            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            break;
+    }
+
+    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+}
+
+// ------------------------------------------------------------------------------------------------------
+// The Non-Inline version of the above.  We need to do this because GCC seems to eventually crap out
+// compiling a slew of inline functions into these large CPU switch statments. So for some instructions
+// and for some parts of the emulation, a non-inline version of this is fine.
+// ------------------------------------------------------------------------------------------------------
 ITCM_CODE void Ts_NoInline(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
@@ -1095,36 +1132,36 @@ ITCM_CODE void Ts_NoInline(u16 bytes)
 }
 
 
-// ------------------------------------------------------------------------------------------------
-// Source Address extracted from the Opcode. For this addressing mode the opcode is in the format:
+// ------------------------------------------------------------------------------------------------------
+// Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
 // 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
-// ------------------------------------------------------------------------------------------------
-inline void Ts(u16 bytes)
+// ------------------------------------------------------------------------------------------------------
+static inline void Td(u16 bytes)
 {
-    u16 rData = REG_GET_FROM_OPCODE();
+    u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
-    switch ((tms9900.currentOp >> 4) & 0x03)
+    switch ((tms9900.currentOp >> 10) & 0x03)
     {
         case 0: // Rx  2c
-            tms9900.srcAddress = WP_REG(rData);
+            tms9900.dstAddress = WP_REG(rData);
             break;
 
         case 1: // *Rx  6c
-            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
+            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
             AddCycleCount(4);
             break;
 
         case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.srcAddress = ReadPC16();
-            if (rData) tms9900.srcAddress += ReadRAM16(WP_REG(rData));
+            tms9900.dstAddress = ReadPC16();
+            if (rData) tms9900.dstAddress += ReadRAM16(WP_REG(rData));
             AddCycleCount(8);
             break;
 
         default: // *Rx+   10c
-            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
-            WriteRAM16(WP_REG(rData), (tms9900.srcAddress + bytes));
+            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
+            WriteRAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
             AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
@@ -1132,12 +1169,10 @@ inline void Ts(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-
 // ------------------------------------------------------------------------------------------------------
-// Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
-// 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
-// [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
-// The [B] bit tells us if this is a byte addressing (0 implies word addressing)
+// The Non-Inline version of the above.  We need to do this because GCC seems to eventually crap out
+// compiling a slew of inline functions into these large CPU switch statments. So for some instructions
+// and for some parts of the emulation, a non-inline version of this is fine.
 // ------------------------------------------------------------------------------------------------------
 ITCM_CODE void Td_NoInline(u16 bytes)
 {
@@ -1170,42 +1205,6 @@ ITCM_CODE void Td_NoInline(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-// ------------------------------------------------------------------------------------------------------
-// Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
-// 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
-// [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
-// The [B] bit tells us if this is a byte addressing (0 implies word addressing)
-// ------------------------------------------------------------------------------------------------------
-inline void Td(u16 bytes)
-{
-    u16 rData = (tms9900.currentOp>>6) & 0x0F;
-
-    switch ((tms9900.currentOp >> 10) & 0x03)
-    {
-        case 0: // Rx  2c
-            tms9900.dstAddress = WP_REG(rData);
-            break;
-
-        case 1: // *Rx  6c
-            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
-            AddCycleCount(4);
-            break;
-
-        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.dstAddress = ReadPC16();
-            if (rData) tms9900.dstAddress += ReadRAM16(WP_REG(rData));
-            AddCycleCount(8);
-            break;
-
-        default: // *Rx+   10c
-            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
-            WriteRAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
-            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
-            break;
-    }
-
-    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
-}
 
 // -------------------------------------------------------------------------------
 // Destination uses workspace addressing only - for instructions like MPY or DIV
@@ -1277,8 +1276,8 @@ void ExecuteOneInstruction(u16 opcode)
     switch (op8)
     {
 // This handler is called so infrequently - swap to the non-inline versions to save program memory
-#define Ts          Ts_NoInline  
-#define Td          Td_NoInline  
+#define Ts  Ts_NoInline  
+#define Td  Td_NoInline  
     #include "tms9900.inc"
 #undef Ts
 #undef Td
@@ -1326,14 +1325,9 @@ void TMS9900_RunAccurate(void)
             {
 // We need to swap in the 'a' = accurate versions of the ReadRAM and WriteRAM handlers
 // These handlers are a bit slower but necessary to allow for SAMS banked memory access.
-// GCC also seems to hit a limit with the large number of inlines in the massive TMS CPU
-// switch statement ... so we swap out the Td() to the non-inline version to save the 
-// inlines for the normal Run() handler below which wants all the speed it can get!
-#define Td          Td_NoInline  
 #define ReadRAM16   ReadRAM16a
 #define WriteRAM16  WriteRAM16a
             #include "tms9900.inc"
-#undef Td
 #undef ReadRAM16
 #undef WriteRAM16
             }

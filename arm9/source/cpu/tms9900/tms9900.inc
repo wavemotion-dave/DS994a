@@ -546,7 +546,7 @@
     case op_div:
         {
             AddCycleCount(16);
-            Ts_NoInline(SOURCE_WORD); TdWA();
+            Ts(SOURCE_WORD); TdWA();
             u16 sData = MemoryRead16(tms9900.srcAddress);
             u32 dData = (u32)MemoryRead16(tms9900.dstAddress);
 
@@ -570,7 +570,7 @@
     case op_mpy:
         {
             AddCycleCount(52);
-            Ts_NoInline(SOURCE_WORD); TdWA();
+            Ts(SOURCE_WORD); TdWA();
             u16 sData = MemoryRead16(tms9900.srcAddress);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             u32 result = (u32)sData * (u32)dData;
@@ -583,9 +583,9 @@
     case op_szc:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_WORD);
+            Ts(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
-            Td_NoInline(SOURCE_WORD);
+            Td(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             data16 = (~sData) & dData;
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
@@ -596,9 +596,9 @@
     case op_szcb:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_BYTE);
+            Ts(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
-            Td_NoInline(SOURCE_BYTE);
+            Td(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
             data8 = (~sData) & dData;
             tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
@@ -609,9 +609,9 @@
     case op_s:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_WORD);
+            Ts(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
-            Td_NoInline(SOURCE_WORD);
+            Td(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             data16 = dData - sData;
             MemoryWrite16(tms9900.dstAddress, data16);
@@ -626,9 +626,9 @@
     case op_sb:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_BYTE);
+            Ts(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
-            Td_NoInline(SOURCE_BYTE);
+            Td(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
             data8 = dData - sData;
             MemoryWrite8(tms9900.dstAddress, data8);
@@ -643,7 +643,7 @@
     case op_c:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_WORD);
+            Ts(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
             Td(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
@@ -666,7 +666,7 @@
     case op_cb:
         {
             AddCycleCount(14);
-            Ts_NoInline(SOURCE_BYTE);
+            Ts(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
             Td(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
@@ -886,7 +886,7 @@
 
     case op_xop:
         AddCycleCount(36);
-        Ts_NoInline(SOURCE_WORD);  // Forces 16-bit source address mode
+        Ts(SOURCE_WORD);  // Forces 16-bit source address mode
         data16 = ((tms9900.currentOp & 0x03c0) >> 6);
         TMS9900_ContextSwitch(data16);
         MemoryWrite16(WP_REG(11), tms9900.srcAddress);
