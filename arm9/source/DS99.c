@@ -1229,6 +1229,8 @@ u8 handle_touch_input(void)
             }
             break;
     }
+    
+    return 0;
 }
 
 // ------------------------------------------------------------------------
@@ -1690,7 +1692,7 @@ int main(int argc, char **argv)
       //  We want to start in the directory where the file is being launched...
       if  (strchr(argv[1], '/') != NULL)
       {
-          static char  path[128];
+          static char path[128];
           strcpy(path,  argv[1]);
           char  *ptr = &path[strlen(path)-1];
           while (*ptr !=  '/') ptr--;

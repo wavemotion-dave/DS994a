@@ -546,7 +546,7 @@
     case op_div:
         {
             AddCycleCount(16);
-            Ts(SOURCE_WORD); TdWA();
+            Ts_NoInline(SOURCE_WORD); TdWA();
             u16 sData = MemoryRead16(tms9900.srcAddress);
             u32 dData = (u32)MemoryRead16(tms9900.dstAddress);
 
@@ -570,7 +570,7 @@
     case op_mpy:
         {
             AddCycleCount(52);
-            Ts(SOURCE_WORD); TdWA();
+            Ts_NoInline(SOURCE_WORD); TdWA();
             u16 sData = MemoryRead16(tms9900.srcAddress);
             u16 dData = MemoryRead16(tms9900.dstAddress);
             u32 result = (u32)sData * (u32)dData;
@@ -645,7 +645,7 @@
             AddCycleCount(14);
             Ts_NoInline(SOURCE_WORD);
             u16 sData = MemoryRead16(tms9900.srcAddress);
-            Td_NoInline(SOURCE_WORD);
+            Td(SOURCE_WORD);
             u16 dData = MemoryRead16(tms9900.dstAddress);
 
             // Set the status flags the Classic99 way...
@@ -668,7 +668,7 @@
             AddCycleCount(14);
             Ts_NoInline(SOURCE_BYTE);
             u8 sData = MemoryRead8(tms9900.srcAddress);
-            Td_NoInline(SOURCE_BYTE);
+            Td(SOURCE_BYTE);
             u8 dData = MemoryRead8(tms9900.dstAddress);
 
             // Set the status flags the Classic99 way...
@@ -886,7 +886,7 @@
 
     case op_xop:
         AddCycleCount(36);
-        Ts(SOURCE_WORD);  // Forces 16-bit source address mode
+        Ts_NoInline(SOURCE_WORD);  // Forces 16-bit source address mode
         data16 = ((tms9900.currentOp & 0x03c0) >> 6);
         TMS9900_ContextSwitch(data16);
         MemoryWrite16(WP_REG(11), tms9900.srcAddress);

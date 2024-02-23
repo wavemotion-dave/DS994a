@@ -1228,17 +1228,6 @@ ITCM_CODE void TsTd(void)
     Ts(bytes); Td(bytes);
 }
 
-// ----------------------------------------------------------
-// Many opcodes want both a source and destination address
-// and for this decoding mode, we will look at the current
-// opcode to determine if this is byte or word addressing...
-// ----------------------------------------------------------
-ITCM_CODE void TsTd_NoInline(void)
-{
-    u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
-    Ts_NoInline(bytes); Td_NoInline(bytes);
-}
-
 // --------------------------------------------------------------------------------------
 // The context switch saves the WP, PC and Status and sets up for the new workspace.
 // Classic99 checks for a return address of zero but we don't handle that in DS99/4a.
@@ -1277,12 +1266,9 @@ ITCM_CODE void TMS9900_HandlePendingInterrupts(void)
 }
 
 
-// ---------------------------------------------------------------------------------
-// Mainly for the X = Execute instruction but also for the accurate emulation flag.
-// I'd love for this to be in fast .ITCM cache memory on the DS but we only have
-// 32K of that fast instruction memory available and we're just about full. So only
-// the main TMS9900_Run() execution loop will use this fast .ITCM opcode handling.
-// ---------------------------------------------------------------------------------
+// -------------------------------------------------------------
+// Mainly for the X = Execute instruction (not frequently used)
+// -------------------------------------------------------------
 void ExecuteOneInstruction(u16 opcode)
 {
     u8 data8;
@@ -1290,31 +1276,19 @@ void ExecuteOneInstruction(u16 opcode)
     u8 op8 = (u8)OpcodeLookup[opcode];
     switch (op8)
     {
-    #include "tms9900.inc"
-    }
-}
-
-void ExecuteOneInstructionAccurate(u16 opcode)
-{
-    u8 data8;
-    u16 data16;
-    u8 op8 = (u8)OpcodeLookup[opcode];
-    switch (op8)
-    {
-#define Ts Ts_NoInline
-#define Td Td_NoInline
-#define TsTd TsTd_NoInline
-#define ReadRAM16 ReadRAM16a
-#define WriteRAM16 WriteRAM16a
+// This handler is called so infrequently - swap to the non-inline versions to save program memory
+#define Ts          Ts_NoInline  
+#define Td          Td_NoInline  
     #include "tms9900.inc"
 #undef Ts
-#undef Td            
-#undef TsTd
-#undef ReadRAM16
-#undef WriteRAM16
+#undef Td
     }
 }
 
+// ----------------------------------------------------------------------------------------------------------------------
+// A bit more CPU intensive - this runs almost 15% slower on the DS but allows us to handle more complex emulation such
+// as SAMS and the IDLE instruction. This only gets enabled when needed... most carts will use TMS9900_Run() instead.
+// ----------------------------------------------------------------------------------------------------------------------
 void TMS9900_RunAccurate(void)
 {
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
@@ -1343,24 +1317,25 @@ void TMS9900_RunAccurate(void)
         {
             u8 data8;
             u16 data16;
+            
             if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
             tms9900.currentOp = ReadPC16();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
+            
             switch (op8)
             {
-#define Ts Ts_NoInline
-#define Td Td_NoInline
-#define TsTd TsTd_NoInline
-#define ReadRAM16 ReadRAM16a
-#define WriteRAM16 WriteRAM16a
-#define ExecuteOneInstruction ExecuteOneInstructionAccurate
+// We need to swap in the 'a' = accurate versions of the ReadRAM and WriteRAM handlers
+// These handlers are a bit slower but necessary to allow for SAMS banked memory access.
+// GCC also seems to hit a limit with the large number of inlines in the massive TMS CPU
+// switch statement ... so we swap out the Td() to the non-inline version to save the 
+// inlines for the normal Run() handler below which wants all the speed it can get!
+#define Td          Td_NoInline  
+#define ReadRAM16   ReadRAM16a
+#define WriteRAM16  WriteRAM16a
             #include "tms9900.inc"
-#undef Ts
-#undef Td            
-#undef TsTd
+#undef Td
 #undef ReadRAM16
 #undef WriteRAM16
-#undef ExecuteOneInstruction                    
             }
         }
     }
@@ -1375,27 +1350,29 @@ void TMS9900_RunAccurate(void)
 // running at the right speed. In practice this has been good enough to render all the TI games properly.
 //
 // This is chewing up a big chunk of the ITCM memory. Right now the entire opcode handling is about 16K of
-// fast instruction memory... but it buys us a solid 10% speed by keeping those instructions in the cache.
+// fast instruction memory... but it buys us at least 10% speed by keeping those instructions in the cache.
 // --------------------------------------------------------------------------------------------------------------
 ITCM_CODE void TMS9900_Run(void)
 {
+    // --------------------------------------------------------------------
+    // Accurate emulation is enabled if we see an IDLE instruction which
+    // needs special attention.  Most games don't need this handling
+    // and we save the precious DS CPU cycles as this is 10% to 15% slower.
+    // --------------------------------------------------------------------
     if (tms9900.accurateEmuFlags) return TMS9900_RunAccurate();
     
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
 
-    // --------------------------------------------------------------------
-    // Accurate emulation is enabled if we see an IDLE instruction which
-    // needs special attention.  Most games don't need this handling
-    // and we save the precious DS CPU cycles as this is almost 10% slower.
-    // --------------------------------------------------------------------
     do
     {
         u8 data8;
         u16 data16;
+        
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
         if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
         tms9900.currentOp = ReadPC16_Fast();
         u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
+        
         switch (op8)
         {
         #include "tms9900.inc"
