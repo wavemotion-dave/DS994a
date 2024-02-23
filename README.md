@@ -91,6 +91,7 @@ File Types Supported :
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
 * Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
+* Files whose base filename ends in 0 is considered a system GROM and can be used to replace the standard console GROMs (e.g. Son of Board).
 * All other files are considered '8' files which is non-inverted banking up to 8192K (8MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
