@@ -15,7 +15,7 @@ include $(DEVKITARM)/ds_rules
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
 BUILD		:=	build
-SOURCES		:=  source/cpu/tms9918a source/cpu/sn76496 source/cpu/m6502 source/cpu/tms9900 source/rpk source 
+SOURCES		:=  source/cpu/tms9918a source/cpu/sn76496 source/cpu/m6502 source/cpu/tms9900 source 
 INCLUDES	:=	include 
 DATA		:=	data
 GRAPHICS	:=	gfx
@@ -26,7 +26,7 @@ BACKGRD		:=  gfx_data
 #---------------------------------------------------------------------------------
 ARCH	:=
 
-CFLAGS	:=  -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange  -ftree-partial-pre -fno-semantic-interposition
+CFLAGS	:=  -Wall -Wno-misleading-indentation -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange  -ftree-partial-pre -fno-semantic-interposition
 
 CFLAGS	+=	$(INCLUDE) -DARM9
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions

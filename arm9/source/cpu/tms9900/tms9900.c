@@ -580,7 +580,7 @@ void TMS9900_ClearAccurateEmulationFlag(u16 flag)
 // the address before reads/increments and so this saves us some
 // processing power necessary for the old DS-handhelds.
 //-------------------------------------------------------------------
-static inline u8 ReadGROM(void)
+static inline __attribute__((always_inline)) u8 ReadGROM(void)
 {
     AddCycleCount(GROM_READ_CYCLES);
     return MemGROM[tms9900.gromAddress++];
@@ -651,7 +651,7 @@ void WriteGROM(u8 data)
 // That's huge - larger than all of the available 16MB of RAM on a DSi and way bigger than the 4MB of RAM on a DS-Lite/Phat. We don't 
 // support that large but it's okay - 99% of all carts are less than 512K.
 // -------------------------------------------------------------------------------------------------------------------------------------------
-inline void WriteBank(u16 address)
+inline __attribute__((always_inline)) void WriteBank(u16 address)
 {
     u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
     bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
@@ -664,7 +664,7 @@ inline void WriteBank(u16 address)
 // For the MBX, there are up to 4 banks of 4K each... These map into >7000
 // We treat this like a half-banked cart with only the 4K at >7000 swapping.
 // --------------------------------------------------------------------------
-inline void WriteBankMBX(u8 bank)
+inline __attribute__((always_inline)) void WriteBankMBX(u8 bank)
 {
     bank &= 0x3;
     tms9900.cartBankPtr = MemCART+(bank*0x1000) - 0x1000;    // The -0x1000 offsets by 4K so that the memory fetch works correctly at >7000
@@ -1315,7 +1315,7 @@ void TMS9900_RunAccurate(void)
             u8 data8;
             u16 data16;
             
-            if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
+            if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
             tms9900.currentOp = ReadPC16a();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
             
@@ -1369,7 +1369,7 @@ ITCM_CODE void TMS9900_Run(void)
         u16 data16;
         
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
-        if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
+        if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
         tms9900.currentOp = ReadPC16();
         u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
         

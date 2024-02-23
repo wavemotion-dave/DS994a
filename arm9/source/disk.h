@@ -14,7 +14,6 @@ enum
     MAX_DSKS
 };
 
-
 typedef struct
 {
     u8   isMounted;             // Is this disk mounted?
@@ -24,21 +23,27 @@ typedef struct
     char filename[MAX_PATH];    // The name of the .dsk file
     char path[MAX_PATH];        // The directory where the .dsk file was found
     u8   *image;                // The (up to) 360K disk image in sector format (V9T9 sector dump format)
-}  _Disk;
+}  Disk_t;
 
-extern _Disk Disk[MAX_DSKS];
+extern Disk_t Disk[MAX_DSKS];
+
+#define MAX_FILES_PER_DSK           32          // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen comfortably
+#define MAX_DSK_FILE_LEN            12          // And room for 12 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
+
+extern char dsk_listing[MAX_FILES_PER_DSK][MAX_DSK_FILE_LEN];   // We store the disk listing here...
+extern u8   dsk_num_files;                                      // And we found this many files...
 
 extern void disk_init(void);
-extern u8 ReadTICCRegister(u16 address);
+extern u8   ReadTICCRegister(u16 address);
 extern void WriteTICCRegister(u16 address, u8 val);
 extern void HandleTICCSector(void);
 extern void disk_cru_write(u16 address, u8 data);
-extern u8 disk_cru_read(u16 address);
-extern void ReadSector(u8 drive, u16 sector, u8 *buf);
+extern u8   disk_cru_read(u16 address);
 extern void disk_mount(u8 drive, char *path, char *filename);
 extern void disk_unmount(u8 drive);
 extern void disk_read_from_sd(u8 drive);
 extern void disk_write_to_sd(u8 disk);
 extern void disk_backup_to_sd(u8 disk);
+extern void disk_get_file_listing(u8 drive);
 
 // End of file

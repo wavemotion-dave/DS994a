@@ -20,7 +20,7 @@ extern u8  *MemCART;        // The actual cart buffer gets allocated here.
 extern char tmpBuf[256];    // For simple printf-type output and other sundry uses.
 extern u8 fileBuf[4096];    // For DSK sector cache and file CRC generation use.
 
-#define WAITVBL swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();
+#define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}
 
 enum
 {

@@ -1,6 +1,4 @@
 // Borrowed from Godemode9i from Rocket Robz
-
-#include "printf.h"
 #include "screenshot.h"
 
 #include <nds.h>

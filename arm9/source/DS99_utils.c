@@ -714,14 +714,18 @@ void TILoadDiskFile(void)
   {
       // Remember the directory for the rom
       getcwd(currentDirDSKs, MAX_PATH);
+      
+      // These need to be stashed away for the caller...
+      strcpy(myDskFile, gpDsk[chosenDSK].szName);
+      strcpy(myDskPath, currentDirDSKs);
+  }
+  else
+  {
+      // Make no changes - keep things as they were...
   }
 
   // Returns the top screen to bitmap mode
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B | KEY_R | KEY_L | KEY_UP | KEY_DOWN))!=0);
-
-  // These need to be stashed away for the caller...
-  strcpy(myDskFile, gpDsk[chosenDSK].szName);
-  strcpy(myDskPath, currentDirDSKs);
 }
 
 // ----------------------------------------------------------------

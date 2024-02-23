@@ -4,7 +4,7 @@
 // DSR along with support for simple 90K, 180K and 360K raw sector disks.
 // This should be enough to load up Scott Adam's Adventure Games 
 // and Tunnels of Doom quests.  Despite the heavy similification
-// of the code, Mike's original copyright remains below:
+// and porting of the code, Mike's original copyright remains below:
 //
 //
 // (C) 2013 Mike Brent aka Tursi aka HarmlessLion.com
@@ -58,30 +58,30 @@
 #include "cpu/tms9918a/tms9918a.h"
 #include "disk.h"
 
-u8 TICC_CRU[8] = {0,0,0,0,0,0,1,0};
 u8 TICC_REG[8] = {0,0,0,0,0,0,0,0};
-u8 TICC_DIR=0;   // 0 means towards 0
+u8 TICC_DIR=0;   // 0 means towards track 0
 
-u8 bDiskDeviceInstalled  = 0;  // DSR installed or not installed... We don't do much with this yet.
-u8 diskSideSelected      = 0;  // Side 0 or Side 1
-u8 driveSelected         = 1;  // We support DSK1, DSK2 and DSK3
+u8 bDiskDeviceInstalled  = 0;       // DSR installed or not installed... We don't do much with this yet.
+u8 diskSideSelected      = 0;       // Side 0 or Side 1
+u8 driveSelected         = DSK1;    // We support DSK1, DSK2 and DSK3
 
-_Disk Disk[MAX_DSKS];           // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
-u8 Disk1_ImageBuf[MAX_DSK_SIZE];// Full buffering
-u8 Disk2_ImageBuf[MAX_DSK_SIZE];// Full buffering
-u8 Disk3_ImageBuf[512];         // First two sectors only - but as a bonus, DSK3 can hold 400K (max 1600 sectors allowed by TI controller)
+Disk_t Disk[MAX_DSKS];              // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
+u8 Disk1_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
+u8 Disk2_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
+u8 Disk3_ImageBuf[512];             // First two sectors only - but as a bonus, DSK3 can hold 400K (max 1600 sectors allowed by TI controller)
 
-char backup_filename[MAX_PATH];
+char backup_filename[MAX_PATH];     // If the user wants, they can backup either of DSK1 or DSK2 (the writeable disks)
 
-u16 max_sectors[MAX_DSKS] = {1440, 1440, 1600}; // For DSK1 and DSK2 we support 1440x256=360K and for DSK3 we allow the full 1600x256=400K
+u16 max_sectors[MAX_DSKS] =         // For DSK1 and DSK2 we support 1440x256=360K and for DSK3 we allow the full 1600x256=400K
+                {1440, 1440, 1600}; 
 
-#define ERR_DEVICEERROR     6
+#define ERR_DEVICEERROR     6       // This is the only error we support. Good enough.
 
+// ------------------------------------------------------
+// Start with no disk mounted and all image data clear
+// ------------------------------------------------------
 void disk_init(void)
 {
-    // ------------------------------------------------------
-    // Start with no disk mounted and all image data clear
-    // ------------------------------------------------------
     memset(Disk, 0x00, sizeof(Disk));
     
     memset(Disk1_ImageBuf, 0x00, MAX_DSK_SIZE);
@@ -93,12 +93,31 @@ void disk_init(void)
     Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us 360KB of memory.
 }
 
-
+// ------------------------------------------------------
+// I don't know if anyone will read the disk CRU bits
+// but we do our best to fill in the required data.
+// ------------------------------------------------------
 u8 disk_cru_read(u16 address)
 {
-    return 1;   // For now... until we want to be more sophisticated
+    switch (address & 0x07)
+    {
+        case 0:     return 0;
+        case 1:     return ((driveSelected == DSK1) ? 1:0);
+        case 2:     return ((driveSelected == DSK2) ? 1:0);
+        case 3:     return ((driveSelected == DSK3) ? 1:0);
+        case 4:     return 0;
+        case 5:     return 0;
+        case 6:     return 1;
+        case 7:     return (diskSideSelected ? 1:0);
+    }
+    return 0;
 }
 
+// ------------------------------------------------------
+// The CRU write selects which drive (DSK1, DSK2 or DSK3)
+// is currently selected and, quite importantly, also 
+// maps the disk DSR into memory or out of memory.
+// ------------------------------------------------------
 void disk_cru_write(u16 address, u8 data)
 {
     switch (address & 0x07)
@@ -120,11 +139,11 @@ void disk_cru_write(u16 address, u8 data)
         case 4:     // select drive 1
         case 5:     // select drive 2
         case 6:     // select drive 3
-            driveSelected = 1 + (address & 0x03);
+            driveSelected = DSK1 + (address & 0x03);    // This will work out to DSK1, DSK2 or DSK3
             break;
             
         case 7: 
-            diskSideSelected = data;
+            diskSideSelected = (data ? 1:0);
             break;
             
         default:
@@ -230,9 +249,10 @@ void WriteTICCRegister(u16 address, u8 val)
 }
 
 // --------------------------------------------------------------------------
-// This is really only used for DSK3 which is not fully buffered in memory.
+// This is really only used for DSK3 which is not fully buffered in memory
+// and so we must go out to the actual .dsk file and seek/read in the sector.
 // --------------------------------------------------------------------------
- void ReadSector(u8 drive, u16 sector, u8 *buf)
+ static void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
     u8 error = true; // Until proven otherwise...
     
@@ -312,17 +332,8 @@ void WriteTICCRegister(u16 address, u8 val)
                 // -----------------------------------------------------------------
                 if (drive == DSK3)
                 {
-                    // Change into the last known DSKs directory for this file
-                    chdir(Disk[drive].path);
-
-                    // Seek to the right sector and read in 256 bytes...
-                    FILE *infile = fopen(Disk[drive].filename, "rb");
-                    if (infile)
-                    {
-                        fseek(infile, index, SEEK_SET);
-                        fread(&pVDPVidMem[destVDP], 1, 256, infile);
-                        fclose(infile);
-                    }
+                    // DSK3 is not cached in memory - so read the sector out from the file.
+                    ReadSector(drive, sectorNumber, &pVDPVidMem[destVDP]);
                 }
                 else
                 {
@@ -334,14 +345,19 @@ void WriteTICCRegister(u16 address, u8 val)
             } 
             else  // Must be write
             {
-                if (drive != DSK3)
+                if (drive != DSK3) // We only support write-back on DSK1 and DSK2
                 {
                     memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
                     *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
                     Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
                     Disk[drive].driveWriteCounter = 2;           // And briefly show that we are writing to the disk
+                    MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
                 }
-                MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
+                else
+                {
+                    success = false;
+                }
+                
             } 
         }
     } else success = false;
@@ -479,6 +495,43 @@ void disk_backup_to_sd(u8 drive)
             fclose(outfile);
         }
     }
+}
+
+// ----------------------------------------------------------------------
+// Utility function to get a list of current files on the mounted disk. 
+// DS994a will use this listing to present a list of files to the user
+// so they can pick a file and easily past it into the keyboard buffer.
+// ----------------------------------------------------------------------
+char dsk_listing[MAX_FILES_PER_DSK][12];    // We store the disk listing here...
+u8   dsk_num_files = 0;                     // And this is how many files we found (never more than MAX_FILES_PER_DSK)
+
+void disk_get_file_listing(u8 drive)
+{
+    u16 sectorPtr = 0;
+    
+    dsk_num_files = 0;
+    for (u16 i=0; i<256; i += 2)
+    {
+        sectorPtr = (Disk[drive].image[256 + (i+0)] << 8) | (Disk[drive].image[256 + (i+1)] << 0);
+        if (sectorPtr == 0) break;
+        if (drive == DSK3)
+        {
+            ReadSector(drive, sectorPtr, fileBuf);
+            for (u8 j=0; j<10; j++) 
+            {
+                dsk_listing[dsk_num_files][j] = fileBuf[j];
+            }
+        }
+        else
+        {
+            for (u8 j=0; j<10; j++) 
+            {
+                dsk_listing[dsk_num_files][j] = Disk[drive].image[(256*sectorPtr) + j];
+            }
+        }
+        dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
+        if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
+    }    
 }
 
 // End of file

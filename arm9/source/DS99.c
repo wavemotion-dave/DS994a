@@ -93,8 +93,8 @@ u8 disk_drive_select = 0;   // Start with DSK1
 // The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
 
-char myDskFile[MAX_PATH];       // This will be filled in with the full filename (including .DSK) of the disk file
-char myDskPath[MAX_PATH];       // This will point to the path where the .DSK file was loaded from (and will be written back to)s
+char myDskFile[MAX_PATH] = {0}; // This will be filled in with the full filename (including .DSK) of the disk file
+char myDskPath[MAX_PATH] = {0}; // This will point to the path where the .DSK file was loaded from (and will be written back to)s
 char initial_file[MAX_PATH];    // In case something was passed on the command line into the emulator (TWL++)
 
 // --------------------------------------------------------------------
@@ -527,10 +527,12 @@ void KeyPushFilename(char *filename)
     }
 }
 
-
-#define MAX_FILES_PER_DSK           32         // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen comfortably
-char dsk_listing[MAX_FILES_PER_DSK][12];       // And room for 12 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
-u8   dsk_num_files = 0;
+// -------------------------------------------------------------------------------
+// Simple little utlity function to show the user the first 32 files on a disk
+// and allow them to select one to put into the keyboard paste buffer. This makes
+// it easier for the user (especially on the little DS handheld) to paste in 
+// a filename or DSK.filename (useful for Adventure, Tunnels of Doom, etc).
+// -------------------------------------------------------------------------------
 void ShowDiskListing(void)
 {
     // Clear the screen...
@@ -552,36 +554,18 @@ void ShowDiskListing(void)
     u8 idx=0;
     DS_Print(5,4,6,      "=== DISK CONTENTS ===");
     DS_Print(1,23,6,     "PRESS A TO PUT IN PASTE BUFFER");
-    dsk_num_files = 0;
+
     if (Disk[disk_drive_select].isMounted)
     {
-        // --------------------------------------------------------
+        // -------------------------------------------------------
         // First find all files and store them into our array...
-        // --------------------------------------------------------
-        u16 sectorPtr = 0;
-        for (u16 i=0; i<256; i += 2)
-        {
-            sectorPtr = (Disk[disk_drive_select].image[256 + (i+0)] << 8) | (Disk[disk_drive_select].image[256 + (i+1)] << 0);
-            if (sectorPtr == 0) break;
-            if (disk_drive_select == DSK3)
-            {
-                ReadSector(disk_drive_select, sectorPtr, fileBuf);
-                for (u8 j=0; j<10; j++) 
-                {
-                    dsk_listing[dsk_num_files][j] = fileBuf[j];
-                }
-            }
-            else
-            {
-                for (u8 j=0; j<10; j++) 
-                {
-                    dsk_listing[dsk_num_files][j] = Disk[disk_drive_select].image[(256*sectorPtr) + j];
-                }
-            }
-            dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
-            if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
-        }
-        
+        // This will update dsk_num_files and dsk_listing[]
+        // -------------------------------------------------------
+        disk_get_file_listing(disk_drive_select);
+
+        // -----------------------------------------
+        // Now display the files for the user...
+        // -----------------------------------------
         u16 key = 0; 
         u8 last_sel = 255;
         u8 sel = 0;
@@ -717,7 +701,7 @@ void DiskMenu(void)
             if (menuSelection == 0) // MOUNT .DSK FILE
             {
                 TILoadDiskFile();   // Sets myDskFile[] and myDskPath[]
-                if (myDskFile != NULL)
+                if (myDskFile[0])  // Was a .DSK picked?
                 {
                     disk_mount(disk_drive_select, myDskPath, myDskFile);
                     DiskMenuShow(true, menuSelection);
@@ -1035,7 +1019,6 @@ char *VDP_Mode_Str[] = {"G1","G2","MC","BT","TX","--","HB","--"};
 
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {
-    extern u16 last_illegal_op_code;
     u8 idx=0;
     
     for (idx=0; idx<16; idx++)
@@ -1328,7 +1311,7 @@ ITCM_CODE void ds99_main(void)
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
           {
-              tms9901.Keyboard[key_push[key_push_read]]=1;
+              tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
               key_push_read = (key_push_read+1) & 0x1F;
           }
       }
