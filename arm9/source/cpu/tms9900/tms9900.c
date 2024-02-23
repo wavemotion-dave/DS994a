@@ -1220,6 +1220,12 @@ static inline __attribute__((always_inline)) void TsTd(void)
     Ts(bytes); Td(bytes);
 }
 
+static inline __attribute__((always_inline)) void TsTd_Accurate(void)
+{
+    u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
+    Ts_Accurate(bytes); Td_Accurate(bytes);
+}
+
 // --------------------------------------------------------------------------------------
 // The context switch saves the WP, PC and Status and sets up for the new workspace.
 // Classic99 checks for a return address of zero but we don't handle that in DS99/4a.
@@ -1319,12 +1325,14 @@ void TMS9900_RunAccurate(void)
 #define ReadPC16    ReadPC16a
 #define Ts          Ts_Accurate
 #define Td          Td_Accurate
+#define TsTd        TsTd_Accurate
             #include "tms9900.inc"
 #undef ReadRAM16
 #undef WriteRAM16
 #undef ReadPC16
 #undef Ts
 #undef Td
+#undef TsTd
             }
         }
     }
