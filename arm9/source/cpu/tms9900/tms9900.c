@@ -1092,11 +1092,11 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
         default: // *Rx+   10c
             tms9900.srcAddress = ReadRAM16(WP_REG(rData));
             WriteRAM16(WP_REG(rData), (tms9900.srcAddress + bytes));
-            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
 
-    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+    if (bytes&2) tms9900.srcAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
 
@@ -1124,11 +1124,11 @@ static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes)
         default: // *Rx+   10c
             tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
             WriteRAM16a(WP_REG(rData), (tms9900.srcAddress + bytes));
-            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
 
-    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+    if (bytes&2) tms9900.srcAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
 // ------------------------------------------------------------------------------------------------------
@@ -1161,11 +1161,11 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
         default: // *Rx+   10c
             tms9900.dstAddress = ReadRAM16(WP_REG(rData));
             WriteRAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
-            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
 
-    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+    if (bytes&2) tms9900.dstAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
 static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
@@ -1192,11 +1192,11 @@ static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
         default: // *Rx+   10c
             tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
             WriteRAM16a(WP_REG(rData), (tms9900.dstAddress + bytes));
-            AddCycleCount((bytes==1?6:8)); // Add 6 cycles for byte address... 8 for word address
+            AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
 
-    tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
+    if (bytes&2) tms9900.dstAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
 // -------------------------------------------------------------------------------
@@ -1216,13 +1216,13 @@ inline void TdWA(void)
 // ----------------------------------------------------------
 static inline __attribute__((always_inline)) void TsTd(void)
 {
-    u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
+    u16 bytes = (tms9900.currentOp & 0x1000) ? SOURCE_BYTE:SOURCE_WORD;     // This handles both Word and Byte addresses
     Ts(bytes); Td(bytes);
 }
 
 static inline __attribute__((always_inline)) void TsTd_Accurate(void)
 {
-    u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
+    u16 bytes = (tms9900.currentOp & 0x1000) ? SOURCE_BYTE:SOURCE_WORD;     // This handles both Word and Byte addresses
     Ts_Accurate(bytes); Td_Accurate(bytes);
 }
 
@@ -1266,6 +1266,9 @@ ITCM_CODE void TMS9900_HandlePendingInterrupts(void)
 
 // -------------------------------------------------------------
 // Mainly for the X = Execute instruction (not frequently used)
+// This chews up almost 20K of program space which isn't ideal
+// but the other methods of handling the X instruction right
+// now look less ideal... and it's only a bit of wasted memory!
 // -------------------------------------------------------------
 void ExecuteOneInstruction(u16 opcode)
 {
