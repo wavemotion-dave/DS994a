@@ -675,8 +675,21 @@ inline void WriteBankMBX(u8 bank)
 // quickly. In theory the WP can point to 8-bit expanded RAM with a pentalty but it's so uncommon that we will not
 // incur the pentaly. This means the emulation will not be cycle accurate but it's good enough to play classic TI games...
 // ------------------------------------------------------------------------------------------------------------------------
-inline u16 ReadRAM16(u16 address)
+inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
 {
+    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
+}
+
+// ----------------------------------------------------------------------------------------------------------------
+// This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
+// ----------------------------------------------------------------------------------------------------------------
+inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
+{
+    if (MemType[address>>4] == MF_SAMS8)
+    {
+        u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
+        return (data16 << 8) | (data16 >> 8);
+    }        
     return __builtin_bswap16(*(u16*) (&MemCPU[address]));
 }
 
@@ -698,24 +711,9 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
     }
 }
 
-// ------------------------------------------------------------------------------------------------------------------------
-// When we know we're reading RAM from the use of the Workspace Pointer (WP) and register access, we can just do this
-// quickly. In theory the WP can point to 8-bit expanded RAM with a pentalty but it's so uncommon that we will not
-// incur the pentaly. This means the emulation will not be cycle accurate but it's good enough to play classic TI games...
-// ------------------------------------------------------------------------------------------------------------------------
-inline u16 ReadRAM16a(u16 address)
-{
-    if (MemType[address>>4] == MF_SAMS8)
-    {
-        u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
-        return (data16 << 8) | (data16 >> 8);
-    }        
-    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
-}
-
-// ----------------------------------------------------------------------------------------
-// See comment above for ReadRAM16() - not cycle accurate but good enough for WP use...
-// ----------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------------------------
+// This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
+// ----------------------------------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
     if (MemType[address>>4] == MF_SAMS8)
@@ -742,10 +740,33 @@ ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 
 // -----------------------------------------------------------------------------------------------
 // A PC fetch is always from main memory and won't trigger anything like VDP or GROM access...
-// so we can be a little smarter/faster in getting the memory here. This routine will handle
-// the SAMS memory map.  See ReadPC16_Fast() for the non-SAMS version.
+// so we can be a little smarter/faster in getting the memory here. This routine does not handle
+// the SAMS memory map for a big speed boost for games that don't use the expanded memory.
 // -----------------------------------------------------------------------------------------------
-ITCM_CODE u16 ReadPC16(void)
+inline __attribute__((always_inline)) u16 ReadPC16(void)
+{
+    u16 address = tms9900.PC; tms9900.PC+=2;
+
+    // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
+    if (address & 0xE000)
+    {
+        u8 memType = MemType[address>>4];
+        if (memType)
+        {
+            AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
+            if (memType == MF_CART)
+            {
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
+            }
+        }
+    }
+    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
+}
+
+// -------------------------------------------------------------------------------------------------------------------------------------
+// This is the accurate version of the above which handles SAMS (yes, code can run from SAMS!) - this chews up more emulation CPU time.
+// -------------------------------------------------------------------------------------------------------------------------------------
+ITCM_CODE u16 ReadPC16a(void)
 {
     u16 address = tms9900.PC; tms9900.PC+=2;
 
@@ -769,35 +790,13 @@ ITCM_CODE u16 ReadPC16(void)
     return __builtin_bswap16(*((u16*)(&MemCPU[address])));
 }
 
-// ------------------------------------------------------------------------------------------------------
-// Here we're not a SAMS game so we don't have to check for or process indexing into SAMS banked memory.
-// ------------------------------------------------------------------------------------------------------
-inline u16 ReadPC16_Fast(void)
-{
-    u16 address = tms9900.PC; tms9900.PC+=2;
-
-    // This will trap out anything that isn't below 0x2000 which is console ROM and heavily utilized...
-    if (address & 0xE000)
-    {
-        u8 memType = MemType[address>>4];
-        if (memType)
-        {
-            AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
-            if (memType == MF_CART)
-            {
-                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
-            }
-        }
-    }
-    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
-}
 
 
 // -----------------------------------------------------------------------------------------
 // We don't perform the actual read - nothing in the TI world should trigger or count on
 // this phantom read... we only take into account any possible cycle penalty.
 // -----------------------------------------------------------------------------------------
-inline void MemoryReadHidden(u16 address)
+inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 {
     if (MemType[address>>4]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
 }
@@ -805,6 +804,9 @@ inline void MemoryReadHidden(u16 address)
 // -------------------------------------------------------------------------------------------
 // Technically everything in the system is a 16-bit read with an 8-bit multiplexer... but
 // we can be a little smarter and not waste the same time that an actual TI-99/4a does.
+// The routines below are general purpose and work for both the accurate and fast versions
+// of our CPU driver. We try to call into one of the above memory handlers whenever possible
+// as these are a bit complex and can slow down emulation.
 // -------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
 {
@@ -856,6 +858,8 @@ ITCM_CODE u16 MemoryRead16(u16 address)
     return (retVal << 8) | (retVal >> 8);
 }
 
+// The TI is a 16-bit system crammed into an 8-bit artchitecture (or, perhaps more acccurately, lots 
+// of 8-bit peripherals were jammed into a 16-bit architecture). 
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
     u8 memType = MemType[address>>4];
@@ -1064,7 +1068,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------
-static inline void Ts(u16 bytes)
+static inline __attribute__((always_inline)) void Ts(u16 bytes) 
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1080,7 +1084,7 @@ static inline void Ts(u16 bytes)
             break;
 
         case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.srcAddress = ReadPC16();
+            tms9900.srcAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
             if (rData) tms9900.srcAddress += ReadRAM16(WP_REG(rData));
             AddCycleCount(8);
             break;
@@ -1095,12 +1099,8 @@ static inline void Ts(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-// ------------------------------------------------------------------------------------------------------
-// The Non-Inline version of the above.  We need to do this because GCC seems to eventually crap out
-// compiling a slew of inline functions into these large CPU switch statments. So for some instructions
-// and for some parts of the emulation, a non-inline version of this is fine.
-// ------------------------------------------------------------------------------------------------------
-ITCM_CODE void Ts_NoInline(u16 bytes)
+
+static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes) 
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1116,7 +1116,7 @@ ITCM_CODE void Ts_NoInline(u16 bytes)
             break;
 
         case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.srcAddress = ReadPC16();
+            tms9900.srcAddress = ReadPC16a();
             if (rData) tms9900.srcAddress += ReadRAM16a(WP_REG(rData));
             AddCycleCount(8);
             break;
@@ -1131,14 +1131,13 @@ ITCM_CODE void Ts_NoInline(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-
 // ------------------------------------------------------------------------------------------------------
 // Destination Address extracted from the Opcode. For this addressing mode the opcode is in the format:
 // 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 // ------------------------------------------------------------------------------------------------------
-static inline void Td(u16 bytes)
+static inline __attribute__((always_inline)) void Td(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
@@ -1154,7 +1153,7 @@ static inline void Td(u16 bytes)
             break;
 
         case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.dstAddress = ReadPC16();
+            tms9900.dstAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
             if (rData) tms9900.dstAddress += ReadRAM16(WP_REG(rData));
             AddCycleCount(8);
             break;
@@ -1169,12 +1168,7 @@ static inline void Td(u16 bytes)
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-// ------------------------------------------------------------------------------------------------------
-// The Non-Inline version of the above.  We need to do this because GCC seems to eventually crap out
-// compiling a slew of inline functions into these large CPU switch statments. So for some instructions
-// and for some parts of the emulation, a non-inline version of this is fine.
-// ------------------------------------------------------------------------------------------------------
-ITCM_CODE void Td_NoInline(u16 bytes)
+static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
@@ -1190,7 +1184,7 @@ ITCM_CODE void Td_NoInline(u16 bytes)
             break;
 
         case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
-            tms9900.dstAddress = ReadPC16();
+            tms9900.dstAddress = ReadPC16a();
             if (rData) tms9900.dstAddress += ReadRAM16a(WP_REG(rData));
             AddCycleCount(8);
             break;
@@ -1204,7 +1198,6 @@ ITCM_CODE void Td_NoInline(u16 bytes)
 
     tms9900.srcAddress &= (0xFFFE | bytes); // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
-
 
 // -------------------------------------------------------------------------------
 // Destination uses workspace addressing only - for instructions like MPY or DIV
@@ -1221,7 +1214,7 @@ inline void TdWA(void)
 // and for this decoding mode, we will look at the current
 // opcode to determine if this is byte or word addressing...
 // ----------------------------------------------------------
-ITCM_CODE void TsTd(void)
+static inline __attribute__((always_inline)) void TsTd(void)
 {
     u16 bytes = (tms9900.currentOp & 0x1000) ? 1:2;     // This handles both Word and Byte addresses
     Ts(bytes); Td(bytes);
@@ -1275,18 +1268,14 @@ void ExecuteOneInstruction(u16 opcode)
     u8 op8 = (u8)OpcodeLookup[opcode];
     switch (op8)
     {
-// This handler is called so infrequently - swap to the non-inline versions to save program memory
-#define Ts  Ts_NoInline  
-#define Td  Td_NoInline  
     #include "tms9900.inc"
-#undef Ts
-#undef Td
     }
 }
 
 // ----------------------------------------------------------------------------------------------------------------------
-// A bit more CPU intensive - this runs almost 15% slower on the DS but allows us to handle more complex emulation such
-// as SAMS and the IDLE instruction. This only gets enabled when needed... most carts will use TMS9900_Run() instead.
+// A bit more CPU intensive - this runs somewhere between 10 and 15% slower on the DS but allows us to handle more 
+// complex emulation such as SAMS and the IDLE instruction. This only gets enabled when needed... most carts will
+// use TMS9900_Run() instead for much improved emulation speed (mostly needed for the older DS-Lite/Phat hardware)
 // ----------------------------------------------------------------------------------------------------------------------
 void TMS9900_RunAccurate(void)
 {
@@ -1318,18 +1307,24 @@ void TMS9900_RunAccurate(void)
             u16 data16;
             
             if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
-            tms9900.currentOp = ReadPC16();
+            tms9900.currentOp = ReadPC16a();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
             
             switch (op8)
             {
-// We need to swap in the 'a' = accurate versions of the ReadRAM and WriteRAM handlers
+// We need to swap in the 'a' = accurate versions of the memory fetch handlers
 // These handlers are a bit slower but necessary to allow for SAMS banked memory access.
 #define ReadRAM16   ReadRAM16a
 #define WriteRAM16  WriteRAM16a
+#define ReadPC16    ReadPC16a
+#define Ts          Ts_Accurate
+#define Td          Td_Accurate
             #include "tms9900.inc"
 #undef ReadRAM16
 #undef WriteRAM16
+#undef ReadPC16
+#undef Ts
+#undef Td
             }
         }
     }
@@ -1343,7 +1338,7 @@ void TMS9900_RunAccurate(void)
 // from one scanline to the next and we compensate the next scanline by the appopriate delta to keep things
 // running at the right speed. In practice this has been good enough to render all the TI games properly.
 //
-// This is chewing up a big chunk of the ITCM memory. Right now the entire opcode handling is about 16K of
+// This is chewing up a big chunk of the ITCM memory. Right now the entire opcode handling is almost 20K of
 // fast instruction memory... but it buys us at least 10% speed by keeping those instructions in the cache.
 // --------------------------------------------------------------------------------------------------------------
 ITCM_CODE void TMS9900_Run(void)
@@ -1351,7 +1346,7 @@ ITCM_CODE void TMS9900_Run(void)
     // --------------------------------------------------------------------
     // Accurate emulation is enabled if we see an IDLE instruction which
     // needs special attention.  Most games don't need this handling
-    // and we save the precious DS CPU cycles as this is 10% to 15% slower.
+    // and we save the precious DS CPU cycles as this is 10% slower.
     // --------------------------------------------------------------------
     if (tms9900.accurateEmuFlags) return TMS9900_RunAccurate();
     
@@ -1364,7 +1359,7 @@ ITCM_CODE void TMS9900_Run(void)
         
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
         if (tms9900.PC & 0x4000) if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
-        tms9900.currentOp = ReadPC16_Fast();
+        tms9900.currentOp = ReadPC16();
         u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
         
         switch (op8)

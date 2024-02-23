@@ -99,7 +99,7 @@ u8 disk_cru_read(u16 address)
     return 1;   // For now... until we want to be more sophisticated
 }
 
-ITCM_CODE void disk_cru_write(u16 address, u8 data)
+void disk_cru_write(u16 address, u8 data)
 {
     switch (address & 0x07)
     {
@@ -232,7 +232,7 @@ void WriteTICCRegister(u16 address, u8 val)
 // --------------------------------------------------------------------------
 // This is really only used for DSK3 which is not fully buffered in memory.
 // --------------------------------------------------------------------------
-ITCM_CODE void ReadSector(u8 drive, u16 sector, u8 *buf)
+ void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
     u8 error = true; // Until proven otherwise...
     
@@ -271,7 +271,7 @@ ITCM_CODE void ReadSector(u8 drive, u16 sector, u8 *buf)
 // we would have to switch to a different disk controller DSR or create our own. This shouldn't be much of a
 // problem as virtually anything that has come out on disk for the TI99 will run on a 360K or smaller floppy.
 // ----------------------------------------------------------------------------------------------------------------
-ITCM_CODE void HandleTICCSector(void)
+ void HandleTICCSector(void)
 {
     bool success = true;
     extern u8 pVDPVidMem[];
@@ -433,7 +433,7 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
-ITCM_CODE void disk_write_to_sd(u8 drive)
+ void disk_write_to_sd(u8 drive)
 {
     // Only DSK1 and DSK2 support write-back
     if (drive != DSK3)

@@ -1111,7 +1111,7 @@ void SetDefaultGameConfig(void)
 {
     MapPlayer1();
 
-    myConfig.frameSkip   = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
+    myConfig.frameSkip   = globalConfig.frameSkip;
     myConfig.frameBlend  = 0;
     myConfig.isPAL       = 0;
     myConfig.maxSprites  = globalConfig.maxSprites;
@@ -1207,13 +1207,20 @@ void FindAndLoadConfig(void)
         fread(&globalConfig, sizeof(globalConfig), 1, fp);
         fread(&AllConfigs, sizeof(AllConfigs), 1, fp);
         fclose(fp);
+        
+        if (globalConfig.config_ver == 0x0007) // Previous config - upgrade the global database
+        {
+            globalConfig.frameSkip = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
+            globalConfig.config_ver = CONFIG_VER;
+        }
 
         if (globalConfig.config_ver != CONFIG_VER)
         {
             memset(&globalConfig, 0x00, sizeof(globalConfig));
             memset(&AllConfigs, 0x00, sizeof(AllConfigs));
-            globalConfig.overlay=1; // TI99 Keyboard
+            globalConfig.overlay=1;     // TI99 Keyboard
             globalConfig.floppySound=1; // Enable sounds
+            globalConfig.frameSkip = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
             SetDefaultGameConfig();
             SaveConfig(FALSE);
         }
@@ -1238,6 +1245,7 @@ void FindAndLoadConfig(void)
         memset(&AllConfigs, 0x00, sizeof(AllConfigs));
         globalConfig.overlay=1; // TI99 Keyboard
         globalConfig.floppySound=1; // Enable sounds
+        globalConfig.frameSkip = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
         SetDefaultGameConfig();
         SaveConfig(FALSE);
     }
@@ -1412,6 +1420,7 @@ const struct options_t GlobalOption_Table[] =
     {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD"},                        &globalConfig.overlay,       2},
     {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
     {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
+    {"DEF FRAMESKP",   {"OFF", "ON"},                                           &globalConfig.frameSkip,     2},
     {"FLOPPY SFX",     {"OFF", "ON"},                                           &globalConfig.floppySound,   2},
 
     {NULL,             {"",      ""},                                           NULL,                        1},

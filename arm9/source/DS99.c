@@ -1800,7 +1800,7 @@ void _putchar(char character) {};   // Not used but needed to link printf()
 // render speech fairly well even on the oldest DS handheld systems.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
-ITCM_CODE void WriteSpeechData(u8 data)
+void WriteSpeechData(u8 data)
 {
     if (myConfig.noExtSpeech) return;
     

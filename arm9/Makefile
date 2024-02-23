@@ -26,7 +26,7 @@ BACKGRD		:=  gfx_data
 #---------------------------------------------------------------------------------
 ARCH	:=
 
-CFLAGS	:=  -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=32 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange  -ftree-partial-pre -fno-semantic-interposition
+CFLAGS	:=  -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange  -ftree-partial-pre -fno-semantic-interposition
 
 CFLAGS	+=	$(INCLUDE) -DARM9
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions

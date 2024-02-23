@@ -18,7 +18,7 @@
 #define MAX_PATH                128
 
 #define MAX_CONFIGS             800
-#define CONFIG_VER              0x0007
+#define CONFIG_VER              0x0008
 
 #define TI99ROM                 0x01
 #define DIRECT                  0x02
@@ -56,7 +56,7 @@ struct __attribute__((__packed__)) GlobalConfig_t
     u8  machineType;
     u8  overlay;
     u8  floppySound;
-    u8  reservedH;
+    u8  frameSkip;
     u8  reservedI;
     u8  reservedJ;
     u8  reservedK;
