@@ -143,7 +143,7 @@ There are also some special keys that are always available:
 
 Memory/System Configurations :
 -----------------------
-By default each game is configured to run on a 32K expanded system which runs 99% of all TI99/4a games. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 20%.  That's generally fine for the DSi and above but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
+By default each game is configured to run on a 32K expanded system which runs 99% of all TI99/4a games. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 15%.  That's fine for the DSi (or better) with the 2X CPU speed but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
 
 To complicate things further, there is also a setting for Mini-Memory (4K of RAM mapped at 7000h) and SuperCart (8K of RAM mapped at 6000h to 7FFFh).  There are a few games that need this extra 8K of memory to operate (mostly a few of the complex Infocom games).  Those games are often identified with a _SC at the end of the filename. To use those games, you would load with the Editor-Assembler (EA) module and change the Cart Type to 'Super Cart'. Since the EA cart loads into GROM space, it can allocate that extra 8K of RAM for use by the program. You would then load your program requriing SuperCart memory via EA option '5' and specifying DSK1.FILENAME
 
@@ -231,6 +231,12 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V1.9: ??-????-2024 by Wavemotion Dave
+* Improvements to the TMS9900 CPU core to improve accuracy.
+* Added new global configuration default for frame skip (DSi, by default will disable frame skip and the DS-Lite/Phat will enable light frameskip).
+* Improved Disk menu handling to show free space and used space plus some instructions on how the paste buffer works.
+* Lots of cleanup and code comments added across the board.
+
 V1.8: 19-Feb-2024 by Wavemotion Dave
 * Improvements to the TMS9918a emulation to fix 5th sprite handling and improve collision detection. Megademo, Eric in Monsterland and Interceptor all work correctly now.
 * Fix for Robots of Death II so it starts properly (was hanging on Speech detection).
