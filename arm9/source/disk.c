@@ -429,7 +429,7 @@ void disk_unmount(u8 drive)
     }
 }
 
-void disk_read_from_sd(u8 drive)
+ITCM_CODE void disk_read_from_sd(u8 drive)
 {
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
@@ -449,7 +449,7 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
- void disk_write_to_sd(u8 drive)
+ ITCM_CODE void disk_write_to_sd(u8 drive)
 {
     // Only DSK1 and DSK2 support write-back
     if (drive != DSK3)
@@ -482,7 +482,7 @@ void disk_backup_to_sd(u8 drive)
         chdir(Disk[drive].path);
 
         DIR* dir = opendir("bak");
-        if (dir) closedir(dir);  // Directory exists... close it out and move on.
+        if (dir) closedir(dir);    // Directory exists... close it out and move on.
         else mkdir("bak", 0777);   // Otherwise create the directory...
         sprintf(backup_filename, "bak/%s", Disk[drive].filename);
         remove(backup_filename);

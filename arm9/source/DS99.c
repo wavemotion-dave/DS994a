@@ -41,7 +41,12 @@
 #include "soundbank.h"
 #include "soundbank_bin.h"
 
-u32 debug[0x10];  // A small bank of 32-bit debug registers we can use for profiling or other sundry debug purposes. Pressing X when loading a game shows the debug registers.
+// --------------------------------------------------------------------------
+// A small bank of 32-bit debug registers we can use for profiling or other 
+// sundry debug purposes. Pressing X when loading a game shows the debug 
+// registers. It's amazing how incredibly useful this proves to be.
+// --------------------------------------------------------------------------
+u32 debug[0x10];
 
 // ---------------------------------------------------------------------------------------
 // The master sound chip for the TI99. The SN sound chip is the same as the TI9919 chip.
@@ -70,22 +75,22 @@ u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;        // 0 if Alpha 
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 
-char tmpBuf[256];              // For simple printf-type output and other sundry uses.
-u8 fileBuf[4096];              // For DSK sector cache and file CRC generation use.
+char tmpBuf[256];               // For simple printf-type output and other sundry uses.
+u8 fileBuf[4096];               // For DSK sector cache and file CRC generation use.
 
-u8 bStartSoundEngine = false;  // Set to true to unmute sound after 1 frame of rendering...
-int bg0, bg1, bg0b, bg1b;      // Some vars for NDS background screen handling
-volatile u16 vusCptVBL = 0;    // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
-u8 last_pal_mode = 99;         // So we show PAL properly in the upper right of the lower DS screen
-u16 floppy_sfx_dampen = 0;     // For Floppy Sound Effects - don't start the playback too often
+u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
+int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
+volatile u16 vusCptVBL = 0;     // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
+u8 last_pal_mode = 99;          // So we show PAL properly in the upper right of the lower DS screen
+u16 floppy_sfx_dampen = 0;      // For Floppy Sound Effects - don't start the playback too often
 
 u8 key_push_write = 0;          // For inserting DSK filenames into the keyboard buffer
 u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard buffer
 char key_push[0x20];            // A small array for when inserting DSK filenames into the keyboard buffer
 char dsk_filename[16];          // Short filename to show on DISK Menu 
 
-u16 PAL_Timing[]  = {656, 596, 546, 504, 470, 435, 728};    // 100%, 110%, 120%, 130%, 140%, 150% and finally 90%
-u16 NTSC_Timing[] = {546, 496, 454, 422, 387, 360, 610};    // 100%, 110%, 120%, 130%, 140%, 150% and finally 90%
+u16 NTSC_Timing[] = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
+u16 PAL_Timing[]  = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 
 u8 disk_menu_items = 0;     // Start with the top menu item
 u8 disk_drive_select = 0;   // Start with DSK1
@@ -793,9 +798,10 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " EXIT   MENU   ");  mini_menu_items++;
 }
 
-// ------------------------------------------------------------------------
-// Handle mini-menu interface...
-// ------------------------------------------------------------------------
+// -------------------------------------------------------------------------
+// Handle mini-menu interface... Lets the user select things like Save/Load
+// State, High Scores and quitting the current game being played.
+// --------------------------------------------------------------------------
 u8 MiniMenu(void)
 {
   u8 retVal = META_KEY_NONE;

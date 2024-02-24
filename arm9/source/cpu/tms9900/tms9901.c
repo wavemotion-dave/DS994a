@@ -289,7 +289,7 @@ ITCM_CODE void TMS9901_ClearJoyKeyData(void)
 // -----------------------------------------------------------------------------------------
 // Handle VDP Interrupt
 // -----------------------------------------------------------------------------------------
-ITCM_CODE void TMS9901_RaiseVDPInterrupt(void)
+void TMS9901_RaiseVDPInterrupt(void)
 {
     if (!tms9901.VDPIntteruptInProcess)                     // Do nothing if we've already fired this interrupt...
     {  
@@ -301,7 +301,7 @@ ITCM_CODE void TMS9901_RaiseVDPInterrupt(void)
     }
 }
 
-ITCM_CODE void TMS9901_ClearVDPInterrupt(void)
+void TMS9901_ClearVDPInterrupt(void)
 {
     if (tms9901.VDPIntteruptInProcess) 
     {

@@ -5,7 +5,7 @@
 
 #define MAX_DSK_SIZE    (360*1024)     // 360K maximum .dsk size
 
-// For now just two disks supported.. that should be fine for just about anything
+// Three disks supported.. that should be fine for just about anything
 enum
 {
     DSK1=0,
@@ -32,6 +32,12 @@ extern Disk_t Disk[MAX_DSKS];
 
 extern char dsk_listing[MAX_FILES_PER_DSK][MAX_DSK_FILE_LEN];   // We store the disk listing here...
 extern u8   dsk_num_files;                                      // And we found this many files...
+
+extern u8 TICC_REG[8];
+extern u8 TICC_DIR;
+extern u8 bDiskDeviceInstalled;
+extern u8 diskSideSelected;
+extern u8 driveSelected;
 
 extern void disk_init(void);
 extern u8   ReadTICCRegister(u16 address);

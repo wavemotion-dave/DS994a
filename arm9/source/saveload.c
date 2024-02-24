@@ -26,7 +26,7 @@
 #include "DS99mngt.h"
 #include "DS99_utils.h"
 #include "SAMS.h"
-#define NORAM 0xFF
+#include "disk.h"
 
 #define TI_SAVE_VER   0x0007        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
@@ -35,7 +35,7 @@
  ********************************************************************************/
 u8  spare[512] = {0x00};    // We keep some spare bytes so we can use them in the future without changing the structure
 static char szFile[160];
-static char szCh1[33];
+extern char tmpBuf[];
 void TI99SaveState() 
 {
   u32 uNbO;
@@ -65,8 +65,8 @@ void TI99SaveState()
       szFile[len-1] = 'v';
   }
   
-  strcpy(szCh1,"SAVING...");
-  DS_Print(10,0,0,szCh1);
+  strcpy(tmpBuf,"SAVING...");
+  DS_Print(10,0,0,tmpBuf);
   
   FILE *handle = fopen(szFile, "wb+");  
   if (handle != NULL) 
@@ -120,9 +120,16 @@ void TI99SaveState()
 
     // Write PSG sound chips...
     if (uNbO) uNbO = fwrite(&snti99, sizeof(snti99),1, handle); 
-      
+
+    // Some high-level DISK stuff...
+    if (uNbO) uNbO = fwrite(TICC_REG,  sizeof(TICC_REG),1, handle); 
+    if (uNbO) uNbO = fwrite(&TICC_DIR, sizeof(TICC_DIR),1, handle); 
+    if (uNbO) uNbO = fwrite(&bDiskDeviceInstalled, sizeof(bDiskDeviceInstalled),1, handle); 
+    if (uNbO) uNbO = fwrite(&diskSideSelected, sizeof(diskSideSelected),1, handle); 
+    if (uNbO) uNbO = fwrite(&driveSelected, sizeof(driveSelected),1, handle); 
+
     // Some spare memory we can eat into...
-    if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
+    if (uNbO) uNbO = fwrite(&spare, 500,1, handle); 
     
     // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
     u32 i=0;
@@ -167,17 +174,17 @@ void TI99SaveState()
     fclose(handle);
       
     if (uNbO) 
-      strcpy(szCh1,"OK ");
+      strcpy(tmpBuf,"OK ");
     else
-      strcpy(szCh1,"ERR");
-     DS_Print(19,0,0,szCh1);
+      strcpy(tmpBuf,"ERR");
+     DS_Print(19,0,0,tmpBuf);
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
     DS_Print(10,0,0,"             "); 
     DisplayStatusLine(true);
   }
   else 
   {
-    strcpy(szCh1,"Error opening SAV file ...");
+    strcpy(tmpBuf,"Error opening SAV file ...");
   }
 }
 
@@ -212,8 +219,8 @@ void TI99LoadState()
     FILE* handle = fopen(szFile, "rb"); 
     if (handle != NULL) 
     {    
-         strcpy(szCh1,"LOADING...");
-         DS_Print(10,0,0,szCh1);
+         strcpy(tmpBuf,"LOADING...");
+         DS_Print(10,0,0,tmpBuf);
        
         // Read Version
         u16 save_ver = 0xBEEF;
@@ -273,8 +280,15 @@ void TI99LoadState()
             // Load PSG Sound Stuff
             if (uNbO) uNbO = fread(&snti99, sizeof(snti99),1, handle); 
             
+            // Load high-level DISK stuff...
+            if (uNbO) uNbO = fread(TICC_REG,  sizeof(TICC_REG),1, handle); 
+            if (uNbO) uNbO = fread(&TICC_DIR, sizeof(TICC_DIR),1, handle); 
+            if (uNbO) uNbO = fread(&bDiskDeviceInstalled, sizeof(bDiskDeviceInstalled),1, handle); 
+            if (uNbO) uNbO = fread(&diskSideSelected, sizeof(diskSideSelected),1, handle); 
+            if (uNbO) uNbO = fread(&driveSelected, sizeof(driveSelected),1, handle); 
+            
             // Load spare memory for future use
-            if (uNbO) uNbO = fread(&spare, 512,1, handle); 
+            if (uNbO) uNbO = fread(&spare, 500,1, handle); 
             
             // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
             u32 i=0;
@@ -334,10 +348,10 @@ void TI99LoadState()
         else uNbO = 0;
         
         if (uNbO) 
-          strcpy(szCh1,"OK ");
+          strcpy(tmpBuf,"OK ");
         else
-          strcpy(szCh1,"ERR");
-         DS_Print(19,0,0,szCh1);
+          strcpy(tmpBuf,"ERR");
+         DS_Print(19,0,0,tmpBuf);
         
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
         DS_Print(10,0,0,"              ");  

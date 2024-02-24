@@ -26,9 +26,10 @@ BACKGRD		:=  gfx_data
 #---------------------------------------------------------------------------------
 ARCH	:=
 
-CFLAGS	:=  -Wall -Wno-misleading-indentation -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange  -ftree-partial-pre -fno-semantic-interposition
+CFLAGS	:=  -Wall -Wno-misleading-indentation -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange -ftree-partial-pre -fno-semantic-interposition
 
 CFLAGS	+=	$(INCLUDE) -DARM9
+
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	$(ARCH) -march=armv5te -mtune=arm946e-s -DSN_UPSHIFT=2
@@ -38,7 +39,7 @@ LDFLAGS	=	-specs=ds_arm9.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:= -ldswifi9 -lfat -lnds9 -lmm9
+LIBS	:= -lfat -lnds9 -lmm9
  
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

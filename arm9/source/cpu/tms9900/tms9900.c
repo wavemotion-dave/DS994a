@@ -583,13 +583,13 @@ void TMS9900_ClearAccurateEmulationFlag(u16 flag)
 static inline __attribute__((always_inline)) u8 ReadGROM(void)
 {
     AddCycleCount(GROM_READ_CYCLES);
-    return MemGROM[tms9900.gromAddress++];
+    return MemGROM[tms9900.gromAddress++];  // Auto-increment - we are not handling WRAP
 }
 
 // ------------------------------------------------------------------------------
 // The GROM address is 16 bits but is always read/written 8-bits at a time
 // so we have to handle the high byte and low byte transfers...
-// The hardware will wrap the 13-bit counter but we are ignoring that for speed
+// The hardware will wrap the 13-bit counter but we are ignoring that for speed.
 // ------------------------------------------------------------------------------
 ITCM_CODE u8 ReadGROMAddress(void)
 {
@@ -597,6 +597,7 @@ ITCM_CODE u8 ReadGROMAddress(void)
 
     AddCycleCount(GROM_READ_ADDR_CYCLES);
     tms9900.gromWriteLoHi = 0;
+    
     if (tms9900.gromReadLoHi) // Low byte
     {
         // Reads are always address + 1 - we are not handling WRAP
@@ -1099,7 +1100,7 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
     if (bytes&2) tms9900.srcAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-
+// This version makes memory calls that take into account the SAMS banking
 static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes) 
 {
     u16 rData = REG_GET_FROM_OPCODE();
@@ -1168,6 +1169,7 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
     if (bytes&2) tms9900.dstAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
+// This version makes memory calls that take into account the SAMS banking
 static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;

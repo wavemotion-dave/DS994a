@@ -728,7 +728,6 @@
         data16 = MemoryRead16(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         Td(SOURCE_WORD);
-        debug[0]=0;
         MemoryReadHidden(tms9900.dstAddress);
         MemoryWrite16(tms9900.dstAddress, data16);
         break;
@@ -739,7 +738,6 @@
         data8 = MemoryRead8(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
         Td(SOURCE_BYTE);
-        debug[0]=0;
         MemoryReadHidden(tms9900.dstAddress);
         MemoryWrite8(tms9900.dstAddress, data8);
         break;

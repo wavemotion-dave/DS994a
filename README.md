@@ -232,8 +232,8 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V1.9: ??-????-2024 by Wavemotion Dave
-* Improvements to the TMS9900 CPU core to improve accuracy.
+V1.9: 24-Feb-2024 by Wavemotion Dave
+* Improvements to the TMS9900 CPU core to improve accuracy and slight optmization for another frame of performance.
 * Added new global configuration default for frame skip (DSi, by default will disable frame skip and the DS-Lite/Phat will enable light frameskip).
 * Improved Disk menu handling to show free space and used space plus some instructions on how the paste buffer works.
 * Lots of cleanup and code comments added across the board.

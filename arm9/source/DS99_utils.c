@@ -1150,6 +1150,8 @@ void SetDefaultGameConfig(void)
     
     if (file_crc == 0xc25be90f) MapESDX();      // Restless II uses ESDX for movement
     
+    if (file_crc == 0x55d49b68) MapESDX();      // Zero Zap uses ESDX for movement
+    
     if (file_crc == 0x742f88ce) MapSTSOS();     // Star Trek SOS maps keys uniquely
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
@@ -1281,7 +1283,7 @@ const struct options_t Option_Table[2][20] =
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                   &myConfig.isPAL,        2},
         {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                                &myConfig.machineType,  2},
         {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM"},                                           &myConfig.cartType,     5},
-        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT"},              &myConfig.emuSpeed,     7},
+        {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT", "80 PERCENT"},&myConfig.emuSpeed,     8},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},
         {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                             &myConfig.memWipe,      2},
