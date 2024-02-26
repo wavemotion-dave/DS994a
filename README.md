@@ -10,6 +10,7 @@ Features :
 -----------------------
 * Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
 * Cart loads up to 8192K (8MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
+* Mixed mode C/D/G/8/9 files supported as well as the MESS/MAME .RPK (**R**om **P**ac**K**s)
 * 32K RAM Expansion built-in
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX and Mini-Mem carts supported with extra RAM. Use Options to select cart type
