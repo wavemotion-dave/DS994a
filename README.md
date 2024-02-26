@@ -1,5 +1,5 @@
 # DS99/4a
-DS994a - A Texas Instruments TI99/4a Emulator for the DS/DSi
+DS994a is a Texas Instruments TI99/4a Emulator for the DS/DSi/XL/LL
 
 To run requires the TI BIOS ROMS in the /roms/bios or /roms/ti99 directory.
 See BIOS files further down for the ones you need.
