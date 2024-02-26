@@ -75,6 +75,12 @@ unsigned int my_read(void *udata, unsigned int offset)
 	return 0x100;
 }
 
+// ------------------------------------------------------------------------------------------------
+// This will call into lowzip to extract the file directly into our memory area - we don't even
+// bother buffering - if the load fails, we'll simply put 0xFF into memory to prevent the TI system
+// from seeing anything that resembles a program. lowzip is great - minimal size and very few 
+// resources consumed ... but it is not the fastest. A 512K load takes a few seconds. Good enough!
+// ------------------------------------------------------------------------------------------------
 static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf)
 {
 	int retcode = 1;
@@ -96,6 +102,11 @@ static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf
 	return retcode;
 }
 
+
+// ------------------------------------------------------------------------------------------------
+// Match a ROM to a socket so we know where to load this into our memory. It's not the fastest
+// lookup but we're going to look up at most 3 roms and so the speed here doesn't matter.
+// ------------------------------------------------------------------------------------------------
 u8 match_rom_to_socket(u8 rom_idx)
 {
     for (u8 socket_num = 0; socket_num < cart_layout.num_sockets; socket_num++)
@@ -109,6 +120,11 @@ u8 match_rom_to_socket(u8 rom_idx)
     return 0;
 }
 
+// ---------------------------------------------------------------------------------------------------
+// At this point we have extracted the XML into one big-ass string which is passed in for parsing.
+// Using YXML we parse through the XML string and pull out the relevant fields we need to aid us
+// in figuring out what kind of PCB type this cartridge is and what roms are loaded in which sockets.
+// ---------------------------------------------------------------------------------------------------
 u8 rpk_parse_xml(char *xml_str)
 {
     // Get YXML ready to parse - it needs some buffer space and we steal into the fileBuf[] mid-way
