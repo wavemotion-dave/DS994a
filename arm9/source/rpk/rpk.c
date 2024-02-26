@@ -178,6 +178,12 @@ u8 rpk_parse_xml(char *xml_str)
     return 0;
 }
 
+// ----------------------------------------------------------------------
+// This is the most common loader - 'C' files are loaded of any size (if
+// more than 8K, we automatically install the cart banking) and we also
+// allow for a 'D' in rom2_socket that must be exactly 8K and we allow
+// for a GROM load as well.
+// ----------------------------------------------------------------------
 u8 rpk_load_standard(void)
 {
     u16 numCartBanks = 1;
@@ -256,6 +262,11 @@ u8 rpk_load_standard(void)
     return err;
 }
 
+// ----------------------------------------------------------------------
+// This is the banked format with 8K of 'C' memory and 8K of 'D' memory
+// that is banswitched by writing to the cart space. We also allow a
+// GROM load as well.  This is the equivilent for non-RPK as C/D/G loads.
+// ----------------------------------------------------------------------
 u8 rpk_load_paged()
 {
     u8 err = 0;
@@ -317,6 +328,11 @@ u8 rpk_load_paged()
     return err;
 }
 
+// ----------------------------------------------------------------------
+// This is the normal non-inverted load - possibly with a GROM file. 
+// This is heavily used by the homebrew and FinalGROM community - the
+// files in non-RPK format usually end with '8'
+// ----------------------------------------------------------------------
 u8 rpk_load_paged378(void)
 {
     u8 err = 0;
@@ -369,6 +385,11 @@ u8 rpk_load_paged378(void)
     return err;
 }
 
+// ----------------------------------------------------------------------
+// This is the 'inverted' cart load - this isn't used as much these days
+// and we actually take the time to swap the banks and lay them out
+// in non-inverted manner to make the rest of the code logic simpler.
+// ----------------------------------------------------------------------
 u8 rpk_load_paged379i(void)
 {
     u8 err = 0;
@@ -407,6 +428,9 @@ u8 rpk_load_paged379i(void)
     return err;
 }
 
+// ----------------------------------------------------------------------
+// Only for DataBiotics carts which use CRU for cart paging into >6000
+// ----------------------------------------------------------------------
 u8 rpk_load_pagedcru(void)
 {
     u8 err = 0;
@@ -441,8 +465,10 @@ u8 rpk_load_pagedcru(void)
     return err;
 }
 
-// MBX is a standard load and then we mark the cart as 'MBX with RAM' which
-// will map in 1K of RAM and set the appopriate banking hotspots.
+// ----------------------------------------------------------------------
+// MBX is a standard load and then we mark the cart as 'MBX with RAM' 
+// which will map in 1K of RAM and set the appopriate banking hotspots.
+// ----------------------------------------------------------------------
 u8 rpk_load_mbx(void)
 {
     u8 err = 0;
@@ -453,8 +479,10 @@ u8 rpk_load_mbx(void)
     return err;
 }
 
-// MINIMEM is a standard load and then we mark the cart as 'MINIMEM' which
-// will map in 4K of RAM at >7000. This is not yet persisted.
+// ----------------------------------------------------------------------
+// MINIMEM is a standard load and then we mark the cart as 'MINIMEM' 
+// which will map in 4K of RAM at >7000. This is not yet persisted.
+// ----------------------------------------------------------------------
 u8 rpk_load_minimem(void)
 {
     u8 err = 0;
@@ -466,19 +494,18 @@ u8 rpk_load_minimem(void)
 }
 
 // Super Cart is not yet supported. We could use the Super 8K version here... maybe.
-u8 rpk_load_super(void)
-{
-    u8 err = 1;
-    return err;
-}
+u8 rpk_load_super(void) {u8 err = 1; return err;}
 
 // Paged7 is not yet supported. Only used for TI-Calc anyway.
-u8 rpk_load_paged7(void)
-{
-    u8 err = 1;
-    return err;
-}
+u8 rpk_load_paged7(void) {u8 err = 1; return err;}
 
+
+// ------------------------------------------------------------------------------
+// This is the only public interface - the caller should pass the filename.rpk 
+// and this will unpack it and extract the layout.xml and figure out what 
+// individual roms get loaded where in the memory map... It returns 0 if there
+// were no errors or non-zero if an error was encoutered.
+// ------------------------------------------------------------------------------
 u8 rpk_load(const char* filename)
 {
     lowzip_file *fileinfo;
@@ -562,3 +589,5 @@ u8 rpk_load(const char* filename)
 
     return errors;
 }
+
+// End of file
