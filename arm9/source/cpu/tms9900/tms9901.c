@@ -113,13 +113,17 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         if (cruAddress & 0xFC00)
         {
-            if ((cruAddress & 0xF80) == 0x880)    // Disk support from >880 to >888 (CRU base >1000)
+            if ((cruAddress & 0xF80) == 0x880)       // Disk support from >880 to >888 (CRU base >1000)
             {
                 disk_cru_write(cruAddress, dataBit);
             }
             else if ((cruAddress & 0xFFE) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
             {
                 SAMS_cru_write(cruAddress, dataBit);
+            }
+            else if ((cruAddress & 0xF80) == 0x400)  // Cart-based CRU bankswitching... (CRU base >800)
+            {
+                cart_cru_write(cruAddress, dataBit);
             }
         }
         else  // This is the internal console CRU bits below CRU base >400... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
@@ -201,6 +205,10 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
             else if ((cruAddress & 0xF80) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
             {
                 retVal = SAMS_cru_read(cruAddress);
+            }
+            else if ((cruAddress & 0xF80) == 0x400)  // Cart-based CRU bankswitching... (CRU base >800)
+            {
+                retVal = cart_cru_read(cruAddress);
             }
         }
         else

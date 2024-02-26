@@ -38,10 +38,10 @@ u8      MemCPU[0x10000];            // 64K of CPU MemCPU Space
 u8      MemGROM[0x10000];           // 64K of GROM MemCPU Space
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
 u8      DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
-        
-u8      FastCartBuffer[0x2000] __attribute__((section(".dtcm")));     // We can speed up 8K carts... use .DTCM memory (even for multi-banks it will help with bank 0)
-u8      *MemCART               __attribute__((section(".dtcm")));     // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
-u32     MAX_CART_SIZE = (512*1024);                                   // Allow carts up to 512K in size (DSI will bump this to 8MB)
+u8      SwapCartBuffer[0x2000];     // A bit of memory to allow us to swap banks (inverted carts, etc)
+
+u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
+u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSI will bump this to 8MB)
         
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
@@ -657,8 +657,7 @@ inline __attribute__((always_inline)) void WriteBank(u16 address)
     u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
     bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
     tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
-    if (bank == 0) tms9900.cartBankPtr = FastCartBuffer;    // If bank 0 we can use the fast cart buffer...
-    else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // Pre-calculate and store a pointer to the start of the right bank
+    tms9900.cartBankPtr = MemCART+tms9900.bankOffset;       // And point to the right place in memory for cart fetches
 }
 
 // --------------------------------------------------------------------------
@@ -667,8 +666,35 @@ inline __attribute__((always_inline)) void WriteBank(u16 address)
 // --------------------------------------------------------------------------
 inline __attribute__((always_inline)) void WriteBankMBX(u8 bank)
 {
-    bank &= 0x3;
-    tms9900.cartBankPtr = MemCART+(bank*0x1000) - 0x1000;    // The -0x1000 offsets by 4K so that the memory fetch works correctly at >7000
+    bank &= 0x3;                                            // There are up to 4 cart banks
+    tms9900.bankOffset = (bank*0x1000) - 0x1000;            // The -0x1000 offsets by 4K so that the memory fetch works correctly at >7000
+    tms9900.cartBankPtr = MemCART+tms9900.bankOffset;       // And point to the right place in memory for cart fetches
+}
+
+// ------------------------------------------------------------------------------
+// For the few carts that use CRU banking... does not need to be in fast memory.
+// This is mainly DataBiotics carts (2-8 banks) and Super Carts (only 4 banks).
+// ------------------------------------------------------------------------------
+u8 cart_cru_shadow[16] = {0};
+void cart_cru_write(u16 cruAddress, u8 dataBit)  
+{
+    if (myConfig.cartType == CART_TYPE_PAGEDCRU)
+    {
+        // Paged CRU maps down to no more than 8 banks
+        cruAddress &= 0xF;
+        if ((cruAddress > 0) && (dataBit != 0)) // Is the bit ON and we are above the base address?
+        {
+            u8 bank = (cruAddress-1)/2;                         // Swap in the new bank - logic borrowed from MAME
+            tms9900.bankOffset = (bank*0x2000);                 // Keep this up to date for SAVE/LOAD state
+            tms9900.cartBankPtr = MemCART+tms9900.bankOffset;   // And point to the right place in memory for cart fetches
+        }
+        cart_cru_shadow[cruAddress] = dataBit;
+    }
+}
+
+u8 cart_cru_read(u16 cruAddress)
+{
+    return cart_cru_shadow[cruAddress & 0xF];   // Return shadow value of CRU bit
 }
 
 // ------------------------------------------------------------------------------------------------------------------------
@@ -1250,7 +1276,7 @@ void TMS9900_ContextSwitch(u16 address)
 // Users of DS99/4a are interested in playing Hunt the Wumpus and Tunnels of Doom and
 // so we won't overcomplicate things...
 // ---------------------------------------------------------------------------------------
-ITCM_CODE void TMS9900_HandlePendingInterrupts(void)
+void TMS9900_HandlePendingInterrupts(void)
 {
     // --------------------------------------------------------------------------------
     // Literally any level except 0 will allow VDP interrupt.

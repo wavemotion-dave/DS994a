@@ -92,21 +92,21 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&emuActFrames, sizeof(emuActFrames), 1, handle); 
     if (uNbO) uNbO = fwrite(&timingFrames, sizeof(timingFrames), 1, handle); 
       
-    // Write VDP
-    if (uNbO) uNbO = fwrite(VDP, sizeof(VDP),1, handle); 
-    if (uNbO) uNbO = fwrite(&VDPCtrlLatch, sizeof(VDPCtrlLatch),1, handle); 
-    if (uNbO) uNbO = fwrite(&VDPStatus, sizeof(VDPStatus),1, handle); 
-    if (uNbO) uNbO = fwrite(&FGColor, sizeof(FGColor),1, handle); 
-    if (uNbO) uNbO = fwrite(&BGColor, sizeof(BGColor),1, handle); 
-    if (uNbO) uNbO = fwrite(&OH, sizeof(OH),1, handle); 
-    if (uNbO) uNbO = fwrite(&IH, sizeof(IH),1, handle);       
-    if (uNbO) uNbO = fwrite(&ScrMode, sizeof(ScrMode),1, handle); 
-    if (uNbO) uNbO = fwrite(&VDPDlatch, sizeof(VDPDlatch),1, handle); 
-    if (uNbO) uNbO = fwrite(&VAddr, sizeof(VAddr),1, handle); 
-    if (uNbO) uNbO = fwrite(&CurLine, sizeof(CurLine),1, handle); 
-    if (uNbO) uNbO = fwrite(&ColTabM, sizeof(ColTabM),1, handle); 
-    if (uNbO) uNbO = fwrite(&ChrGenM, sizeof(ChrGenM),1, handle); 
-    if (uNbO) uNbO = fwrite(pVDPVidMem, 0x4000,1, handle); 
+    // Save VDP stuff...
+    if (uNbO) uNbO = fwrite(VDP,            sizeof(VDP),            1, handle); 
+    if (uNbO) uNbO = fwrite(&VDPCtrlLatch,  sizeof(VDPCtrlLatch),   1, handle); 
+    if (uNbO) uNbO = fwrite(&VDPStatus,     sizeof(VDPStatus),      1, handle); 
+    if (uNbO) uNbO = fwrite(&FGColor,       sizeof(FGColor),        1, handle); 
+    if (uNbO) uNbO = fwrite(&BGColor,       sizeof(BGColor),        1, handle); 
+    if (uNbO) uNbO = fwrite(&OH,            sizeof(OH),             1, handle); 
+    if (uNbO) uNbO = fwrite(&IH,            sizeof(IH),             1, handle);       
+    if (uNbO) uNbO = fwrite(&ScrMode,       sizeof(ScrMode),        1, handle); 
+    if (uNbO) uNbO = fwrite(&VDPDlatch,     sizeof(VDPDlatch),      1, handle); 
+    if (uNbO) uNbO = fwrite(&VAddr,         sizeof(VAddr),          1, handle); 
+    if (uNbO) uNbO = fwrite(&CurLine,       sizeof(CurLine),        1, handle); 
+    if (uNbO) uNbO = fwrite(&ColTabM,       sizeof(ColTabM),        1, handle); 
+    if (uNbO) uNbO = fwrite(&ChrGenM,       sizeof(ChrGenM),        1, handle); 
+    if (uNbO) uNbO = fwrite(pVDPVidMem,     0x4000,                 1, handle); 
     pSvg = ChrGen-pVDPVidMem;
     if (uNbO) uNbO = fwrite(&pSvg, sizeof(pSvg),1, handle); 
     pSvg = ChrTab-pVDPVidMem;
@@ -157,20 +157,6 @@ void TI99SaveState()
         }
     }
       
-    // And finally the 'special' memory layout carts... we only write these if needed
-    if (myConfig.cartType == CART_TYPE_SUPERCART)
-    {
-        if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
-    }
-    if (myConfig.cartType == CART_TYPE_MINIMEM)
-    {
-        if (uNbO) uNbO = fwrite(MemCPU+0x7000, 0x1000, 1, handle); 
-    }
-    if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-    {
-        if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
-    }
-
     fclose(handle);
       
     if (uNbO) 
@@ -236,8 +222,7 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&theSAMS, sizeof(theSAMS),1, handle); 
             
             // Ensure we are pointing to the right cart bank in memory
-            if (tms9900.bankOffset == 0) tms9900.cartBankPtr = FastCartBuffer;
-            else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;
+            tms9900.cartBankPtr = MemCART+tms9900.bankOffset;
             
             // Restore TI Memory that might possibly be volatile (RAM areas mostly)
             if (uNbO) uNbO = fread(MemCPU+0x2000, 0x2000, 1, handle); 
@@ -249,23 +234,23 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&emuActFrames, sizeof(emuActFrames), 1, handle); 
             if (uNbO) uNbO = fread(&timingFrames, sizeof(timingFrames), 1, handle); 
             
-            // Load VDP
-            if (uNbO) uNbO = fread(VDP, sizeof(VDP),1, handle); 
-            if (uNbO) uNbO = fread(&VDPCtrlLatch, sizeof(VDPCtrlLatch),1, handle); 
-            if (uNbO) uNbO = fread(&VDPStatus, sizeof(VDPStatus),1, handle); 
-            if (uNbO) uNbO = fread(&FGColor, sizeof(FGColor),1, handle); 
-            if (uNbO) uNbO = fread(&BGColor, sizeof(BGColor),1, handle); 
-            if (uNbO) uNbO = fread(&OH, sizeof(OH),1, handle); 
-            if (uNbO) uNbO = fread(&IH, sizeof(IH),1, handle); 
-            if (uNbO) uNbO = fread(&ScrMode, sizeof(ScrMode),1, handle); 
-            extern void (*RefreshLine)(u8 uY);  RefreshLine = SCR[ScrMode].Refresh;
-            if (uNbO) uNbO = fread(&VDPDlatch, sizeof(VDPDlatch),1, handle); 
-            if (uNbO) uNbO = fread(&VAddr, sizeof(VAddr),1, handle); 
-            if (uNbO) uNbO = fread(&CurLine, sizeof(CurLine),1, handle); 
-            if (uNbO) uNbO = fread(&ColTabM, sizeof(ColTabM),1, handle); 
-            if (uNbO) uNbO = fread(&ChrGenM, sizeof(ChrGenM),1, handle); 
-            
-            if (uNbO) uNbO = fread(pVDPVidMem, 0x4000,1, handle); 
+            // Load VDP stuff...
+            if (uNbO) uNbO = fread(VDP,             sizeof(VDP),            1, handle); 
+            if (uNbO) uNbO = fread(&VDPCtrlLatch,   sizeof(VDPCtrlLatch),   1, handle); 
+            if (uNbO) uNbO = fread(&VDPStatus,      sizeof(VDPStatus),      1, handle); 
+            if (uNbO) uNbO = fread(&FGColor,        sizeof(FGColor),        1, handle); 
+            if (uNbO) uNbO = fread(&BGColor,        sizeof(BGColor),        1, handle); 
+            if (uNbO) uNbO = fread(&OH,             sizeof(OH),             1, handle); 
+            if (uNbO) uNbO = fread(&IH,             sizeof(IH),             1, handle); 
+            if (uNbO) uNbO = fread(&ScrMode,        sizeof(ScrMode),        1, handle); 
+            if (uNbO) uNbO = fread(&VDPDlatch,      sizeof(VDPDlatch),      1, handle); 
+            if (uNbO) uNbO = fread(&VAddr,          sizeof(VAddr),          1, handle); 
+            if (uNbO) uNbO = fread(&CurLine,        sizeof(CurLine),        1, handle); 
+            if (uNbO) uNbO = fread(&ColTabM,        sizeof(ColTabM),        1, handle); 
+            if (uNbO) uNbO = fread(&ChrGenM,        sizeof(ChrGenM),        1, handle); 
+            extern void (*RefreshLine)(u8 uY);      RefreshLine = SCR[ScrMode].Refresh;
+
+            if (uNbO) uNbO = fread(pVDPVidMem, 0x4000, 1, handle); 
             if (uNbO) uNbO = fread(&pSvg, sizeof(pSvg),1, handle); 
             ChrGen = pSvg + pVDPVidMem;
             if (uNbO) uNbO = fread(&pSvg, sizeof(pSvg),1, handle); 
@@ -313,21 +298,7 @@ void TI99LoadState()
                     i+=4;
                 }
             }
-            
-            // And finally the 'special' memory layout carts...
-            if (myConfig.cartType == CART_TYPE_SUPERCART)
-            {
-                if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
-            }
-            if (myConfig.cartType == CART_TYPE_MINIMEM)
-            {
-                if (uNbO) uNbO = fread(MemCPU+0x7000, 0x1000, 1, handle); 
-            }
-            if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-            {
-                if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
-            }
-            
+           
             // Restore the SAMS memory banks as they were... this should get our memory map back properly
             SAMS_cru_write(0x0000, theSAMS.cruSAMS[0]);
             SAMS_cru_write(0x0001, theSAMS.cruSAMS[1]);            

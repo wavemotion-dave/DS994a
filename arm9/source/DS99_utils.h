@@ -38,6 +38,7 @@
 #define CART_TYPE_MINIMEM       2
 #define CART_TYPE_MBX_NO_RAM    3
 #define CART_TYPE_MBX_WITH_RAM  4
+#define CART_TYPE_PAGEDCRU      5
 
 typedef struct {
   char szName[MAX_ROM_LENGTH];

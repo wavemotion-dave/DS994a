@@ -90,7 +90,7 @@ File Types Supported :
 -----------------------
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
-* Files whose base filename ends in 3 or 9 are considered "inverted" files and the banks will be swapped appopriately.
+* Files whose base filename ends in 9 are considered "inverted" files and the banks will be swapped appopriately.
 * Files whose base filename ends in 0 is considered a system GROM and can be used to replace the standard console GROMs (e.g. Son of Board).
 * All other files are considered '8' files which is non-inverted banking up to 8192K (8MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
@@ -308,7 +308,7 @@ V0.9: 02-Feb-2023 by wavemotion-dave
 V0.8: 29-Jan-2023 by wavemotion-dave
 * Added DSK2 support and both drives now handle up to 360K disks. 
 * Improved default key mapping so X='1' and Y='2' allowing faster game startup.
-* Inverted .bin files now supported with the filenames ending in '3' or '9'.
+* Inverted .bin files now supported with the filenames ending in '9'.
 * Added ability to paste in DSKx.FILENAME from the Disk menu
 * Other cleanups as time permitted.
 

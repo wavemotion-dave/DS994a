@@ -102,7 +102,7 @@ enum _OPCODES
 extern u8   MemCPU[];
 extern u8   MemGROM[];
 extern u8   DiskDSR[];
-extern u8   FastCartBuffer[];
+extern u8   SwapCartBuffer[];
 extern u8   MemType[];
 extern u16  BankMasks[];
 
@@ -244,6 +244,8 @@ extern void TMS9900_ClearInterrupt(u16 iMask);
 extern void TMS9900_SetAccurateEmulationFlag(u16 flag);
 extern void TMS9900_ClearAccurateEmulationFlag(u16 flag);
 extern void SAMS_cru_write(u16 address, u8 dataBit);
+extern void cart_cru_write(u16 cruAddress, u8 dataBit);
+extern u8 cart_cru_read(u16 cruAddress);
 extern void WriteBankMBX(u8 bank);
 
 #endif

@@ -33,30 +33,12 @@ SAMS theSAMS    __attribute__((section(".dtcm")));         // The entire state o
 u8 sams_highwater_bank __attribute__((section(".dtcm"))) = 0; // To track how far into SAMS memory we used
 
 // ---------------------------------------------------------
-// Allocate enough memory for a SAMS 512K (DS) or 1MB (DSi)
+// Setup for SAMS 512K (DS) or 1MB (DSi)
 // ---------------------------------------------------------
 void SAMS_Initialize(void)
 {
     // Start with everything cleared out...
     memset(&theSAMS, 0x00, sizeof(theSAMS));
-    
-    // Only allocate the memory once...
-    if (isDSiMode())
-    {
-        theSAMS.numBanks = 256;                         // 256 * 4K = 1024K
-        if (MemSAMS == 0)
-        {
-            MemSAMS = malloc((theSAMS.numBanks) * 0x1000);  // Allocate the SAMS memory 
-        }
-    }
-    else
-    {
-        theSAMS.numBanks = 128;                         // 128 * 4K = 512K
-        if (MemSAMS == 0)
-        {
-            MemSAMS = malloc((theSAMS.numBanks) * 0x1000);  // Allocate the SAMS memory 
-        }
-    }
     
     // --------------------------------------------------------------
     // For SAMS memory, ensure everything points to the right banks
@@ -65,6 +47,9 @@ void SAMS_Initialize(void)
     theSAMS.cruSAMS[0] = 0;
     theSAMS.cruSAMS[1] = 0;
     
+    // SAMS memory is bigger for the DSi where we have more room...
+    theSAMS.numBanks = (isDSiMode() ? 256 : 128);  // 256 * 4K = 1024K,  128 * 4K = 512K
+    
     // For each bank... set the default memory banking pointers 
     for (u8 i=0; i<16; i++)
     {
@@ -72,7 +57,10 @@ void SAMS_Initialize(void)
         theSAMS.memoryPtr[i] = MemSAMS + (i * 0x1000);
     }
     
-    // We don't map the MemType[] here.. only when CRU bit is written
+    // --------------------------------------------------------------------------
+    // We don't map the MemType[] here.. only when CRU bit is written but we do
+    // clear out the SAMS memory to all zeros (helps with savestate compression)
+    // --------------------------------------------------------------------------
     memset(MemSAMS, 0x00, ((theSAMS.numBanks) * 0x1000));
     
     // -----------------------------------------------------------------
@@ -84,6 +72,12 @@ void SAMS_Initialize(void)
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
         SAMS_cru_write(0,0);    // Swap out the DSR
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode)
+        
+        if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
+    }
+    else
+    {
+        if (!isDSiMode()) MAX_CART_SIZE = (512 * 1024);  // If we are DS-Lite/Phat, we can support a larger cart size when SAMS is disabled
     }
     
     sams_highwater_bank = 0x00;
@@ -97,10 +91,16 @@ const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
 
 inline void SAMS_SwapBank(u8 memory_region, u8 bank)
 {
-    if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
+    // For smaller than 1MB SAMS, it's acceptable to mirror the memory (so 512K ends up visible in both halves of the banking)
+    bank &= (theSAMS.numBanks - 1);
+    
+    if (bank < theSAMS.numBanks)
     {
-        theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
-        if (bank > sams_highwater_bank) sams_highwater_bank = bank;
+        if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
+        {
+            theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
+            if (bank > sams_highwater_bank) sams_highwater_bank = bank;
+        }
     }
 }
 

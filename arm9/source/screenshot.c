@@ -37,18 +37,16 @@ bool screenshotbmp(const char* filename) {
     REG_DISPCAPCNT = DCAP_BANK(DCAP_BANK_VRAM_B) | DCAP_SIZE(DCAP_SIZE_256x192) | DCAP_ENABLE;
     while(REG_DISPCAPCNT & DCAP_ENABLE);
 
-    u8 *temp;
-    if (isDSiMode())
-    {
-        // On the DSi there is ample memory to just allocate the buffer and free it below...
-        temp = malloc(256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER));
-    }
-    else
-    {
-        extern u8 *MemSAMS;
-        temp = MemSAMS + (412 * 1024);  // Take our chances here... if we're on the older DS and we've got more than 412K of SAMS usage this will not end well
-    }
-
+    // ---------------------------------------------------------------
+    // This is 100K off the back end of the shared memory pool.
+    // The DSi doesn't use this pool otherwise so it's fine and
+    // for the DS-Lite/Phat, the only possibility is if they are
+    // using a SAMS enabled game and they require the memory 
+    // in the last 100K area... in which case this will not end well.
+    // ---------------------------------------------------------------
+    extern u8 SharedMemBuffer[];
+    u8 *temp = (u8*)(SharedMemBuffer + (668*1024)); 
+    
     if(!temp) {
         fclose(file);
         return false;
@@ -90,7 +88,6 @@ bool screenshotbmp(const char* filename) {
     DC_FlushAll();
     fwrite(temp, 1, 256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER), file);
     fclose(file);
-    if (isDSiMode()) free(temp);
     return true;
 }
 

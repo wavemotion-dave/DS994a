@@ -76,7 +76,9 @@ u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to han
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 
 char tmpBuf[256];               // For simple printf-type output and other sundry uses.
-u8 fileBuf[4096];               // For DSK sector cache and file CRC generation use.
+u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
+
+u8 SharedMemBuffer[768 * 1024]; // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS 
 
 u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
@@ -407,7 +409,10 @@ void ResetTI(void)
   key_push_write = 0;
   key_push_read  = 0;
   strcpy(dsk_filename,"");    
-    
+  
+  // ---------------------------------------------
+  // Make sure the disk systems is up and running
+  // ---------------------------------------------
   disk_init();
   disk_drive_select = 0; // Start with DSK1
     
@@ -1621,6 +1626,33 @@ void LoadBIOSFiles(void)
     if (inFile1) fclose(inFile1);    
 }
 
+// We call this function once at startup to allocate memory 
+static void StartupMemoryAllocation(void)
+{
+    if (isDSiMode())
+    {
+        theSAMS.numBanks = 256;                         // 256 * 4K = 1024K for DSi
+        MemSAMS = malloc((theSAMS.numBanks) * 0x1000);  // Allocate the SAMS memory
+         
+        MAX_CART_SIZE = (u32)(8192 * 1024);             // 8MB (8192K) Max Cart for DSi
+        MemCART = malloc(MAX_CART_SIZE);                // Allocate the Cartridge Buffer
+    }
+    else
+    {
+        // ---------------------------------------------------------------------------------------
+        // For the DS-Lite/Phat we are using a shared memory pool to help us conserve resources.
+        // Basically we have 768K to play with - normally 512K of that is cart space but if the
+        // SAMS is enabled, we drop the Cartridge max size to 256K and enable a 512K SAMS which
+        // still allows us to play virtually any SAMS game including Realms of Antiquity!
+        // ---------------------------------------------------------------------------------------
+        theSAMS.numBanks = 128;                         // 128 * 4K = 512K for DS-Lite/Phat
+        MemSAMS = SharedMemBuffer + (256 * 1024);       // Set the SAMS memory area. When SAMS is enabled for the DS-Lite/Phat, cart size will drop to 256K
+        
+        MAX_CART_SIZE = (u32)(512 * 1024);              // 512K Max Cart for DS-Lite/Phat (may get adjusted down to 256K if SAMS enabled)
+        MemCART = SharedMemBuffer;                      // Set the Cartridge Buffer
+    }
+}
+
 
 /*********************************************************************************
  * Program entry point - check if an argument has been passed in probably from TWL++
@@ -1634,6 +1666,9 @@ int main(int argc, char **argv)
      iprintf("Unable to initialize libfat!\n");
      return -1;
   }
+  
+  // Allocate some memory for the SAMS and Cart Buffers - done one time
+  StartupMemoryAllocation();
 
   // Need to load in config file if only for the global options at this point...
   FindAndLoadConfig();
@@ -1655,18 +1690,6 @@ int main(int argc, char **argv)
     
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
-
-  // Setup the cart memory - for the DSi we can support 8MB and for the DS we can support 512K
-  if (isDSiMode())
-  {
-      MAX_CART_SIZE = (u32)(8192 * 1024);
-      MemCART = malloc(MAX_CART_SIZE);
-  }
-  else
-  {
-      MAX_CART_SIZE = (u32)(512 * 1024);
-      MemCART = malloc(MAX_CART_SIZE);
-  }    
 
   // -----------------------------------------------------------------
   // Grab the BIOS before we try to switch any directories around...
@@ -1890,5 +1913,6 @@ void WriteSpeechData(u8 data)
 #endif        
     }
 }
+
 // End of file
 
