@@ -61,7 +61,6 @@ Credits :
 * Thanks to Darryl Hirschler for the TI99 Keyboard Graphic.
 * Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes as well as testing and providing feedback.
 
-
 Installation :
 -----------------------
 * To run this on your DS or DSi (or 2DS/3DS) requires that you have the ability to launch homebrews. For the older DS units, this is usually accomplished via a FlashCart such as the R4 or one of the many clones. These tend to run about US$25. If you have a DSi or above, you can soft-mod your unit and run something like Twilight Menu++ or Unlaunch which will run homebrew software on the DS. The DSi has a convienent SD card slot on the side that saw very little use back in the day but is a great way to enjoy homebrews. See https://dsi.cfw.guide/ to get started on how to soft-mod your unit.
@@ -116,6 +115,12 @@ For something like Realms of Antiquity you can have:
 - roa_3.dsk   - The third disk to mount as DSK3
 
 (the underscores are just a personal preference of mine as I find it makes the filenames look cleaner and more clear. It's not required by the DS99/4a emulator)
+
+RPK files can also have associated .dsk files - just use the same base filename and add 1.dsk or 2.dsk
+For example:
+
+- Adventure.rpk
+- Adventure1.dsk
 
 Configuration :
 -----------------------
