@@ -75,7 +75,7 @@ unsigned int my_read(void *udata, unsigned int offset)
 	return 0x100;
 }
 
-static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, int ignore_errors, u8 *buf)
+static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf)
 {
 	int retcode = 1;
 
@@ -86,13 +86,7 @@ static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, int ign
 	lowzip_get_data(st);
 
 	if (st->have_error) {
-		if (ignore_errors) {
-			//fprintf(stderr, "Failed to extract (ignoring as requested)\n");
 			retcode = 0;
-		} else {
-			//fprintf(stderr, "Failed to extract\n");
-		}
-		fflush(stderr);
 	} else {
 		fwrite((void *) st->output_start, 1, (size_t) (st->output_next - st->output_start), stdout);
 		fflush(stdout);
@@ -187,7 +181,6 @@ u8 rpk_parse_xml(char *xml_str)
 u8 rpk_load_standard(void)
 {
     u8 err = 0;
-    int ignore_errors = 0;
 
     tms9900.bankMask = 0x0000;
 
@@ -203,7 +196,7 @@ u8 rpk_load_standard(void)
             if (fileinfo)
             {
                 u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-                if (extract_located_file(&st, fileinfo, ignore_errors, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
 
@@ -226,7 +219,7 @@ u8 rpk_load_standard(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, ignore_errors, &MemGROM[0x6000]) != 0)
+                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
                 {
                     memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
@@ -240,7 +233,6 @@ u8 rpk_load_standard(void)
 u8 rpk_load_paged()
 {
     u8 err = 0;
-    int ignore_errors = 0;
 
     tms9900.bankMask = 0x0001;
 
@@ -255,7 +247,7 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, ignore_errors, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                 }
@@ -273,7 +265,7 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, ignore_errors, MemCART+0x2000) != 0)
+                if (extract_located_file(&st, fileinfo, MemCART+0x2000) != 0)
                 {
                     memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
@@ -287,7 +279,7 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, ignore_errors, &MemGROM[0x6000]) != 0)
+                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
                 {
                     memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
@@ -302,43 +294,65 @@ u8 rpk_load_paged()
 u8 rpk_load_paged378(void)
 {
     u8 err = 0;
-    int ignore_errors = 0;
-    // There should be just one ROM here - and we load it up into banked memory
-    lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[0].rom_file);
-    if (fileinfo)
+
+    // ------------------------------------------------------------------------------------
+    // For each ROM in our layout we load it in to the appopriate CPU/GROM memory area...
+    // ------------------------------------------------------------------------------------
+    for (u8 i=0; i<cart_layout.num_roms; i++)
     {
-        u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-        if (extract_located_file(&st, fileinfo, ignore_errors, MemCART) == 0)
+        // Find the main ROM which will likely be banked...
+        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
-            // Full load cart
-            tms9900.bankMask = BankMasks[numCartBanks-1];
-            memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-        }
-        else
-        {
-            memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
-            err = 1;
+            lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
+            if (fileinfo)
+            {
+                u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
+                if (extract_located_file(&st, fileinfo, MemCART) == 0)
+                {
+                    // Full load cart
+                    tms9900.bankMask = BankMasks[numCartBanks-1];
+                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
+                }
+                else
+                {
+                    err = 1;
+                }
+            }
+            
+            // Check for load into the GROM socket at GROM offset >6000
+            if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
+            {
+                lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
+                if (fileinfo)
+                {
+                    if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
+                    {
+                        err = 1;
+                    }
+                }
+            }
         }
     }
-    else
+    
+    if (err)
     {
-        memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
-        err = 1;
+        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load
+        memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
     }
+    
     return err;
 }
 
 u8 rpk_load_paged379i(void)
 {
     u8 err = 0;
-    int ignore_errors = 0;
 
-    // There should be just one ROM here - and we load it up into banked memory
+    // There should be just one ROM here - and we load it up into banked memory. GROMs are not supported for this type.
     lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[0].rom_file);
     if (fileinfo)
     {
         u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-        if (extract_located_file(&st, fileinfo, ignore_errors, MemCART) == 0)
+        if (extract_located_file(&st, fileinfo, MemCART) == 0)
         {
             // Full load cart
             tms9900.bankMask = BankMasks[numCartBanks-1];
@@ -367,30 +381,9 @@ u8 rpk_load_paged379i(void)
     return err;
 }
 
-u8 rpk_load_mbx(void)
-{
-    u8 err = 0;
-
-    err = rpk_load_standard();
-    myConfig.cartType = CART_TYPE_MBX_WITH_RAM;
-
-    return err;
-}
-
-u8 rpk_load_minimem(void)
-{
-    u8 err = 0;
-
-    err = rpk_load_standard();
-    myConfig.cartType = CART_TYPE_MINIMEM;
-
-    return err;
-}
-
 u8 rpk_load_pagedcru(void)
 {
     u8 err = 0;
-    int ignore_errors = 0;
 
     tms9900.bankMask = 0x0000;
 
@@ -405,7 +398,7 @@ u8 rpk_load_pagedcru(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, ignore_errors, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                     myConfig.cartType = CART_TYPE_PAGEDCRU;
@@ -422,15 +415,38 @@ u8 rpk_load_pagedcru(void)
     return err;
 }
 
+// MBX is a standard load and then we mark the cart as 'MBX with RAM' which
+// will map in 1K of RAM and set the appopriate banking hotspots.
+u8 rpk_load_mbx(void)
+{
+    u8 err = 0;
 
-// Super Cart is not yet supported.
+    err = rpk_load_standard();
+    myConfig.cartType = CART_TYPE_MBX_WITH_RAM;
+
+    return err;
+}
+
+// MINIMEM is a standard load and then we mark the cart as 'MINIMEM' which
+// will map in 4K of RAM at >7000. This is not yet persisted.
+u8 rpk_load_minimem(void)
+{
+    u8 err = 0;
+
+    err = rpk_load_standard();
+    myConfig.cartType = CART_TYPE_MINIMEM;
+
+    return err;
+}
+
+// Super Cart is not yet supported. We could use the Super 8K version here... maybe.
 u8 rpk_load_super(void)
 {
     u8 err = 1;
     return err;
 }
 
-// Paged7 is not yet supported.
+// Paged7 is not yet supported. Only used for TI-Calc anyway.
 u8 rpk_load_paged7(void)
 {
     u8 err = 1;
@@ -441,7 +457,6 @@ u8 rpk_load(const char* filename)
 {
     lowzip_file *fileinfo;
     FILE *input = NULL;
-    int ignore_errors = 0;
     u8 errors = 0;
 
     // Everything is zero to start
@@ -470,7 +485,7 @@ u8 rpk_load(const char* filename)
     if (fileinfo)
     {
         memset(fileBuf, 0x00, sizeof(fileBuf));
-        if (extract_located_file(&st, fileinfo, ignore_errors, fileBuf) == 0)
+        if (extract_located_file(&st, fileinfo, fileBuf) == 0)
         {
             // --------------------------------------------------------------------------------------
             // Parse the XML and find the PCB type, file/socket type and associated binary files...
