@@ -32,6 +32,9 @@ As such, the following copyrights apply:
 
 The SN76496 sound core is from FluBBa and is used with permission. 
 
+The lowzip library and yxml parser are used following the generous MIT licences they 
+were released under.
+
 The TI9918A code came from Marat Fayzullin (ColEM) and retains Marat's original copyright
 statement. Do not use any of that code without trying to contact Marat.
 
