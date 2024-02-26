@@ -416,19 +416,22 @@ void TI99FindFiles(void)
   {
       qsort (gpFic, countTI, sizeof(FIC_TI99), TI99Filescmp);
 
-      // And finally we remove files that are part of the same binary package C/D/G files...
+      // And finally we remove 'sibling' files that are part of the same binary package C/D/G files...
       for (s16 i=0; i<countTI-1; i++)
       {
           if (strlen(gpFic[i].szName) > 5)
           {
-              if (strncmp(gpFic[i].szName, gpFic[i+1].szName, strlen(gpFic[i].szName)-5) == 0)
+              if (strlen(gpFic[i].szName) == strlen(gpFic[i+1].szName)) // Strings need to be the same length to be siblings
               {
-                  for (u16 j=i+1; j<countTI; j++)
+                  if (strncmp(gpFic[i].szName, gpFic[i+1].szName, strlen(gpFic[i].szName)-5) == 0)
                   {
-                      memcpy(&gpFic[j], &gpFic[j+1], sizeof(FIC_TI99));
+                      for (u16 j=i+1; j<countTI; j++)
+                      {
+                          memcpy(&gpFic[j], &gpFic[j+1], sizeof(FIC_TI99));
+                      }
+                      countTI--;
+                      i--;
                   }
-                  countTI--;
-                  i--;
               }
           }
       }

@@ -180,6 +180,7 @@ u8 rpk_parse_xml(char *xml_str)
 
 u8 rpk_load_standard(void)
 {
+    u16 numCartBanks = 1;
     u8 err = 0;
 
     tms9900.bankMask = 0x0000;
@@ -195,7 +196,7 @@ u8 rpk_load_standard(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
+                numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
                 if (extract_located_file(&st, fileinfo, MemCART) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
@@ -207,8 +208,28 @@ u8 rpk_load_standard(void)
                 }
                 else
                 {
-                    memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
+                }
+            }
+        }
+
+        // Check for load into the ROM2 socket - this is a 'd' expanded ROM and we only allow it if our ROM was 8K
+        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom2_socket") == 0)
+        {
+            if (numCartBanks == 1) // We only allow ROM2 socket if we have an 8K ROM above
+            {
+                lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
+                if (fileinfo)
+                {
+                    if (extract_located_file(&st, fileinfo, MemCART+0x2000) == 0)
+                    {
+                        numCartBanks = 1;
+                        tms9900.bankMask = BankMasks[numCartBanks-1];
+                    }
+                    else
+                    {
+                        err = 1;
+                    }
                 }
             }
         }
@@ -221,11 +242,16 @@ u8 rpk_load_standard(void)
             {
                 if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
                 {
-                    memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
             }
         }
+    }
+    
+    if (err)
+    {
+        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load
+        memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
     }
     return err;
 }

@@ -343,7 +343,30 @@ u8 TI99Init(char *szGame)
             disk_mount(drivesel, currentDirDSKs, tmpBuf);
         }  
     }
-    
+
+    // ---------------------------------------------------------------
+    // Alternate filename check for loaded disks... This one just
+    // checks for the same filename with a '1' '2' or '3' at the base
+    // ---------------------------------------------------------------
+    strcpy(tmpBuf, szGame);
+    strcat(tmpBuf, "X");
+    tmpBuf[strlen(tmpBuf)-4] = '.';
+    tmpBuf[strlen(tmpBuf)-3] = 'd';
+    tmpBuf[strlen(tmpBuf)-2] = 's';
+    tmpBuf[strlen(tmpBuf)-1] = 'k';
+    for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
+    {
+        tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
+        FILE *infile = fopen(tmpBuf, "rb");
+        if (infile) // Does the .dsk file exist?
+        {
+            extern char currentDirDSKs[];
+            fclose(infile);
+            getcwd(currentDirDSKs, MAX_PATH);
+            disk_mount(drivesel, currentDirDSKs, tmpBuf);
+        }  
+    }
+
     
     // --------------------------------------------------------------------
     // Now that we're loaded up in memory, we set the initial CPU pointers
