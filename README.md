@@ -98,7 +98,9 @@ DS994a supports the following file types:
 * All other files are considered '8' files which is non-inverted banking up to 8192K (8MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
-* If you wish to associate a .dsk file with your cart (e.g. Adventure or Tunnels of Doom, etc.) you can name the .dsk files with the same base name as the cart and replace the C/D/G/8 with 1, 2 or 3.
+* As of version 2.0, the MAME/MESS .rpk (ROM PacK) format is also supported - these are single file archives that contain the ROMs and a layout.xml file that describes where the ROMs get loaded and how any banking might work.
+
+If you wish to associate a .dsk file with your cart (e.g. Adventure or Tunnels of Doom, etc.) you can name the .dsk files with the same base name as the cart and replace the C/D/G/8 with 1, 2 or 3.
 
 For example, for Tunnels of Doom you might have:
 
