@@ -156,6 +156,13 @@ void TI99SaveState()
             i+=4;
         }
     }
+    
+    if (myConfig.cartType == CART_TYPE_SUPERCART)
+    {
+        extern u8 super_bank;
+        if (uNbO) uNbO = fwrite(&super_bank,  sizeof(super_bank),  1, handle); 
+        if (uNbO) uNbO = fwrite(&MemCART[MAX_CART_SIZE-0x8000], 0x8000, 1, handle); 
+    }
       
     fclose(handle);
       
@@ -298,6 +305,15 @@ void TI99LoadState()
                     i+=4;
                 }
             }
+            
+            if (myConfig.cartType == CART_TYPE_SUPERCART)
+            {
+                extern u8 super_bank;
+                if (uNbO) uNbO = fread(&super_bank,  sizeof(super_bank),  1, handle); 
+                if (uNbO) uNbO = fread(&MemCART[MAX_CART_SIZE-0x8000], 0x8000, 1, handle); 
+            }
+            
+            fclose(handle);            
            
             // Restore the SAMS memory banks as they were... this should get our memory map back properly
             SAMS_cru_write(0x0000, theSAMS.cruSAMS[0]);
@@ -334,8 +350,6 @@ void TI99LoadState()
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
         DS_Print(10,0,0,"             ");  
       }
-
-    fclose(handle);
 }
 
 // End of file

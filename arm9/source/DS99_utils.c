@@ -1285,7 +1285,7 @@ const struct options_t Option_Table[2][20] =
         {"MAX SPRITES",    {"4",   "32"},                                                                                                    &myConfig.maxSprites,   2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                   &myConfig.isPAL,        2},
         {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                                &myConfig.machineType,  2},
-        {"CART TYPE",      {"NORMAL", "SUPERCART 8K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM", "PAGED CRU"},                              &myConfig.cartType,     6},
+        {"CART TYPE",      {"NORMAL", "SUPERCART 32K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM", "PAGED CRU"},                             &myConfig.cartType,     6},
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT", "80 PERCENT"},&myConfig.emuSpeed,     8},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},

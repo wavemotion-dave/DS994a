@@ -202,10 +202,9 @@ u8 rpk_parse_xml(char *xml_str)
 }
 
 // ----------------------------------------------------------------------
-// This is the most common loader - 'C' files are loaded of any size (if
-// more than 8K, we automatically install the cart banking) and we also
-// allow for a 'D' in rom2_socket that must be exactly 8K and we allow
-// for a GROM load as well.
+// The standard loader will allow for any sized 'c' ROM in the normal
+// rom_socket (setting up banking if the ROM is > 8K) and also allow
+// for a GROM load as well up to 40K. The 'rom2_socket' is not used.
 // ----------------------------------------------------------------------
 u8 rpk_load_standard(void)
 {
@@ -225,42 +224,20 @@ u8 rpk_load_standard(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
+                // -----------------------------------------------------------------------------
+                // We allow larger than 8K in which case we will turn on banking automatically
+                // -----------------------------------------------------------------------------
                 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
                 if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
-                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
+                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // The first 8K of this cart gets loaded directly into main memory
 
-                    if (numCartBanks) // If more than 8K we need to bank
+                    if (numCartBanks > 1) // If more than 8K we need to bank
                     {
                         tms9900.bankMask = BankMasks[numCartBanks-1];
                     }
-                }
-                else
-                {
-                    err = 1;
-                }
-            }
-        }
-
-        // Check for load into the ROM2 socket - this is a 'd' expanded ROM and we only allow it if our ROM was 8K
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom2_socket") == 0)
-        {
-            if (numCartBanks == 1) // We only allow ROM2 socket if we have an 8K ROM above
-            {
-                lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
-                if (fileinfo)
-                {
-                    if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) == 0)
-                    {
-                        numCartBanks = 1;
-                        tms9900.bankMask = BankMasks[numCartBanks-1];
-                    }
-                    else
-                    {
-                        err = 1;
-                    }
-                }
-            }
+                } else err = 1;
+            } else err = 1;
         }
 
         // Check for load into the GROM socket at GROM offset >6000
@@ -273,7 +250,7 @@ u8 rpk_load_standard(void)
                 {
                     err = 1;
                 }
-            }
+            } else err = 1;
         }
     }
     
@@ -293,42 +270,38 @@ u8 rpk_load_paged()
     u8 err = 0;
     u8 bPaged12k = 0;
 
-    tms9900.bankMask = 0x0001;
+    tms9900.bankMask = 0x0001;  // Paged is always 8K of 'C' and 8K of 'D' and possibly GROM
 
     // ------------------------------------------------------------------------------------
     // For each ROM in our layout we load it in to the appopriate CPU/GROM memory area...
     // ------------------------------------------------------------------------------------
     for (u8 i=0; i<cart_layout.num_roms; i++)
     {
-        // Check for load into the standard ROM socket at >6000
+        // Check for an 8K ROM load into the standard ROM socket at >6000
         if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo->uncompressed_size == 4096) bPaged12k = 1;
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, 0x2000) == 0)
                 {
-                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
-                }
-                else
-                {
-                    err = 1;
-                }
-            }
+                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);        // This cart gets loaded directly into main memory
+                }  else err = 1;
+            } else err = 1;
         }
 
-         // Check for the paged ROM load
+         // Check for the paged 8K ROM load
         if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom2_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) != 0)
+                if (extract_located_file(&st, fileinfo, MemCART+0x2000, 0x2000) != 0)
                 {
                     err = 1;
                 }
-            }
+            } else err = 1;
         }
 
         // Check for load into the GROM socket at GROM offset >6000
@@ -339,10 +312,9 @@ u8 rpk_load_paged()
             {
                 if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                 {
-                    memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
-            }
+            } else err = 1;
         }
     }
     
@@ -357,7 +329,7 @@ u8 rpk_load_paged()
         memcpy(MemCPU +0x6000, MemCART+0x0000, 0x2000);  // And place our new doctored ROM (bank 0) into main memory...
         tms9900.bankMask = 0x0001;                       // We have one bank
     }
-
+    
     return err;
 }
 
@@ -384,17 +356,13 @@ u8 rpk_load_paged378(void)
                 u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
                 if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
-                    // Full load cart
-                    tms9900.bankMask = BankMasks[numCartBanks-1];
-                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-                }
-                else
-                {
-                    err = 1;
-                }
-            }
+                    tms9900.bankMask = BankMasks[numCartBanks-1];   // Full load cart will usually have manu banks
+                    memcpy(&MemCPU[0x6000], MemCART, 0x2000);       // First bank loaded into main memory
+                } else err = 1;
+            } else err = 1;
             
             // Check for load into the GROM socket at GROM offset >6000
+            // This is non-standard as MAME 378 does not support GROMs for this type but we do...
             if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
             {
                 lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
@@ -404,7 +372,7 @@ u8 rpk_load_paged378(void)
                     {
                         err = 1;
                     }
-                }
+                } else err = 1;
             }
         }
     }
@@ -416,6 +384,7 @@ u8 rpk_load_paged378(void)
 // This is the 'inverted' cart load - this isn't used as much these days
 // and we actually take the time to swap the banks and lay them out
 // in non-inverted manner to make the rest of the code logic simpler.
+// Only one ROM is allowed here - no GROMs.
 // ----------------------------------------------------------------------
 u8 rpk_load_paged379i(void)
 {
@@ -441,16 +410,9 @@ u8 rpk_load_paged379i(void)
             }
 
             memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-        }
-        else
-        {
-            err = 1;
-        }
-    }
-    else
-    {
-        err = 1;
-    }
+        } else err = 1;
+    } else err = 1;
+    
     return err;
 }
 
@@ -478,12 +440,8 @@ u8 rpk_load_pagedcru(void)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                     myConfig.cartType = CART_TYPE_PAGEDCRU;
-                }
-                else
-                {
-                    err = 1;
-                }
-            }
+                } else err = 1;
+            } else err = 1;
         }
     }
 
@@ -518,12 +476,51 @@ u8 rpk_load_minimem(void)
     return err;
 }
 
-// Super Cart is not yet supported. We could use the Super 8K version here... maybe.
-u8 rpk_load_super(void) {u8 err = 1; return err;}
+// Super Cart is 32K of RAM that is CRU mapped - otherwise a standard load
+u8 rpk_load_super(void)
+{
+    u8 err = 0;
 
-// Paged7 is not yet supported. Only used for TI-Calc anyway.
-u8 rpk_load_paged7(void) {u8 err = 1; return err;}
+    err = rpk_load_standard();
+    myConfig.cartType = CART_TYPE_SUPERCART;
 
+    return err;
+}
+
+// ----------------------------------------------------------------------------
+// Paged7 only used for TI-Calc. It's basically a paged ROM at >7000 but for
+// simplicity, we are going to read the two 8K ROMs into memory and then
+// manipulate them to create the illusion of a normal paged ROM.  This
+// isn't quite accurate as the banks should only swap on writes to >7000
+// and above - but TI-Calc appears well behaved so we make it simple. Magic!!
+// ----------------------------------------------------------------------------
+u8 rpk_load_paged7(void)
+{
+    u8 err = 0;
+
+    err = rpk_load_paged();                             // paged7 is esentially a paged load and then we modify the paging below
+    
+    u8 *swapArea = (u8*)(MemCART + 0x10000);            // Just need 32K somewhere convienent
+    
+    memcpy(swapArea+0x0000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM0
+    memcpy(swapArea+0x1000, MemCART+0x0000, 0x1000);
+    
+    memcpy(swapArea+0x2000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM1
+    memcpy(swapArea+0x3000, MemCART+0x1000, 0x1000);
+    
+    memcpy(swapArea+0x4000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM2
+    memcpy(swapArea+0x5000, MemCART+0x2000, 0x1000);
+
+    memcpy(swapArea+0x6000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM3
+    memcpy(swapArea+0x7000, MemCART+0x3000, 0x1000);
+    
+    memcpy(MemCPU+0x6000,  swapArea, 0x2000);           // Bank 0 + Bank 0
+    memcpy(MemCART+0x0000, swapArea, 0x8000);           // The new 32K ROM with all the banks in place
+    
+    tms9900.bankMask = 0x0003;                          // We have 4 banks.
+    
+    return err;
+}
 
 // ------------------------------------------------------------------------------
 // This is the only public interface - the caller should pass the filename.rpk 

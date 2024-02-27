@@ -56,6 +56,7 @@ u16* DSR2  = ((u16*)0x068A2000);   // 8K of fast VDP memory for the second DSR (
 u16 MemoryRead16(u16 address);
 
 u16 readSpeech = SPEECH_SENTINAL_VAL;
+u8  super_bank = 0;
 
 // A few externs from other modules...
 extern SN76496 snti99;
@@ -391,7 +392,8 @@ void TMS9900_Reset(void)
     // ----------------------------------------------------------------------
     for (u16 numBanks=1; numBanks<=1024; numBanks++)
     {
-        if      (numBanks <= 2)    BankMasks[numBanks-1] = 0x0001;
+        if      (numBanks <= 1)    BankMasks[numBanks-1] = 0x0000;  // No banking
+        else if (numBanks <= 2)    BankMasks[numBanks-1] = 0x0001;
         else if (numBanks <= 4)    BankMasks[numBanks-1] = 0x0003;
         else if (numBanks <= 8)    BankMasks[numBanks-1] = 0x0007;
         else if (numBanks <= 16)   BankMasks[numBanks-1] = 0x000F;
@@ -528,6 +530,9 @@ void TMS9900_Reset(void)
             MemCPU[addr] = (rand() & 0xFF);
         }
     }
+    
+    // Reset the super bank to bank 0
+    super_bank = 0;
 
     // Reset the TMS9901 peripheral IO chip
     TMS9901_Reset();
@@ -688,6 +693,19 @@ void cart_cru_write(u16 cruAddress, u8 dataBit)
             u8 bank = (cruAddress-1)/2;                         // Swap in the new bank - logic borrowed from MAME
             tms9900.bankOffset = (bank*0x2000);                 // Keep this up to date for SAVE/LOAD state
             tms9900.cartBankPtr = MemCART+tms9900.bankOffset;   // And point to the right place in memory for cart fetches
+        }
+        cart_cru_shadow[cruAddress] = dataBit;
+    }
+    else if (myConfig.cartType == CART_TYPE_SUPERCART)
+    {
+        // Super Cart is 4 banks of 8K for a total of 32K of RAM
+        cruAddress &= 0x7;
+        if ((cruAddress > 0) && (dataBit != 0)) // Is the bit ON and we are above the base address?
+        {
+            u8 bank = (cruAddress-1)/2;                                                 // Grab the new bank number - logic borrowed from MAME
+            memcpy(MemCART+(MAX_CART_SIZE-(super_bank*0x2000)), MemCPU+0x6000, 0x2000); // Copy out the working 8K of RAM into our Super Cart Space
+            memcpy(MemCPU+0x6000, MemCART+(MAX_CART_SIZE-(bank*0x2000)), 0x2000);       // Copy in the new bank of 8K RAM into our working space at >6000
+            super_bank = bank;
         }
         cart_cru_shadow[cruAddress] = dataBit;
     }

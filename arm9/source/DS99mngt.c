@@ -277,7 +277,8 @@ u8 TI99Init(char *szGame)
         {
             MemType[address>>4] = MF_RAM8; // Supercart maps ram into the cart slot
         }
-        memset(MemCPU+0x6000, 0x00, 0x2000);
+        memset(MemCPU+0x6000, 0x00, 0x2000); // Clear the Super Cart working RAM to start (located at cart-space >6000)
+        memset(MemCART+(MAX_CART_SIZE - 0x8000), 0x00, 0x8000); // Clear the back-end 32K of the cartridge... we will repurpose to 32K of SUPER CART RAM
     }
 
     // ------------------------------------------------------------
@@ -320,7 +321,7 @@ u8 TI99Init(char *szGame)
         WriteBankMBX(0);
     }
     
-    // Ensure we're in the first bank...
+    // Ensure we're in the first bank... (which might be the only bank for 8K ROMs)
     tms9900.cartBankPtr = MemCPU+0x6000;
     
     // ---------------------------------------------------------------
