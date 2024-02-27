@@ -62,6 +62,7 @@
 
 #include <string.h>  /* memset(), strlen() */
 #include <stddef.h>  /* ptrdiff_t */
+#include <ctype.h>   /* toupper() */
 #include "lowzip.h"
 
 /*
@@ -835,7 +836,7 @@ lowzip_file *lowzip_locate_file(lowzip_state *st, int idx, const char *name) {
 			if (filename_length == name_length) {
 				for (i = 0; i < filename_length; i++) {
 					t = lowzip_read1(st, offset + LOWZIP_MIN_CDIRFILE_LENGTH + i);
-					if (t != (unsigned int) ((unsigned char *) name)[i]) {
+					if (toupper(t) != (unsigned int) toupper(((unsigned char *) name)[i])) {
 						break;
 					}
 				}

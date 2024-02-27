@@ -657,7 +657,8 @@ inline __attribute__((always_inline)) void WriteBank(u16 address)
     u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
     bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
     tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
-    tms9900.cartBankPtr = MemCART+tms9900.bankOffset;       // And point to the right place in memory for cart fetches
+    if (bank == 0) tms9900.cartBankPtr = &MemCPU[0x6000];   // Bank 0 can just point back into the main memory which always has bank 0 ROM
+    else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // And point to the right place in memory for cart fetches
 }
 
 // --------------------------------------------------------------------------

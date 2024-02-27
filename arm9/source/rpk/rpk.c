@@ -12,6 +12,7 @@
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "rpk.h"
 #include "lowzip.h"
 #include "yxml.h"
@@ -23,7 +24,7 @@
 typedef struct {
 	FILE *input;
 	unsigned int  input_length;
-	unsigned char input_chunk[0x200];   // 512 byte buffer
+	unsigned char input_chunk[0x400];   // 1024 byte buffer
 	unsigned int  input_chunk_start;
 	unsigned int  input_chunk_end;
 } read_state;
@@ -80,26 +81,17 @@ unsigned int my_read(void *udata, unsigned int offset)
 // bother buffering - if the load fails, we'll simply put 0xFF into memory to prevent the TI system
 // from seeing anything that resembles a program. lowzip is great - minimal size and very few 
 // resources consumed ... but it is not the fastest. A 512K load takes a few seconds. Good enough!
+// This returns zero if everything went smoothly on unpacking the file. Non-zero otherwise.
 // ------------------------------------------------------------------------------------------------
-static int extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf)
+static u8 extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf, int max_size)
 {
-	int retcode = 1;
-
 	st->output_start = buf;
-	st->output_end = buf + fileinfo->uncompressed_size;
+	st->output_end = buf + max_size;
 	st->output_next = st->output_start;
 
 	lowzip_get_data(st);
 
-	if (st->have_error) {
-			retcode = 0;
-	} else {
-		fwrite((void *) st->output_start, 1, (size_t) (st->output_next - st->output_start), stdout);
-		fflush(stdout);
-		retcode = 0;
-	}
-
-	return retcode;
+	return (st->have_error) ? 1:0;
 }
 
 
@@ -150,6 +142,8 @@ u8 rpk_parse_xml(char *xml_str)
                 {
                     if (strcasecmp(xml_value, "standard")   == 0)  cart_layout.pcb = PCB_STANDARD;
                     if (strcasecmp(xml_value, "paged")      == 0)  cart_layout.pcb = PCB_PAGED;
+                    if (strcasecmp(xml_value, "paged16k")   == 0)  cart_layout.pcb = PCB_PAGED;
+                    if (strcasecmp(xml_value, "paged12k")   == 0)  cart_layout.pcb = PCB_PAGED;
                     if (strcasecmp(xml_value, "gromemu")    == 0)  cart_layout.pcb = PCB_GROMEMU;
                     if (strcasecmp(xml_value, "paged377")   == 0)  cart_layout.pcb = PCB_PAGED377;
                     if (strcasecmp(xml_value, "paged378")   == 0)  cart_layout.pcb = PCB_PAGED378;
@@ -176,22 +170,35 @@ u8 rpk_parse_xml(char *xml_str)
                 {
                     strcpy(cart_layout.sockets[cart_layout.num_sockets-1].socket_uses, xml_value);
                 }
+                if ((strcasecmp(xml.elem, "romset") == 0) && (strcasecmp(xml.attr, "listname") == 0))
+                {
+                    strcpy(cart_layout.listname, xml_value);
+                }                
                 break;
-            case YXML_ATTRVAL:   xml_value[val_idx++] = xml.data[0]; xml_value[val_idx] = 0; break;
+                
+            case YXML_ATTRVAL:   
+                xml_value[val_idx++] = xml.data[0]; 
+                xml_value[val_idx] = 0; 
+                break;
+            
             case YXML_EEOF:
             case YXML_EREF:
             case YXML_ECLOSE:
             case YXML_ESTACK:
             case YXML_ESYN:
+                return 1; // Error
+                break;
+                
             case YXML_CONTENT:
             case YXML_PISTART:
             case YXML_PICONTENT:
             case YXML_PIEND:
-            case YXML_OK:        break;
+            case YXML_OK:
+                break;
         }
     }
 
-    return 0;
+    return 0; // No error
 }
 
 // ----------------------------------------------------------------------
@@ -219,7 +226,7 @@ u8 rpk_load_standard(void)
             if (fileinfo)
             {
                 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-                if (extract_located_file(&st, fileinfo, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
 
@@ -243,7 +250,7 @@ u8 rpk_load_standard(void)
                 lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
                 if (fileinfo)
                 {
-                    if (extract_located_file(&st, fileinfo, MemCART+0x2000) == 0)
+                    if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) == 0)
                     {
                         numCartBanks = 1;
                         tms9900.bankMask = BankMasks[numCartBanks-1];
@@ -262,7 +269,7 @@ u8 rpk_load_standard(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
+                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                 {
                     err = 1;
                 }
@@ -270,11 +277,6 @@ u8 rpk_load_standard(void)
         }
     }
     
-    if (err)
-    {
-        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load
-        memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
-    }
     return err;
 }
 
@@ -282,10 +284,14 @@ u8 rpk_load_standard(void)
 // This is the banked format with 8K of 'C' memory and 8K of 'D' memory
 // that is banswitched by writing to the cart space. We also allow a
 // GROM load as well.  This is the equivilent for non-RPK as C/D/G loads.
+// This routine is also capable of handling a 4K 'C' ROM in which case
+// it assumes that this is a 12K ROM load (such as the real dump of 
+// Extended BASIC) and will rework the buffers to create a 16K paged ROM.
 // ----------------------------------------------------------------------
 u8 rpk_load_paged()
 {
     u8 err = 0;
+    u8 bPaged12k = 0;
 
     tms9900.bankMask = 0x0001;
 
@@ -298,15 +304,15 @@ u8 rpk_load_paged()
         if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
+            if (fileinfo->uncompressed_size == 4096) bPaged12k = 1;
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                 }
                 else
                 {
-                    memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
             }
@@ -318,9 +324,8 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART+0x2000) != 0)
+                if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) != 0)
                 {
-                    memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
             }
@@ -332,13 +337,25 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
+                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                 {
                     memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
             }
         }
+    }
+    
+    // If we are a 12K paged cart, we re-arrange memory so it just works like normal Paged 16k
+    // This is done by copying and manipulating the cart buffer as follows:
+    // 4K ROM1 + first 4K of ROM2a = 8K bank 0 ROM
+    // 4K ROM1 + second 4K of ROM2b = 8K bank 1 ROM
+    if (bPaged12k && !err) 
+    {
+        memcpy(MemCART+0x1000, MemCART+0x2000, 0x1000);  // Bank 0 ROM is created and now in place in the cart buffer
+        memcpy(MemCART+0x2000, MemCART+0x0000, 0x1000);  // Bank 1 ROM is created and now in place in the cart buffer
+        memcpy(MemCPU +0x6000, MemCART+0x0000, 0x2000);  // And place our new doctored ROM (bank 0) into main memory...
+        tms9900.bankMask = 0x0001;                       // We have one bank
     }
 
     return err;
@@ -365,7 +382,7 @@ u8 rpk_load_paged378(void)
             if (fileinfo)
             {
                 u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-                if (extract_located_file(&st, fileinfo, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     // Full load cart
                     tms9900.bankMask = BankMasks[numCartBanks-1];
@@ -383,19 +400,13 @@ u8 rpk_load_paged378(void)
                 lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
                 if (fileinfo)
                 {
-                    if (extract_located_file(&st, fileinfo, &MemGROM[0x6000]) != 0)
+                    if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                     {
                         err = 1;
                     }
                 }
             }
         }
-    }
-    
-    if (err)
-    {
-        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load
-        memset(&MemGROM[0x6000], 0xFF, 0x2000);   // Failed to load
     }
     
     return err;
@@ -415,7 +426,8 @@ u8 rpk_load_paged379i(void)
     if (fileinfo)
     {
         u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-        if (extract_located_file(&st, fileinfo, MemCART) == 0)
+        
+        if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
         {
             // Full load cart
             tms9900.bankMask = BankMasks[numCartBanks-1];
@@ -432,13 +444,11 @@ u8 rpk_load_paged379i(void)
         }
         else
         {
-            memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
             err = 1;
         }
     }
     else
     {
-        memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
         err = 1;
     }
     return err;
@@ -464,14 +474,13 @@ u8 rpk_load_pagedcru(void)
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                     myConfig.cartType = CART_TYPE_PAGEDCRU;
                 }
                 else
                 {
-                    memset(&MemCPU[0x6000], 0xFF, 0x2000);   // Failed to load
                     err = 1;
                 }
             }
@@ -554,7 +563,7 @@ u8 rpk_load(const char* filename)
     if (fileinfo)
     {
         memset(fileBuf, 0x00, sizeof(fileBuf));
-        if (extract_located_file(&st, fileinfo, fileBuf) == 0)
+        if (extract_located_file(&st, fileinfo, fileBuf, 4096) == 0)
         {
             // --------------------------------------------------------------------------------------
             // Parse the XML and find the PCB type, file/socket type and associated binary files...
@@ -603,6 +612,11 @@ u8 rpk_load(const char* filename)
 
     fclose(input);
 
+    if (errors)
+    {
+        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load - clear main memory CART area
+        memset(&MemGROM[0x6000], 0xFF, 0xA000);   // Failed to load - clear the user GROM area
+    }
     return errors;
 }
 

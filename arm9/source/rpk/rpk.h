@@ -55,6 +55,7 @@ typedef struct
     u8       num_roms;
     Socket_t sockets[MAX_XML_SOCKETS];
     u8       num_sockets;
+    char     listname[64];
 } Layout_t;
 
 u8 rpk_load(const char* filename);
