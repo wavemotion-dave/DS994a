@@ -35,8 +35,13 @@ yxml_t xml              __attribute__((section(".dtcm")));
 char xml_value[64]      __attribute__((section(".dtcm")));
 Layout_t cart_layout    __attribute__((section(".dtcm")));
 
-/* Read callback which uses a single cached chunk to minimize file I/O. */
-unsigned int my_read(void *udata, unsigned int offset)
+// -----------------------------------------------------------------------
+// We pass this into the lowzip handler who will call us back to read  a
+// single byte from the file. Most of the time this will return quickly
+// as the byte will be in cached memory - but if not, it will read in a
+// single cached chunk (see input_chunk[] above) to minimize file I/O.
+// -----------------------------------------------------------------------
+unsigned int rpk_read_file(void *udata, unsigned int offset)
 {
 	read_state *st;
 	size_t got;
@@ -83,7 +88,7 @@ unsigned int my_read(void *udata, unsigned int offset)
 // resources consumed ... but it is not the fastest. A 512K load takes a few seconds. Good enough!
 // This returns zero if everything went smoothly on unpacking the file. Non-zero otherwise.
 // ------------------------------------------------------------------------------------------------
-static u8 extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf, int max_size)
+static u8 rpk_extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf, int max_size)
 {
 	st->output_start = buf;
 	st->output_end = buf + max_size;
@@ -98,7 +103,7 @@ static u8 extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf,
 // Match a ROM to a socket so we know where to load this into our memory. It's not the fastest
 // lookup but we're going to look up at most 3 roms and so the speed here doesn't matter.
 // ------------------------------------------------------------------------------------------------
-u8 match_rom_to_socket(u8 rom_idx)
+u8 rpk_match_rom_to_socket(u8 rom_idx)
 {
     for (u8 socket_num = 0; socket_num < cart_layout.num_sockets; socket_num++)
     {
@@ -218,7 +223,7 @@ u8 rpk_load_standard(void)
     for (u8 i=0; i<cart_layout.num_roms; i++)
     {
         // Check for load into the standard ROM socket at >6000
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
@@ -227,7 +232,7 @@ u8 rpk_load_standard(void)
                 // We allow larger than 8K in which case we will turn on banking automatically
                 // -----------------------------------------------------------------------------
                 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+                if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // The first 8K of this cart gets loaded directly into main memory
 
@@ -240,12 +245,12 @@ u8 rpk_load_standard(void)
         }
 
         // Check for load into the GROM socket at GROM offset >6000
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
+                if (rpk_extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                 {
                     err = 1;
                 }
@@ -277,13 +282,13 @@ u8 rpk_load_paged()
     for (u8 i=0; i<cart_layout.num_roms; i++)
     {
         // Check for an 8K ROM load into the standard ROM socket at >6000
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo->uncompressed_size == 4096) bPaged12k = 1;
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+                if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);        // This cart gets loaded directly into main memory
                 }  else err = 1;
@@ -291,12 +296,12 @@ u8 rpk_load_paged()
         }
 
          // Check for the paged 8K ROM load
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom2_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "rom2_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) != 0)
+                if (rpk_extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) != 0)
                 {
                     err = 1;
                 }
@@ -304,12 +309,12 @@ u8 rpk_load_paged()
         }
 
         // Check for load into the GROM socket at GROM offset >6000
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
+                if (rpk_extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                 {
                     err = 1;
                 }
@@ -347,13 +352,13 @@ u8 rpk_load_paged378(void)
     for (u8 i=0; i<cart_layout.num_roms; i++)
     {
         // Find the main ROM which will likely be banked...
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
                 u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+                if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     tms9900.bankMask = BankMasks[numCartBanks-1];   // Full load cart will usually have manu banks
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);       // First bank loaded into main memory
@@ -362,12 +367,12 @@ u8 rpk_load_paged378(void)
             
             // Check for load into the GROM socket at GROM offset >6000
             // This is non-standard as MAME 378 does not support GROMs for this type but we do...
-            if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
+            if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
             {
                 lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
                 if (fileinfo)
                 {
-                    if (extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
+                    if (rpk_extract_located_file(&st, fileinfo, &MemGROM[0x6000], 0xA000) != 0)
                     {
                         err = 1;
                     }
@@ -395,7 +400,7 @@ u8 rpk_load_paged379i(void)
     {
         u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
         
-        if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+        if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
         {
             // Full load cart
             tms9900.bankMask = BankMasks[numCartBanks-1];
@@ -430,12 +435,12 @@ u8 rpk_load_pagedcru(void)
     for (u8 i=0; i<cart_layout.num_roms; i++)
     {
         // Check for load into the standard ROM socket at >6000
-        if (strcasecmp(cart_layout.sockets[match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
+        if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "rom_socket") == 0)
         {
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
+                if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                     myConfig.cartType = CART_TYPE_PAGEDCRU;
@@ -546,7 +551,7 @@ u8 rpk_load(const char* filename)
 	read_st.input_length = (unsigned int) ftell(input);
 
     st.udata = (void *) &read_st;
-    st.read_callback = my_read;
+    st.read_callback = rpk_read_file;
     st.zip_length = read_st.input_length;
 
     // Initialize the lowzip library
@@ -559,7 +564,7 @@ u8 rpk_load(const char* filename)
     if (fileinfo)
     {
         memset(fileBuf, 0x00, sizeof(fileBuf));
-        if (extract_located_file(&st, fileinfo, fileBuf, 4096) == 0)
+        if (rpk_extract_located_file(&st, fileinfo, fileBuf, 4096) == 0)
         {
             // --------------------------------------------------------------------------------------
             // Parse the XML and find the PCB type, file/socket type and associated binary files...
