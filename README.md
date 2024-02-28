@@ -243,19 +243,19 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.0: SOON! by Wavemotion Dave
+V2.0: SOON! by wavemotion Dave
 * Support for .rpk (Rom PacKs - same as used by MAME/MESS).
 * Fix for save/load state of games that use RAM (MBX carts, MiniMem, etc)
 * Improved SAMS handling so that the proper amount of RAM is detected
 * Refactored and reduced resources so we free up an additional 256K of valuable memory for the future!
 
-V1.9: 24-Feb-2024 by Wavemotion Dave
+V1.9: 24-Feb-2024 by wavemotion Dave
 * Improvements to the TMS9900 CPU core to improve accuracy and slight optmization for another frame of performance.
 * Added new global configuration default for frame skip (DSi, by default will disable frame skip and the DS-Lite/Phat will enable light frameskip).
 * Improved Disk menu handling to show free space and used space plus some instructions on how the paste buffer works.
 * Lots of cleanup and code comments added across the board.
 
-V1.8: 19-Feb-2024 by Wavemotion Dave
+V1.8: 19-Feb-2024 by wavemotion Dave
 * Improvements to the TMS9918a emulation to fix 5th sprite handling and improve collision detection. Megademo, Eric in Monsterland and Interceptor all work correctly now.
 * Fix for Robots of Death II so it starts properly (was hanging on Speech detection).
 * DSi now supports up to 8192K (8MB) banked ROMs (the older DS still supports 512K). The Dragon's Lair demo will run but won't process speech/sound as the emulation can't sample the SN sound chip fast enough for that game. 
