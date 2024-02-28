@@ -84,7 +84,7 @@ unsigned int rpk_read_file(void *udata, unsigned int offset)
 // ------------------------------------------------------------------------------------------------
 // This will call into lowzip to extract the file directly into our memory area - we don't even
 // bother buffering - if the load fails, we'll simply put 0xFF into memory to prevent the TI system
-// from seeing anything that resembles a program. lowzip is great - minimal size and very few 
+// from seeing anything that resembles a program. lowzip is great - minimal size and very few
 // resources consumed ... but it is not the fastest. A 512K load takes a few seconds. Good enough!
 // This returns zero if everything went smoothly on unpacking the file. Non-zero otherwise.
 // ------------------------------------------------------------------------------------------------
@@ -177,14 +177,14 @@ u8 rpk_parse_xml(char *xml_str)
                 if ((strcasecmp(xml.elem, "romset") == 0) && (strcasecmp(xml.attr, "listname") == 0))
                 {
                     strcpy(cart_layout.listname, xml_value);
-                }                
+                }
                 break;
-                
-            case YXML_ATTRVAL:   
-                xml_value[val_idx++] = xml.data[0]; 
-                xml_value[val_idx] = 0; 
+
+            case YXML_ATTRVAL:
+                xml_value[val_idx++] = xml.data[0];
+                xml_value[val_idx] = 0;
                 break;
-            
+
             case YXML_EEOF:
             case YXML_EREF:
             case YXML_ECLOSE:
@@ -192,7 +192,7 @@ u8 rpk_parse_xml(char *xml_str)
             case YXML_ESYN:
                 return 1; // Error
                 break;
-                
+
             case YXML_CONTENT:
             case YXML_PISTART:
             case YXML_PICONTENT:
@@ -257,7 +257,7 @@ u8 rpk_load_standard(void)
             } else err = 1;
         }
     }
-    
+
     return err;
 }
 
@@ -266,7 +266,7 @@ u8 rpk_load_standard(void)
 // that is banswitched by writing to the cart space. We also allow a
 // GROM load as well.  This is the equivilent for non-RPK as C/D/G loads.
 // This routine is also capable of handling a 4K 'C' ROM in which case
-// it assumes that this is a 12K ROM load (such as the real dump of 
+// it assumes that this is a 12K ROM load (such as the real dump of
 // Extended BASIC) and will rework the buffers to create a 16K paged ROM.
 // -----------------------------------------------------------------------
 u8 rpk_load_paged()
@@ -321,24 +321,24 @@ u8 rpk_load_paged()
             } else err = 1;
         }
     }
-    
+
     // If we are a 12K paged cart, we re-arrange memory so it just works like normal Paged 16k
     // This is done by copying and manipulating the cart buffer as follows:
     // 4K ROM1 + first 4K of ROM2a = 8K bank 0 ROM
     // 4K ROM1 + second 4K of ROM2b = 8K bank 1 ROM
-    if (bPaged12k && !err) 
+    if (bPaged12k && !err)
     {
         memcpy(MemCART+0x1000, MemCART+0x2000, 0x1000);  // Bank 0 ROM is created and now in place in the cart buffer
         memcpy(MemCART+0x2000, MemCART+0x0000, 0x1000);  // Bank 1 ROM is created and now in place in the cart buffer
         memcpy(MemCPU +0x6000, MemCART+0x0000, 0x2000);  // And place our new doctored ROM (bank 0) into main memory...
         tms9900.bankMask = 0x0001;                       // We have one bank
     }
-    
+
     return err;
 }
 
 // ----------------------------------------------------------------------
-// This is the normal non-inverted load - possibly with a GROM file. 
+// This is the normal non-inverted load - possibly with a GROM file.
 // This is heavily used by the homebrew and FinalGROM community - the
 // files in non-RPK format usually end with '8'
 // ----------------------------------------------------------------------
@@ -364,7 +364,7 @@ u8 rpk_load_paged378(void)
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);       // First bank loaded into main memory
                 } else err = 1;
             } else err = 1;
-            
+
             // Check for load into the GROM socket at GROM offset >6000
             // This is non-standard as MAME 378 does not support GROMs for this type but we do...
             if (strcasecmp(cart_layout.sockets[rpk_match_rom_to_socket(i)].socket_id, "grom_socket") == 0)
@@ -380,7 +380,7 @@ u8 rpk_load_paged378(void)
             }
         }
     }
-    
+
     return err;
 }
 
@@ -399,7 +399,7 @@ u8 rpk_load_paged379i(void)
     if (fileinfo)
     {
         u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
-        
+
         if (rpk_extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
         {
             // Full load cart
@@ -416,7 +416,7 @@ u8 rpk_load_paged379i(void)
             memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
         } else err = 1;
     } else err = 1;
-    
+
     return err;
 }
 
@@ -453,7 +453,7 @@ u8 rpk_load_pagedcru(void)
 }
 
 // ----------------------------------------------------------------------
-// MBX is a standard load and then we mark the cart as 'MBX with RAM' 
+// MBX is a standard load and then we mark the cart as 'MBX with RAM'
 // which will map in 1K of RAM and set the appopriate banking hotspots.
 // ----------------------------------------------------------------------
 u8 rpk_load_mbx(void)
@@ -467,7 +467,7 @@ u8 rpk_load_mbx(void)
 }
 
 // ----------------------------------------------------------------------
-// MINIMEM is a standard load and then we mark the cart as 'MINIMEM' 
+// MINIMEM is a standard load and then we mark the cart as 'MINIMEM'
 // which will map in 4K of RAM at >7000. This is not yet persisted.
 // ----------------------------------------------------------------------
 u8 rpk_load_minimem(void)
@@ -502,33 +502,36 @@ u8 rpk_load_paged7(void)
 {
     u8 err = 0;
 
-    err = rpk_load_paged();                             // paged7 is esentially a paged load and then we modify the paging below
-    
-    u8 *swapArea = (u8*)(MemCART + 0x10000);            // Just need 32K somewhere convienent
-    
-    memcpy(swapArea+0x0000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM0
-    memcpy(swapArea+0x1000, MemCART+0x0000, 0x1000);
-    
-    memcpy(swapArea+0x2000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM1
-    memcpy(swapArea+0x3000, MemCART+0x1000, 0x1000);
-    
-    memcpy(swapArea+0x4000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM2
-    memcpy(swapArea+0x5000, MemCART+0x2000, 0x1000);
+    err = rpk_load_paged();     // paged7 is esentially a paged load and then we modify the paging below
 
-    memcpy(swapArea+0x6000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM3
-    memcpy(swapArea+0x7000, MemCART+0x3000, 0x1000);
-    
-    memcpy(MemCPU+0x6000,  swapArea, 0x2000);           // Bank 0 + Bank 0
-    memcpy(MemCART+0x0000, swapArea, 0x8000);           // The new 32K ROM with all the banks in place
-    
-    tms9900.bankMask = 0x0003;                          // We have 4 banks.
-    
+    if (!err)
+    {
+        u8 *swapArea = (u8*)(MemCART + 0x10000);            // Just need 32K somewhere convienent
+
+        memcpy(swapArea+0x0000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM0
+        memcpy(swapArea+0x1000, MemCART+0x0000, 0x1000);
+
+        memcpy(swapArea+0x2000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM1
+        memcpy(swapArea+0x3000, MemCART+0x1000, 0x1000);
+
+        memcpy(swapArea+0x4000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM2
+        memcpy(swapArea+0x5000, MemCART+0x2000, 0x1000);
+
+        memcpy(swapArea+0x6000, MemCART+0x0000, 0x1000);    // Build ROM0 + ROM3
+        memcpy(swapArea+0x7000, MemCART+0x3000, 0x1000);
+
+        memcpy(MemCPU+0x6000,  swapArea, 0x2000);           // Bank 0 + Bank 0
+        memcpy(MemCART+0x0000, swapArea, 0x8000);           // The new 32K ROM with all the banks in place
+
+        tms9900.bankMask = 0x0003;                          // We have 4 banks.
+    }
+
     return err;
 }
 
 // ------------------------------------------------------------------------------
-// This is the only public interface - the caller should pass the filename.rpk 
-// and this will unpack it and extract the layout.xml and figure out what 
+// This is the only public interface - the caller should pass the filename.rpk
+// and this will unpack it and extract the layout.xml and figure out what
 // individual roms get loaded where in the memory map... It returns 0 if there
 // were no errors or non-zero if an error was encoutered.
 // ------------------------------------------------------------------------------
@@ -596,10 +599,10 @@ u8 rpk_load(const char* filename)
                     errors = rpk_load_minimem();     // Load special mini-memory with 4K of RAM at >7000
                     break;
                 case PCB_PAGEDCRU:
-                    errors = rpk_load_pagedcru();    // Load special paged CRU cart (DataBiotics, SuperCart)
+                    errors = rpk_load_pagedcru();    // Load special paged CRU cart (DataBiotics mostly)
                     break;
                 case PCB_SUPER:
-                    errors = rpk_load_super();       // Load special Super Cart II with 32K of RAM
+                    errors = rpk_load_super();       // Load special Super Cart II with 32K of RAM that is paged via CRU
                     break;
                 case PCB_PAGED7:
                     errors = rpk_load_paged7();      // Load special paged7 ROM (TI-Calc is the only one I know of)
@@ -619,7 +622,7 @@ u8 rpk_load(const char* filename)
         memset(&MemGROM[0x6000], 0xFF, 0xA000);   // Failed to load - clear the user GROM area
         memset(MemCART,          0xFF, 0x10000);  // And clear out a big chunk of the Cart Buffer just to be safe
     }
-    else 
+    else
     {
         // -------------------------------------------------------------------------------------------
         // Here we look at the listname to try and make some sensible mappings for controllers, etc.
@@ -629,7 +632,7 @@ u8 rpk_load(const char* filename)
         if (strcasecmp(cart_layout.listname, "congobng") == 0)  myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
         if (strcasecmp(cart_layout.listname, "buckrog")  == 0)  myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
     }
-    
+
     return errors;
 }
 
