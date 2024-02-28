@@ -125,4 +125,9 @@ extern void TILoadDiskFile(void);
 extern void FadeToColor(unsigned char ucSens, unsigned short ucBG, unsigned char ucScr, unsigned char valEnd, unsigned char uWait);
 extern void DisplayFileName(void);
 
+extern void SetDiagonals(void);
+extern void MapESDX(void);
+extern void MapSTSOS(void);
+extern void MapPlayer2(void);
+
 #endif

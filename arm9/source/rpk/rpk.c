@@ -94,7 +94,6 @@ static u8 extract_located_file(lowzip_state *st, lowzip_file *fileinfo, u8 *buf,
 	return (st->have_error) ? 1:0;
 }
 
-
 // ------------------------------------------------------------------------------------------------
 // Match a ROM to a socket so we know where to load this into our memory. It's not the fastest
 // lookup but we're going to look up at most 3 roms and so the speed here doesn't matter.
@@ -202,7 +201,7 @@ u8 rpk_parse_xml(char *xml_str)
 }
 
 // ----------------------------------------------------------------------
-// The standard loader will allow for any sized 'c' ROM in the normal
+// The standard loader will allow for any sized 'C' ROM in the normal
 // rom_socket (setting up banking if the ROM is > 8K) and also allow
 // for a GROM load as well up to 40K. The 'rom2_socket' is not used.
 // ----------------------------------------------------------------------
@@ -257,14 +256,14 @@ u8 rpk_load_standard(void)
     return err;
 }
 
-// ----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // This is the banked format with 8K of 'C' memory and 8K of 'D' memory
 // that is banswitched by writing to the cart space. We also allow a
 // GROM load as well.  This is the equivilent for non-RPK as C/D/G loads.
 // This routine is also capable of handling a 4K 'C' ROM in which case
 // it assumes that this is a 12K ROM load (such as the real dump of 
 // Extended BASIC) and will rework the buffers to create a 16K paged ROM.
-// ----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 u8 rpk_load_paged()
 {
     u8 err = 0;
@@ -284,7 +283,7 @@ u8 rpk_load_paged()
             if (fileinfo->uncompressed_size == 4096) bPaged12k = 1;
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART, 0x2000) == 0)
+                if (extract_located_file(&st, fileinfo, MemCART, MAX_CART_SIZE) == 0)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);        // This cart gets loaded directly into main memory
                 }  else err = 1;
@@ -297,7 +296,7 @@ u8 rpk_load_paged()
             lowzip_file *fileinfo = lowzip_locate_file(&st, 0, cart_layout.roms[i].rom_file);
             if (fileinfo)
             {
-                if (extract_located_file(&st, fileinfo, MemCART+0x2000, 0x2000) != 0)
+                if (extract_located_file(&st, fileinfo, MemCART+0x2000, MAX_CART_SIZE-0x2000) != 0)
                 {
                     err = 1;
                 }
@@ -423,7 +422,7 @@ u8 rpk_load_pagedcru(void)
 {
     u8 err = 0;
 
-    tms9900.bankMask = 0x0000;
+    tms9900.bankMask = 0x0000;  // Paged CRU does not use traditional banking
 
     // ------------------------------------------------------------------------------------
     // For each ROM in our layout we load it in to the appopriate CPU/GROM memory area...
@@ -570,17 +569,17 @@ u8 rpk_load(const char* filename)
             switch (cart_layout.pcb)
             {
                 case PCB_STANDARD:
-                    errors = rpk_load_standard();    // Load standard ROM ('C') with possibly GROM ('G')
+                    errors = rpk_load_standard();    // Load standard ROM ('C') and usually also a GROM ('G') - most first party TI carts use this
                     break;
                 case PCB_PAGED:
-                    errors = rpk_load_paged();       // Load standard ROM ('C') with 8K rom2 ('D') and possibly GROM ('G')
+                    errors = rpk_load_paged();       // Load standard ROM ('C') with 8K rom2 ('D') and possibly GROM ('G') - some third party carts use this
                     break;
                 case PCB_GROMEMU:
                     errors = rpk_load_standard();    // No distinction here... MESS/MAME forces 6K GROM vs 8K GROM but DS994a doesn't care
                     break;
-                case PCB_PAGED377:                   // Same as 378 for our purposes (the only real distinction is the max size of the load)
+                case PCB_PAGED377:                   // Same as 378 for our purposes (the only real distinction is the max size of the load and possible GROM use)
                 case PCB_PAGED378:
-                    errors = rpk_load_paged378();    // Load flat ROM with paging up to 512K (8MB on the DSi)
+                    errors = rpk_load_paged378();    // Load flat ROM with non-inverted paging up to 512K (8MB on the DSi)
                     break;
                 case PCB_PAGED379i:
                     errors = rpk_load_paged379i();   // Load flat ROM with inversed paging up to 512K
@@ -601,7 +600,7 @@ u8 rpk_load(const char* filename)
                     errors = rpk_load_paged7();      // Load special paged7 ROM (TI-Calc is the only one I know of)
                     break;
                 default:
-                    errors = 1;
+                    errors = 1;                      // Unsupported type - in theory, this should never happen
                     break;
             }
         } else errors = 1;
@@ -611,9 +610,21 @@ u8 rpk_load(const char* filename)
 
     if (errors)
     {
-        memset(&MemCPU[0x6000], 0xFF, 0x2000);    // Failed to load - clear main memory CART area
+        memset(&MemCPU[0x6000],  0xFF, 0x2000);   // Failed to load - clear main memory CART area
         memset(&MemGROM[0x6000], 0xFF, 0xA000);   // Failed to load - clear the user GROM area
+        memset(MemCART,          0xFF, 0x10000);  // And clear out a big chunk of the Cart Buffer just to be safe
     }
+    else 
+    {
+        // -------------------------------------------------------------------------------------------
+        // Here we look at the listname to try and make some sensible mappings for controllers, etc.
+        // -------------------------------------------------------------------------------------------
+        if (strcasecmp(cart_layout.listname, "qbert")    == 0)  SetDiagonals();             // Q-Bert wants to play using diagnoal movement
+        if (strcasecmp(cart_layout.listname, "frogger")  == 0)  MapPlayer2();               // Frogger uses the P2 controller port
+        if (strcasecmp(cart_layout.listname, "congobng") == 0)  myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
+        if (strcasecmp(cart_layout.listname, "buckrog")  == 0)  myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
+    }
+    
     return errors;
 }
 
