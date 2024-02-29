@@ -84,8 +84,8 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot.
-* MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX is not emulated (other MBX-optional titles with 1K of RAM work fine).
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot where the sound samples are built into the emulator.
+* MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine).
 * Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
 
