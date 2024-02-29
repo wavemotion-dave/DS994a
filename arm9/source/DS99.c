@@ -1621,6 +1621,9 @@ void LoadBIOSFiles(void)
     inFile1 = fopen("/roms/bios/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aDISK.bin", "rb");
+    if (!inFile1) inFile1 = fopen("/roms/bios/disk.bin", "rb");
+    if (!inFile1) inFile1 = fopen("/roms/ti99/disk.bin", "rb");
+    if (!inFile1) inFile1 = fopen("disk.bin", "rb");
     
     if (inFile1) bTIDISKFound = true; else bTIDISKFound = false;
     if (inFile1) fclose(inFile1);    

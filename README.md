@@ -76,11 +76,11 @@ BIOS Files :
 Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek these out if you want maximum compatibility. Place these into /roms/bios
 ```
 * db8f33e5	994aROM.bin (8K)
-* af5c2449	994aGROM.bin (24K)
-* 8f7df93f	994aDISK.bin (8K) - this is needed only if you want .DSK support
+* 584b3dca	994aGROM.bin (24K) [a CRC of af5c2449 is also acceptable]
+* de1f2e25	994aDISK.bin (8K)  [a CRC of 8f7df93f is also acceptable] - this is needed only if you want .DSK support
 ```
 
-BIOS files should be placed in either /roms/bios (recommended - that's where the cool kids keep them) or /roms/ti99 or they can be put in the same directory as your game ROMs.
+BIOS files should be placed in either /roms/bios (recommended - that's where the cool kids keep them) or /roms/ti99 or they can be put in the same directory as your game ROMs. Do not ask me for BIOS files - you will be ignored. Try borrowing them from the amazing Classic99 emulator.
 
 Known Issues :
 -----------------------
@@ -190,7 +190,7 @@ How do I play Q-Bert? :
 -----------------------
 A few games want you to press diagonals for movement such as Q-Bert. This is a little awkward on the d-pad. I find that re-mapping the keys such that D-PAD UP is Joystick Right, DOWN is Joystick Left, LEFT is Joystick Up and RIGHT is Joystick Down works quite well. This replicates the non-diagnoal use of the controller and mimics the way some other home ports (notably the Colecovision) work. If you're using a standard ROM for Q-Bert, the emulator should auto-set this by default.
 
-How do I play Bigfoot? :
+How do I play Bigfoot and other MBX games? :
 -----------------------
 Some of the Milton Bradley games use a cart banking scheme known as MBX (they also had a set of peripherals called the MBX System). DS994a needs to be told that a cart is an MBX cart.  Some of the MBX carts had extra memory. So after you select an MBX game like Bigfoot, you must go into GAME OPTIONS and tell it that it's an MBX cart (in this case 'With RAM'). Then the game should play fine. 
 
