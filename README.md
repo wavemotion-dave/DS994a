@@ -73,7 +73,7 @@ Installation :
 
 BIOS Files :
 -----------------------
-Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek these out if you want maximum compatibility. Place these into /roms/bios
+Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek these out if you want maximum compatibility.
 ```
 * db8f33e5	994aROM.bin (8K)
 * 584b3dca	994aGROM.bin (24K) [a CRC of af5c2449 is also acceptable]
