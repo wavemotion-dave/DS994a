@@ -77,7 +77,7 @@ Here are the BIOS file CRC32 hashes I'm using with all of my testing - seek thes
 ```
 * db8f33e5	994aROM.bin (8K)
 * 584b3dca	994aGROM.bin (24K) [a CRC of af5c2449 is also acceptable]
-* de1f2e25	994aDISK.bin (8K)  [a CRC of 8f7df93f is also acceptable] - this is needed only if you want .DSK support
+* de1f2e25	994aDISK.bin (8K)  [a CRC of 8f7df93f is also acceptable] - for .DSK support
 ```
 
 BIOS files should be placed in either /roms/bios (recommended - that's where the cool kids keep them) or /roms/ti99 or they can be put in the same directory as your game ROMs. Do not ask me for BIOS files - you will be ignored. Try borrowing them from the amazing Classic99 emulator.
