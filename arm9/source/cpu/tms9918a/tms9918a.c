@@ -67,8 +67,6 @@ u8 IH __attribute__((section(".dtcm"))) = 0;
 u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
 u8 CollisionCheckEvery[] = {255, 4, 8, 16, 32, 64, 255};
 
-extern u32 debug[];
-
 // ---------------------------------------------------------------------------------------
 // Screen handlers and masks for VDP table address registers. 
 // Screen modes are confusing as different documentation (MSX, Coleco, VDP manuals, etc)

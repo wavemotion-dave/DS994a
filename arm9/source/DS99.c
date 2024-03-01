@@ -443,7 +443,8 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             Disk[drive].driveWriteCounter--;
             if (Disk[drive].driveWriteCounter) 
             {
-                DS_Print(11,0,6, "DISK WRITE");
+                sprintf(tmpBuf, "DISK %d WRITE", drive+1);
+                DS_Print(11,0,6, tmpBuf);
                 if (globalConfig.floppySound) 
                 {
                     if (++floppy_sfx_dampen & 1) mmEffect(SFX_FLOPPY);
@@ -453,7 +454,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             {
                 // Persist the disk - write it back to the SD card
                 disk_write_to_sd(drive);
-                DS_Print(11,0,6, "          ");
+                DS_Print(11,0,6, "            ");
                 floppy_sfx_dampen = 0;
             }
         }
@@ -462,7 +463,8 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             Disk[drive].driveReadCounter--;
             if (Disk[drive].driveReadCounter) 
             {
-                DS_Print(11,0,6, "DISK READ ");
+                sprintf(tmpBuf, "DISK %d READ ", drive+1);
+                DS_Print(11,0,6, tmpBuf);
                 if (globalConfig.floppySound)
                 {
                     if (++floppy_sfx_dampen & 1) mmEffect(SFX_FLOPPY);
@@ -470,7 +472,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             }
             else
             {
-                 DS_Print(11,0,6, "          ");
+                 DS_Print(11,0,6, "            ");
                  floppy_sfx_dampen = 0;
             }
         }
@@ -1770,9 +1772,9 @@ int main(int argc, char **argv)
     }
     else
     {
-        DS_Print(2,10,0,"ERROR: TI99 BIOS NOT FOUND");
+        DS_Print(2,10,0,"ERROR: TI994a BIOS NOT FOUND");
         DS_Print(2,12,0,"ERROR: CANT RUN WITHOUT BIOS");
-        DS_Print(3,12,0,"ERROR: SEE README FILE");
+        DS_Print(3,12,0,"ERROR: SEE README.MD FILE");
         while(1) ;  // We're done... Need a TI99 bios to run this emulator
     }
   

@@ -1280,9 +1280,9 @@ static inline __attribute__((always_inline)) void TsTd_Accurate(void)
 void TMS9900_ContextSwitch(u16 address)
 {
     // Do it the Classic99 way...
-    u16 x1 = tms9900.WP;                        // Save old WP
+    u16 old_wp = tms9900.WP;                    // Save old WP
     tms9900.WP = MemoryRead16(address+0);       // Set the new Workspace
-    MemoryWrite16(WP_REG(13), x1);              // Set the old Workspace Pointer
+    MemoryWrite16(WP_REG(13), old_wp);          // Set the old Workspace Pointer
     MemoryWrite16(WP_REG(14), tms9900.PC);      // Set the old PC
     MemoryWrite16(WP_REG(15), tms9900.ST);      // Set the old Status
     tms9900.PC = MemoryRead16(address+2);       // Set the new PC based on original workspace

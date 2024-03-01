@@ -136,7 +136,7 @@ Be sure to use the START button to save out your configuration options so they p
 
 Emulated Disk Drives :
 -----------------------
-DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. The first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a modification to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
+DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. On the DSi, all three disks are fully buffered read/write. On the older DS-Lite/Phat, only the first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a modification to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
 
 Keyboards and Menus :
 -----------------------
@@ -243,10 +243,12 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.0: SOON! by wavemotion-dave
+V2.0: 01-Mar-2024 by wavemotion-dave
 * Support for .rpk (Rom PacKs - same as used by MAME/MESS).
 * Fix for save/load state of games that use RAM (MBX carts, MiniMem, etc)
 * Improved SAMS handling so that the proper amount of RAM is detected
+* On DSi and above, DSK3 is now fully buffered and writable.
+* Lots of small tweaks and cleanups across the board as time permitted.
 * Refactored and reduced resources so we free up an additional 256K of valuable memory for the future!
 
 V1.9: 24-Feb-2024 by wavemotion-dave

@@ -68,12 +68,11 @@ u8 driveSelected         = DSK1;    // We support DSK1, DSK2 and DSK3
 Disk_t Disk[MAX_DSKS];              // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 u8 Disk1_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
 u8 Disk2_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
-u8 Disk3_ImageBuf[512];             // First two sectors only - but as a bonus, DSK3 can hold 400K (max 1600 sectors allowed by TI controller)
+u8 Disk3_ImageBuf[512];             // First two sectors only for the DS-Lite/Phat but full buffering on DSi (who will use the SharedMemBuffer[])
 
 char backup_filename[MAX_PATH];     // If the user wants, they can backup either of DSK1 or DSK2 (the writeable disks)
 
-u16 max_sectors[MAX_DSKS] =         // For DSK1 and DSK2 we support 1440x256=360K and for DSK3 we allow the full 1600x256=400K
-                {1440, 1440, 1600}; 
+#define MAX_DSK_SECTORS     1440    // For all disks we support 1440x256=360K
 
 #define ERR_DEVICEERROR     6       // This is the only error we support. Good enough.
 
@@ -90,7 +89,16 @@ void disk_init(void)
     
     Disk[DSK1].image = Disk1_ImageBuf;  // Buffered
     Disk[DSK2].image = Disk2_ImageBuf;  // Buffered
-    Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us 360KB of memory.
+    
+    if (isDSiMode())
+    {
+        extern u8 SharedMemBuffer[];
+        Disk[DSK3].image = SharedMemBuffer; // For DSi we fully buffer 360K for DSK3. The DSi is otherwise not really using the SharedMemBuffer[]
+    }
+    else
+    {
+        Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us valuable memory on the older handhelds.
+    }
 }
 
 // ------------------------------------------------------
@@ -249,8 +257,9 @@ void WriteTICCRegister(u16 address, u8 val)
 }
 
 // --------------------------------------------------------------------------
-// This is really only used for DSK3 which is not fully buffered in memory
-// and so we must go out to the actual .dsk file and seek/read in the sector.
+// This is really only used for DSK3 on the older DS-Lite/Phat where the 
+// disk is not fully buffered in memory and so we must go out to the actual
+// .dsk file and seek/read in the sector.
 // --------------------------------------------------------------------------
  static void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
@@ -260,7 +269,7 @@ void WriteTICCRegister(u16 address, u8 val)
     chdir(Disk[drive].path);
 
     // Make sure the sector being asked for is sensible...
-    if (sector < max_sectors[drive])
+    if (sector < MAX_DSK_SECTORS)
     {
         // Seek to the right sector and read in 256 bytes...
         FILE *infile = fopen(Disk[drive].filename, "rb");
@@ -319,7 +328,7 @@ void WriteTICCRegister(u16 address, u8 val)
         // --------------------------------------------------
         // Make sure the sector asked for is within reason...
         // --------------------------------------------------
-        if (sectorNumber >= max_sectors[drive])
+        if (sectorNumber >=  MAX_DSK_SECTORS)
         {
             success = false;
         }
@@ -330,12 +339,12 @@ void WriteTICCRegister(u16 address, u8 val)
                 // -----------------------------------------------------------------
                 // Move the 256 byte sector from the .DSK image to the VDP memory
                 // -----------------------------------------------------------------
-                if (drive == DSK3)
+                if (!isDSiMode() && (drive == DSK3))
                 {
-                    // DSK3 is not cached in memory - so read the sector out from the file.
+                    // DSK3 is not cached in memory on older DS-Lite/Phat - so read the sector out from the file.
                     ReadSector(drive, sectorNumber, &pVDPVidMem[destVDP]);
                 }
-                else
+                else // Fully buffered - just grab from memory
                 {
                     memcpy(&pVDPVidMem[destVDP], &Disk[drive].image[index], 256);
                 }
@@ -345,7 +354,7 @@ void WriteTICCRegister(u16 address, u8 val)
             } 
             else  // Must be write
             {
-                if (drive != DSK3) // We only support write-back on DSK1 and DSK2
+                if (isDSiMode() || (drive != DSK3)) // We only support write-back on DSK1 and DSK2 for DS-Lite/Phat
                 {
                     memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
                     *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
@@ -419,11 +428,11 @@ void disk_unmount(u8 drive)
 {
     if (Disk[drive].isDirty) disk_write_to_sd(drive);
     Disk[drive].isMounted = false;
-    if (drive != DSK3)
+    if (isDSiMode() || (drive != DSK3))
     {
         memset(Disk[drive].image, 0x00, MAX_DSK_SIZE);
     }
-    else
+    else // For DS-Lite/Phat we only have a 2 sector buffer
     {
         memset(Disk[drive].image, 0x00, 512);
     }
@@ -437,9 +446,9 @@ ITCM_CODE void disk_read_from_sd(u8 drive)
     FILE *infile = fopen(Disk[drive].filename, "rb");
     if (infile)
     {
-        if (drive != DSK3)
+        if (isDSiMode() || (drive != DSK3))
         {
-            fread(Disk[drive].image, 1, MAX_DSK_SIZE, infile); // For DSK1 and DSK2 we buffer it all
+            fread(Disk[drive].image, 1, MAX_DSK_SIZE, infile); // For DSK1 and DSK2 we buffer it all. DSi can also buffer DSK3
         }
         else
         {
@@ -451,8 +460,8 @@ ITCM_CODE void disk_read_from_sd(u8 drive)
 
  ITCM_CODE void disk_write_to_sd(u8 drive)
 {
-    // Only DSK1 and DSK2 support write-back
-    if (drive != DSK3)
+    // Only DSK1 and DSK2 support write-back on DS-Lite/Phat
+    if (isDSiMode() || (drive != DSK3))
     {
         // Change into the last known DSKs directory for this file
         chdir(Disk[drive].path);
@@ -475,8 +484,8 @@ ITCM_CODE void disk_read_from_sd(u8 drive)
 
 void disk_backup_to_sd(u8 drive)
 {
-    // Only DSK1 and DSK2 support backup
-    if (drive != DSK3)
+    // Only DSK1 and DSK2 support backup on DS-Lite/Phat
+    if (isDSiMode() || (drive != DSK3))
     {
         // Change into the last known DSKs directory for this file
         chdir(Disk[drive].path);
@@ -514,7 +523,7 @@ void disk_get_file_listing(u8 drive)
     {
         sectorPtr = (Disk[drive].image[256 + (i+0)] << 8) | (Disk[drive].image[256 + (i+1)] << 0);
         if (sectorPtr == 0) break;
-        if (drive == DSK3)
+        if (!isDSiMode() && (drive == DSK3))
         {
             ReadSector(drive, sectorPtr, fileBuf);
             for (u8 j=0; j<10; j++) 
