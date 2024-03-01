@@ -132,7 +132,7 @@ There are two levels of configuration:
 
 Be sure to use the START button to save out your configuration options so they persist on future launches of the emulator.
 
-![Options Screen](https://github.com/wavemotion-dave/DS994a/blob/main/options.png)
+![Options Screen](https://github.com/wavemotion-dave/DS994a/blob/main/options.bmp)
 
 Emulated Disk Drives :
 -----------------------
