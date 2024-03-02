@@ -422,6 +422,7 @@ void ResetTI(void)
 void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 {
     static u8 bShiftKeysBlanked = 0;
+    static u8 bCapsKeysBlanked = 0;
     
     // ----------------------------------------------------------
     // Show PAL or blanks (if NTSC) on screen
@@ -500,11 +501,6 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
                 DS_Print(0,0,6, "CTRL");
                 bShiftKeysBlanked = 0;
             }
-            else if(tms9901.CapsLock)
-            {
-                DS_Print(0,0,6, "CAPS");
-                bShiftKeysBlanked = 0;
-            }
             else
             {
                 if (!bShiftKeysBlanked)
@@ -514,6 +510,21 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
                 }
             }
         }
+        
+        if(tms9901.CapsLock)
+        {
+            DS_Print(2,23,6, "@");
+            bCapsKeysBlanked = 0;
+        }
+        else
+        {
+            if (!bCapsKeysBlanked)
+            {
+                bCapsKeysBlanked = 1;
+                DS_Print(2,23,2, "@");
+            }
+        }
+        
     }
 }
 
