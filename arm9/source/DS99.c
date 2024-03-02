@@ -46,7 +46,7 @@
 // sundry debug purposes. Pressing X when loading a game shows the debug 
 // registers. It's amazing how incredibly useful this proves to be.
 // --------------------------------------------------------------------------
-u32 debug[0x10];
+u32 debug[0x10]     __attribute__((section(".dtcm")));
 
 // ---------------------------------------------------------------------------------------
 // The master sound chip for the TI99. The SN sound chip is the same as the TI9919 chip.
@@ -91,8 +91,8 @@ u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard
 char key_push[0x20];            // A small array for when inserting DSK filenames into the keyboard buffer
 char dsk_filename[16];          // Short filename to show on DISK Menu 
 
-u16 NTSC_Timing[] = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
-u16 PAL_Timing[]  = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
+u16 NTSC_Timing[] __attribute__((section(".dtcm"))) = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
+u16 PAL_Timing[]  __attribute__((section(".dtcm"))) = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 
 u8 disk_menu_items = 0;     // Start with the top menu item
 u8 disk_drive_select = 0;   // Start with DSK1

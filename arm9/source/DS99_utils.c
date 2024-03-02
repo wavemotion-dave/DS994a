@@ -390,6 +390,7 @@ void TI99FindFiles(void)
         if (strcasecmp(szFile, "sav") == 0) continue;
           
         strcpy(gpFic[uNbFile].szName,szFile);
+        gpFic[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
         gpFic[uNbFile].uType = DIRECT;
         uNbFile++;
         countTI++;
@@ -464,6 +465,7 @@ void TI99FindDskFiles(void)
         if (strcasecmp(szFile, "sav") == 0) continue;
           
         strcpy(gpDsk[uNbFile].szName,szFile);
+        gpDsk[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
         gpDsk[uNbFile].uType = DIRECT;
         uNbFile++;
         countDSK++;

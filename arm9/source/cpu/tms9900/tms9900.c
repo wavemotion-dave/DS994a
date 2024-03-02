@@ -579,23 +579,29 @@ void TMS9900_ClearAccurateEmulationFlag(u16 flag)
 }
 
 //-------------------------------------------------------------------
-// A GROM increment should take into account that it's only really
-// incrementing and wrapping at the 8K boundary. But I've yet to
-// find any game that relies on the wrap and games are always setting
-// the address before reads/increments and so this saves us some
-// processing power necessary for the old DS-handhelds.
+// The GROM increment takes into account that it's only really
+// incrementing and wrapping at the 8K boundary. The auto-increment
+// should not bump the upper 3 bits which would, effectively, select
+// the next GROM in memory. This comes at a slight speed pentalty
+// but it's minor and we want this to be bullet-accurate.
 //-------------------------------------------------------------------
 static inline __attribute__((always_inline)) u8 ReadGROM(void)
 {
     AddCycleCount(GROM_READ_CYCLES);
-    return MemGROM[tms9900.gromAddress++];  // Auto-increment - we are not handling WRAP
+    u8 ret=MemGROM[tms9900.gromAddress];
+    // Auto-increment - be careful not to bump the high bits as that's our GROM select
+    tms9900.gromAddress = (tms9900.gromAddress & 0xE000) | ((tms9900.gromAddress+1) & 0x1FFF);
+    return ret;
+    
 }
 
-// ------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
 // The GROM address is 16 bits but is always read/written 8-bits at a time
-// so we have to handle the high byte and low byte transfers...
-// The hardware will wrap the 13-bit counter but we are ignoring that for speed.
-// ------------------------------------------------------------------------------
+// so we have to handle the high byte and low byte transfers... This code 
+// is careful to preserve the upper 3 bits of the GROM address as an auto-increment
+// should not bump the GROM that is being accessed (i.e. if we are at the top
+// of the GROM address, an increment should wrap to address 0x0000 of the same GROM.
+// ---------------------------------------------------------------------------------
 ITCM_CODE u8 ReadGROMAddress(void)
 {
     u8 data;
@@ -605,14 +611,15 @@ ITCM_CODE u8 ReadGROMAddress(void)
     
     if (tms9900.gromReadLoHi) // Low byte
     {
-        // Reads are always address + 1 - we are not handling WRAP
-        data = (u8)(tms9900.gromAddress+1);
+        // Reads are always address + 1
+        data = (u8)((tms9900.gromAddress+1) & 0xFF);
         tms9900.gromReadLoHi = 0;
     }
     else // High byte
     {
-        // Reads are always address + 1 - we are not handling WRAP
-        data = (u8)((tms9900.gromAddress+1) >> 8);
+        // Reads are always address + 1 - be careful to not bump the high bits as that's our GROM select
+        u16 addr = (tms9900.gromAddress & 0xE000) | ((tms9900.gromAddress+1) & 0x1FFF);
+        data = (u8)(addr >> 8);
         tms9900.gromReadLoHi = 1;
     }
 

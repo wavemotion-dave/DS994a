@@ -245,6 +245,10 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.1: ??-???-2024 by wavemotion-dave
+* Now using a small light on the CAPS/ALPHALOCK key to indicate if CAPS LOCK is on (cleaner look).
+* GROM auto-increment of address will properly preserve the upper bits so we don't inadvertantly select the next GROM in our system (accuracy).
+
 V2.0: 01-Mar-2024 by wavemotion-dave
 * Support for .rpk (Rom PacKs - same as used by MAME/MESS).
 * Fix for save/load state of games that use RAM (MBX carts, MiniMem, etc)

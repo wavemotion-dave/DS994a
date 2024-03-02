@@ -7,7 +7,7 @@
 * Note: Most of this file is from the ColEm emulator core by Marat Fayzullin
 *       but heavily modified for specific NDS use. If you want to use this
 *       code, you are advised to seek out the ColEm core and contact Marat.
-* 
+*
 *       I've added proper init of the VDP[] registers per findings on real
 *       hardware and the VDP Control Latch reset on data read/write and
 *       on control reads - this was not quite accurate in the ColEm handlers.
@@ -16,29 +16,29 @@
 *       for improved accuracy - the 5S flag should be set and latched
 *       and neither the sprite number nor the flag should be cleared
 *       until the status register is read (or the VDP is reset).
-* 
+*
 *       There is one caveat here, however: the 5th sprite number acts
 *       like a counter when the 5S flag is not set - it will represent
 *       the last sprite scanned on a line (either 31 or the one where
 *       the Y coordinate is 208).
-* 
+*
 *       Some improvements have been made to the undocumented VDP modes
 *       which are used by a few homebrews and are now properly rendered.
-* 
-*       Border refresh has been overhauled - it's only used in TEXT 
+*
+*       Border refresh has been overhauled - it's only used in TEXT
 *       mode and handles the first and last 8 pixels on a line using
 *       a memcpy() which is pretty fast.
-* 
-*       We've also patched in several color tables for very fast color 
+*
+*       We've also patched in several color tables for very fast color
 *       handling and check that the FG/BG colors have changed before
-*       going back through a semi-CPU-expensive fetch into VDP memory. 
+*       going back through a semi-CPU-expensive fetch into VDP memory.
 *       Whenever possible, we also write 16-bits or 32-bits at a time
-*       since the 16-bit writes are exactly as CPU intensive as the 
+*       since the 16-bit writes are exactly as CPU intensive as the
 *       8-bit variety on the DS hardware (and 32-bit writes are slightly
 *       faster than two 16-bit writes).
-* 
+*
 *       I've added the tms9918a.txt file to the github repository that
-*       also houses this emulator - it's a wealth of info on the VDP 
+*       also houses this emulator - it's a wealth of info on the VDP
 *       including many things that the original TI manuals did not tell us.
 *
 ******************************************************************************/
@@ -68,10 +68,10 @@ u8 scan_collisions_every __attribute__((section(".dtcm"))) = 32;
 u8 CollisionCheckEvery[] = {255, 4, 8, 16, 32, 64, 255};
 
 // ---------------------------------------------------------------------------------------
-// Screen handlers and masks for VDP table address registers. 
+// Screen handlers and masks for VDP table address registers.
 // Screen modes are confusing as different documentation (MSX, Coleco, VDP manuals, etc)
 // all seem to refer to 'Modes' vs 'Screens' vs more colorful names for the modes
-// plus there are the undocumented modes. So I've done my best to comment using 
+// plus there are the undocumented modes. So I've done my best to comment using
 // all of the names you will find out there in the wild world of VDP documentation!
 // ---------------------------------------------------------------------------------------
 tScrMode SCR[MAXSCREEN+1] __attribute__((section(".dtcm")))  = {
@@ -118,33 +118,12 @@ u16 ChrGenM     __attribute__((section(".dtcm"))) = 0x3FFF;
 u16 SprTabM     __attribute__((section(".dtcm"))) = 0x3FFF;
 
 
-/** RefreshBorder() ******************************************/
-/** This function is called from RefreshLine#() to refresh  **/
-/** the left and right screen borders for TEXT modes.       **/
-/*************************************************************/
-ITCM_CODE void RefreshBorder(byte Y)
-{
-    /* Screen buffer */
-    byte *P=XBuf;
-
-    /* Skip down to the correct position vertically */
-    P+=256*Y;
-    
-    /* Refresh left border 8 pixels */
-    memset(P, BGColor, 8);
-
-    /* Refresh right border 8 pixels */
-    P+=256-8;
-    memset(P, BGColor, 8);
-}
-
-
 /** CheckSprites() ***********************************************/
 /** This function is periodically called to check for sprite    **/
 /** collisions. The caller of this will set the flag as needed. **/
 /** Returning zero (0) means no collision. Otherwise collision. **/
 /*****************************************************************/
-ITCM_CODE byte CheckSprites(void) 
+ITCM_CODE byte CheckSprites(void)
 {
   unsigned int I,J,LS,LD;
   byte *S,*D,*PS,*PD,*T;
@@ -158,7 +137,7 @@ ITCM_CODE byte CheckSprites(void)
   }
 
   // ------------------------------------------------------------------
-  // Run through all displayed sprites and see if there is any overlap. 
+  // Run through all displayed sprites and see if there is any overlap.
   // This is a bit CPU intensive - we check vertical overlap first as
   // it's a bit faster to see if these have any chance of collision.
   // ------------------------------------------------------------------
@@ -230,11 +209,11 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
     byte *AT;
     u8 sprite,MS,S5;
     s16 K;
-    
+
     // Assume no sprites shown - we OR in a '1' for each visible sprite
     *Mask = 0x00000000;
-    
-    // Must have MODE1+ and screen enabled - otherwise no sprites rendered 
+
+    // Must have MODE1+ and screen enabled - otherwise no sprites rendered
     if(!ScrMode || !TMS9918_ScreenON)
     {
         return(-1);
@@ -245,14 +224,14 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
     MS = MaxSprites[myConfig.maxSprites]+1;     // We either render 4 sprites (normal - this is how an 9918 would work) or 32 sprites (enhanded mode for emulation only)
     S5 = 5;                                     // We always want to trap on the 5th sprite
     u8 last = 31;                               // The last sprite number is 31 but we may break early if Y==208
-    
+
     // ------------------------------------------------------------------
     // Scan through all possible 32 sprites to see what's being shown...
     // ------------------------------------------------------------------
     for(sprite=0;sprite<32;++sprite,AT+=4)
     {
-        K=AT[0];                            // K = sprite Y coordinate 
-        if(K==208) {last=sprite; break;}    // Iteration terminates if Y=208 and we save the last scanned sprite 
+        K=AT[0];                            // K = sprite Y coordinate
+        if(K==208) {last=sprite; break;}    // Iteration terminates if Y=208 and we save the last scanned sprite
         if(K>256-IH) K-=256;                // Y coordinate may be negative
 
         // -------------------------------------------------------------------------------------------
@@ -297,7 +276,7 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
         }
     }
 
-  // Return last scanned sprite - the caller's Mask is also filled in with a list of all shown sprites 
+  // Return last scanned sprite - the caller's Mask is also filled in with a list of all shown sprites
   return(sprite-1);
 }
 
@@ -306,7 +285,7 @@ ITCM_CODE int ScanSprites(byte Y, unsigned int *Mask)
 /** This function is called from RefreshLine#() to refresh  **/
 /** and draw sprites to a given pixel line.                 **/
 /*************************************************************/
-ITCM_CODE void RefreshSprites(register byte Y) 
+ITCM_CODE void RefreshSprites(register byte Y)
 {
   register byte *PT,*AT;
   register byte *P,*T,C;
@@ -425,7 +404,7 @@ ITCM_CODE void RefreshSprites(register byte Y)
 /** Refresh line Y (0..191) of SCREEN0, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine0(u8 Y) 
+ITCM_CODE void RefreshLine0(u8 Y)
 {
   register byte *T,K,Offset;
   register byte *P,FC,BC;
@@ -443,9 +422,10 @@ ITCM_CODE void RefreshLine0(u8 Y)
     Offset=Y&0x07;
 
     u8 lastT = ~(*T);
-    
-    P += 8;     // For this TEXT mode, we shift in 8 pixels to center the screen. RefreshBorder() will fix the first 8 pixels and last 8 pixels on a line.
-    
+
+    memset(P, BGColor, 8);  // Fill the first 8 pixels with background color since the screen in TEXT mode is 240 pixels and needs the border filled
+    P += 8;                 // For this TEXT mode, we shift in 8 pixels to center the screen. RefreshBorder() will fix the first 8 pixels and last 8 pixels on a line.
+
     for(int X=0;X<40;X++)
     {
       if (lastT != *T) // Is this set of pixels different than the last one?
@@ -472,16 +452,16 @@ ITCM_CODE void RefreshLine0(u8 Y)
       }
       P+=6;T++;
     }
+
+    memset(P, BGColor, 8);  // Fill the last 8 pixels with background color since the screen in TEXT mode is 240 pixels and needs the border filled
   }
-    
-  RefreshBorder(Y);
 }
 
 /** RefreshLine1() *******************************************/
 /** Refresh line Y (0..191) of SCREEN1, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine1(u8 uY) 
+ITCM_CODE void RefreshLine1(u8 uY)
 {
   register byte K=0,Offset,BC;
   register u8 *T;
@@ -491,16 +471,16 @@ ITCM_CODE void RefreshLine1(u8 uY)
   P=(u32*) (XBuf+(uY<<8));
   u32 ptLow = 0; u32 ptHigh = 0;
 
-  if(!ScreenON) 
+  if(!ScreenON)
     memset(P,BGColor,256);
-  else 
+  else
   {
     T=ChrTab+((int)(uY&0xF8)<<2);
     Offset=uY&0x07;
 
     lastT = ~(*T);
-      
-    for(int X=0;X<32;X++) 
+
+    for(int X=0;X<32;X++)
     {
       if (lastT != *T) // Is this set of pixels different than the last one?
       {
@@ -522,7 +502,7 @@ ITCM_CODE void RefreshLine1(u8 uY)
 /** Refresh line Y (0..191) of SCREEN2, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine2(u8 uY) 
+ITCM_CODE void RefreshLine2(u8 uY)
 {
   u32 *P;
   register byte K,BC,*T;
@@ -530,12 +510,12 @@ ITCM_CODE void RefreshLine2(u8 uY)
 
   P=(u32*)(XBuf+(uY<<8));
 
-  if (!ScreenON) 
+  if (!ScreenON)
     memset(P,BGColor,256);
-  else 
+  else
   {
     u32 ptLow = 0; u32 ptHigh = 0;
-      
+
     J   = ((u16)((u16)uY&0xC0)<<5)+(uY&0x07);
     T   = ChrTab+((u16)((u16)uY&0xF8)<<2);
     u8 lastT = ~(*T);
@@ -562,16 +542,16 @@ ITCM_CODE void RefreshLine2(u8 uY)
       *P++ = ptHigh;
       T++;
     }
-      
+
     RefreshSprites(uY);
-  }    
+  }
 }
 
 /** RefreshLine3() *******************************************/
 /** Refresh line Y (0..191) of SCREEN3, including sprites   **/
 /** in this line.                                           **/
 /*************************************************************/
-ITCM_CODE void RefreshLine3(u8 uY) 
+ITCM_CODE void RefreshLine3(u8 uY)
 {
   byte X,K,Offset;
   byte *P,*T;
@@ -581,14 +561,14 @@ ITCM_CODE void RefreshLine3(u8 uY)
   if(!TMS9918_ScreenON) {
     memset(P,BGColor,256);
   }
-  else 
+  else
   {
     u8 ptLow = 0; u8 ptHigh = 0;
     T=ChrTab+((int)(uY&0xF8)<<2);
     lastT = ~(*T);
     Offset=(uY&0x1C)>>2;
     u32 dword1=0, dword2=0;
-    for(X=0;X<32;X++) 
+    for(X=0;X<32;X++)
     {
       if (lastT != *T) // Is this set of pixels different than the last one?
       {
@@ -605,7 +585,7 @@ ITCM_CODE void RefreshLine3(u8 uY)
       {
           u32 *destPtr = (u32*)P;
           *destPtr++ = dword1;
-          *destPtr   = dword2;          
+          *destPtr   = dword2;
       }
       P+=8;T++;
     }
@@ -620,15 +600,15 @@ ITCM_CODE void RefreshLine3(u8 uY)
 u8 VDP_RegisterMasks[] __attribute__((section(".dtcm"))) = { 0x03, 0xfb, 0x0f, 0xff, 0x07, 0x7f, 0x07, 0xff };
 byte SprHeights[4] __attribute__((section(".dtcm"))) = { 8,16,16,32 };
 
-ITCM_CODE byte Write9918(u8 iReg, u8 value) 
-{ 
+ITCM_CODE byte Write9918(u8 iReg, u8 value)
+{
   int newMode;
   int VRAMMask;
   byte bIRQ;
-  
+
   iReg &= 0x07;
   value &= VDP_RegisterMasks[iReg];
-    
+
   /* Enabling IRQs may cause an IRQ here */
   bIRQ  = (iReg==1) && ((VDP[1]^value)&value&TMS9918_REG1_IRQ) && (VDPStatus&TMS9918_STAT_VBLANK);
 
@@ -638,7 +618,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
   /* Store value into the register */
   VDP[iReg]=value;
 
-  /* Depending on the register, do... */  
+  /* Depending on the register, do... */
   switch (iReg) {
     case 0: /* Mode register 0 */
     case 1: /* Mode register 1 */
@@ -650,7 +630,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
     //      0x04    1       0       0       Mode 1   - MSX SCREEN 0 aka "TEXT"
     //      0x06    1       1       0       Mode 1+2 - Undocumented. Like Mode 1 aka "HALF BITMAP"
     //      0x03    0       1       1       Mode 2+3 - Undocumented. Like Mode 3 aka "BITMAP TEXT"
-      switch(TMS9918_Mode) 
+      switch(TMS9918_Mode)
       {
         case 0x00: newMode=1;break;         /* VDP Mode 0 aka MSX SCREEN 1 aka "GRAPHIC 1"        */
         case 0x01: newMode=2;break;         /* VDP Mode 3 aka MSX SCREEN 2 aka "GRAPHIC 2"        */
@@ -660,9 +640,9 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
         case 0x03: newMode=2;break;         /* Undocumented Mode 2+3 is like Mode 3 (BITMAP TEXT) */
         default:   newMode=ScrMode;break;   /* Illegal mode. Just keep screen mode as-is.         */
       }
-          
+
       /* If mode was changed or VRAM size changed: recompute table addresses */
-      if ((newMode!=ScrMode) || !VRAMMask) 
+      if ((newMode!=ScrMode) || !VRAMMask)
       {
         VRAMMask    = TMS9918_VRAMMask;
         ScrMode=newMode;
@@ -672,37 +652,37 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
         ChrGen=pVDPVidMem+(((int)(VDP[4]&SCR[ScrMode].R4)<<11)&VRAMMask);
         SprTab=pVDPVidMem+(((int)(VDP[5]&SCR[ScrMode].R5)<<7)&VRAMMask);
         SprGen=pVDPVidMem+(((int)(VDP[6]&SCR[ScrMode].R6)<<11)&VRAMMask);
-          
+
         ChrTabM = ((int)(VDP[2]|(u8)~SCR[ScrMode].M2)<<10)|0x03FF;
         ColTabM = ((int)(VDP[3]|(u8)~SCR[ScrMode].M3)<<6) |0x003F;
         ChrGenM = ((int)(VDP[4]|(u8)~SCR[ScrMode].M4)<<11)|0x07FF;
         SprTabM = ((int)(VDP[5]|(u8)~SCR[ScrMode].M5)<<7) |0x007F;
       }
-          
+
       OH = SprHeights[VDP[1]&0x03];
       IH = SprHeights[VDP[1]&0x02];
-          
+
       break;
-    case  2: 
+    case  2:
       ChrTab=pVDPVidMem+(((int)(value&SCR[ScrMode].R2)<<10)&VRAMMask);
       ChrTabM = ((int)(value|(u8)~SCR[ScrMode].M2)<<10)|0x03FF;
       break;
-    case  3: 
+    case  3:
       ColTab=pVDPVidMem+(((int)(value&SCR[ScrMode].R3)<<6)&VRAMMask);
       ColTabM = ((int)(value|(u8)~SCR[ScrMode].M3)<<6)|0x003F;
       break;
-    case  4: 
+    case  4:
       ChrGen=pVDPVidMem+(((int)(value&SCR[ScrMode].R4)<<11)&VRAMMask);
       ChrGenM = ((int)(value|(u8)~SCR[ScrMode].M4)<<11)|0x07FF;
       break;
-    case  5: 
+    case  5:
       SprTab=pVDPVidMem+(((int)(value&SCR[ScrMode].R5)<<7)&VRAMMask);
       SprTabM = ((int)(value|(u8)~SCR[ScrMode].M5)<<7)|0x007F;
       break;
-    case  6: 
+    case  6:
       SprGen=pVDPVidMem+(((int)(value&SCR[ScrMode].R6)<<11)&VRAMMask);
       break;
-    case  7: 
+    case  7:
       FGColor=value>>4;
       BGColor=value&0x0F;
       if (BGColor)
@@ -716,7 +696,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
       else
       {
           BG_PALETTE[0] = RGB15(0x00,0x00,0x00);
-      }          
+      }
       break;
   }
 
@@ -728,7 +708,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
 /** RdData9918() *********************************************/
 /** Read a value from the VDP Data Port.                    **/
 /*************************************************************/
-ITCM_CODE byte RdData9918(void) 
+ITCM_CODE byte RdData9918(void)
 {
   byte data = VDPDlatch;
   VDPDlatch = pVDPVidMem[VAddr];
@@ -747,12 +727,12 @@ extern void TMS9901_ClearVDPInterrupt(void);
 /** in this function may cause an IRQ to be generated. In   **/
 /** this case, WrCtrl9918() returns 1. Returns 0 otherwise. **/
 /*************************************************************/
-ITCM_CODE void WrCtrl9918(byte value) 
+ITCM_CODE void WrCtrl9918(byte value)
 {
   if(VDPCtrlLatch)  // Write the high byte of the video address
-  { 
+  {
     VDPCtrlLatch=0; // Set the VDP flip-flop so we do the low byte next
-      
+
     VAddr = ((VAddr&0x00FF)|((u16)value<<8))&0x3FFF;                                // Set the high byte of the video address always
     if (value & 0x80)
     {
@@ -763,7 +743,7 @@ ITCM_CODE void WrCtrl9918(byte value)
   else  // Write the low byte of the video address / control register
   {
       VDPCtrlLatch=1;   // Set the VDP flip-flow so we do the high byte next
-      VAddr=(VAddr&0xFF00)|value; 
+      VAddr=(VAddr&0xFF00)|value;
   }
 }
 
@@ -771,12 +751,12 @@ ITCM_CODE void WrCtrl9918(byte value)
 /** RdCtrl9918() *********************************************/
 /** Read a value from the VDP Control Port.                 **/
 /*************************************************************/
-ITCM_CODE byte RdCtrl9918(void) 
+ITCM_CODE byte RdCtrl9918(void)
 {
   byte data = VDPStatus;
-  VDPStatus &= 0x1F; // Top bits are cleared on a read... 
+  VDPStatus &= 0x1F; // Top bits are cleared on a read...
   VDPCtrlLatch = 0;
-    
+
   TMS9901_ClearVDPInterrupt();    // This is the VDP interrupt for the TMS9901/TMS9900
 
   return(data);
@@ -796,7 +776,7 @@ u16 tms_start_line __attribute__((section(".dtcm"))) = TMS9918_START_LINE;
 u16 tms_end_line   __attribute__((section(".dtcm"))) = TMS9918_END_LINE;
 u16 tms_cpu_line   __attribute__((section(".dtcm"))) = TMS9918_LINE;
 
-ITCM_CODE byte Loop9918(void) 
+ITCM_CODE byte Loop9918(void)
 {
   extern void TI99UpdateScreen(void);
   register byte bIRQ;
@@ -843,7 +823,7 @@ ITCM_CODE byte Loop9918(void)
       }
 
       frameSkipIdx++;
-      
+
       /* Generate IRQ when enabled and when VBlank flag goes up */
       bIRQ=TMS9918_VBlankON && !(VDPStatus&TMS9918_STAT_VBLANK);
 
@@ -856,7 +836,7 @@ ITCM_CODE byte Loop9918(void)
         if (CheckSprites()) VDPStatus|=TMS9918_STAT_OVRLAP; // Set the collision bit
       }
   }
-    
+
   /* Done */
   return(bIRQ);
 }
@@ -866,7 +846,7 @@ ITCM_CODE byte Loop9918(void)
 /** by pointing Buffer to it and setting Width and Height.  **/
 /** Set Buffer to 0 to use the existing screen buffer.      **/
 /*************************************************************/
-void Reset9918(void) 
+void Reset9918(void)
 {
     memset(VDP,0x00,sizeof(VDP));       // Initialize VDP registers
     VDP[0] = 0x00;                      // Control Bits I:  Graphics Mode 1 (M3... M1,M2 in VDP[1])
@@ -876,8 +856,8 @@ void Reset9918(void)
     VDP[4] = 0x00;                      // Default for pattern generator base address
     VDP[5] = 0x36;                      // Default for sprite attribute table base address
     VDP[6] = 0x07;                      // Default for sprite generator table base address
-    VDP[7] = 0x00;                      // FG color and BG color both 0x00 to start        
-    memset(pVDPVidMem, 0x00, 0x4000);   // Reset Video memory 
+    VDP[7] = 0x00;                      // FG color and BG color both 0x00 to start
+    memset(pVDPVidMem, 0x00, 0x4000);   // Reset Video memory
     VDPCtrlLatch=0;                     // VDP control latch (flip-flop)
     VDPStatus=0x00;                     // VDP status register
     VAddr = 0x0000;                     // VDP address register
@@ -887,14 +867,14 @@ void Reset9918(void)
     ChrTab=ColTab=ChrGen=pVDPVidMem;    // VDP tables (screen)
     SprTab=SprGen=pVDPVidMem;           // VDP tables (sprites)
     VDPDlatch = 0;                      // VDP Data latch
-   
+
     ChrGenM = 0x3FFF;                   // Full mask by default
     ColTabM = 0x3FFF;                   // Full mask by default
     ChrGenM = 0x3FFF;                   // Full mask by default
     SprTabM = 0x3FFF;                   // Full mask by default
-    
+
     BG_PALETTE[0] = RGB15(0x00,0x00,0x00);
-    
+
     // ------------------------------------------------------------
     // Determine if we are PAL vs NTSC and adjust line timing...
     // ------------------------------------------------------------
@@ -902,10 +882,10 @@ void Reset9918(void)
     tms_end_line   = (myConfig.isPAL ? TMS9929_END_LINE    :  TMS9918_END_LINE);
     tms_num_lines  = (myConfig.isPAL ? TMS9929_LINES       :  TMS9918_LINES);
     tms_cpu_line   = (myConfig.isPAL ? TMS9929_LINE        :  TMS9918_LINE);
-    
+
     // -----------------------------------------------------------------------
-    // Determine how often we should check for sprite collisions. Some clever 
-    // demos and games require that we check more often than end of frame. 
+    // Determine how often we should check for sprite collisions. Some clever
+    // demos and games require that we check more often than end of frame.
     // -----------------------------------------------------------------------
     if (myConfig.spriteCheck) // Force a specific collision check value?
     {
@@ -920,12 +900,12 @@ void Reset9918(void)
     // Our background/foreground color table makes computations FAST!
     // ---------------------------------------------------------------
     int colfg,colbg;
-    for (colfg=0;colfg<16;colfg++) 
+    for (colfg=0;colfg<16;colfg++)
     {
-        for (colbg=0;colbg<16;colbg++) 
+        for (colbg=0;colbg<16;colbg++)
         {
           fastBackgroundLut[(colfg<<4) | colbg] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0 - this one is called often enough that we keep it in fast DTCM memory
-          
+
           lutTablehh[(colfg<<4) | colbg][ 0] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colbg<<24); // 0 0 0 0
           lutTablehh[(colfg<<4) | colbg][ 1] = (colbg<<0) | (colbg<<8) | (colbg<<16) | (colfg<<24); // 0 0 0 1
           lutTablehh[(colfg<<4) | colbg][ 2] = (colbg<<0) | (colbg<<8) | (colfg<<16) | (colbg<<24); // 0 0 1 0
