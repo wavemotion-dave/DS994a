@@ -20,7 +20,7 @@ Features :
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice except...)
-* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek and Bigfoot
+* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek, Bigfoot and Superfly
 
 Copyright :
 -----------------------
@@ -84,7 +84,7 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek and Bigfoot where the sound samples are built into the emulator.
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek, Bigfoot and Superfly where the sound samples are built into the emulator.
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine).
 * Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
@@ -248,6 +248,8 @@ Versions :
 V2.1: ??-???-2024 by wavemotion-dave
 * Now using a small light on the CAPS/ALPHALOCK key to indicate if CAPS LOCK is on (cleaner look).
 * GROM auto-increment of address will properly preserve the upper bits so we don't inadvertantly select the next GROM in our system (accuracy).
+* Added partial speech samples for MB Superfly.
+* Improved TMS9900 debugger for developement use.
 
 V2.0: 01-Mar-2024 by wavemotion-dave
 * Support for .rpk (Rom PacKs - same as used by MAME/MESS).

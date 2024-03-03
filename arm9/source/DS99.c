@@ -295,7 +295,12 @@ void setupStream(void)
   mmLoadEffect(SFX_AVOIDMINES);
   mmLoadEffect(SFX_DAMAGEREPAIRED);
   mmLoadEffect(SFX_EXCELLENTMANUVER);
+  mmLoadEffect(SFX_OHYES_SF);
+  mmLoadEffect(SFX_OHNO_SF); 
+  mmLoadEffect(SFX_WHEREFLY_SF);
+  mmLoadEffect(SFX_NEVERTRUST_SF);
   mmLoadEffect(SFX_FLOPPY);
+  
 
   //----------------------------------------------------------------
   //  open stream
@@ -1956,11 +1961,18 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);
         else if (speechData32 == 0x600AF022) mmEffect(SFX_DAMAGEREPAIRED);
         else if (speechData32 == 0x60ADC8DE) mmEffect(SFX_EXCELLENTMANUVER);
-#if 0
+        
+        // Superfly
+        else if (speechData32 == 0x608E54A7) mmEffect(SFX_OHNO_SF);
+        else if (speechData32 == 0x60000318) mmEffect(SFX_OHYES_SF);
+        else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);
+        else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);
+        
+#if 0 // Enable this to debug speech and add additional sound effects by signature
         else    // Output the digital signature into a file... we can use this to try and pick out other phrases for other gamess
         {
             FILE *fp = fopen("aaa_speech.txt", "a+");
-            fprintf(fp, ": %08X\n", speechData32);
+            fprintf(fp, ": %08X\n", (unsigned int)speechData32);
             fclose(fp);
         }
 #endif
