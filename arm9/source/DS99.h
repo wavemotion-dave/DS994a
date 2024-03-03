@@ -75,6 +75,7 @@ enum
 #define META_KEY_CONTROL        8
 #define META_KEY_FUNCTION       9
 #define META_KEY_DISKMENU       10
+#define META_KEY_DEBUG_NEXT     11
 
 extern u16 emuFps;
 extern u16 emuActFrames;

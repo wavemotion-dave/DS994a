@@ -602,10 +602,11 @@ byte SprHeights[4] __attribute__((section(".dtcm"))) = { 8,16,16,32 };
 
 ITCM_CODE byte Write9918(u8 iReg, u8 value)
 {
-  int newMode;
-  int VRAMMask;
+  u16 newMode;
+  u16 VRAMMask;
   byte bIRQ;
 
+  /* There are 8 VDP registers - map down to these 8 and mask off irrelevant bits */
   iReg &= 0x07;
   value &= VDP_RegisterMasks[iReg];
 

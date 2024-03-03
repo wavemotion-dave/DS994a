@@ -636,4 +636,28 @@ u8 rpk_load(const char* filename)
     return errors;
 }
 
+// -----------------------------------------------------------------------
+// For debugging use only - we return the name of the current PCB layout
+// -----------------------------------------------------------------------
+char *rpk_get_pcb_name(void)
+{
+    switch (cart_layout.pcb)
+    {
+        case PCB_STANDARD:      return "STANDARD";
+        case PCB_PAGED:         return "PAGED";
+        case PCB_GROMEMU:       return "GROMEMU";
+        case PCB_PAGED377:      return "PAGED377";
+        case PCB_PAGED378:      return "PAGED378";
+        case PCB_PAGED379i:     return "PAGED379i";
+        case PCB_MBX:           return "MBX";
+        case PCB_MINIMEM:       return "MINIMEM";
+        case PCB_PAGEDCRU:      return "PAGEDCRU";
+        case PCB_SUPER:         return "SUPER";
+        case PCB_PAGED7:        return "PAGED7";
+        default:
+            break;
+    }
+    return "UNKNOWN";
+}
+
 // End of file

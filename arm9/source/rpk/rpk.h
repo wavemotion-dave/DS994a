@@ -58,7 +58,10 @@ typedef struct
     char     listname[64];
 } Layout_t;
 
+extern Layout_t cart_layout;
+
 u8 rpk_load(const char* filename);
+char *rpk_get_pcb_name(void);
 
 #endif
 

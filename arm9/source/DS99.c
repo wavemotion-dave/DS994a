@@ -1,8 +1,8 @@
 // =====================================================================================
 // Copyright (c) 2023-2004 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -29,6 +29,7 @@
 #include "cpu/tms9900/tms9901.h"
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
+#include "rpk/rpk.h"
 #include "disk.h"
 #include "SAMS.h"
 #include "intro.h"
@@ -42,8 +43,8 @@
 #include "soundbank_bin.h"
 
 // --------------------------------------------------------------------------
-// A small bank of 32-bit debug registers we can use for profiling or other 
-// sundry debug purposes. Pressing X when loading a game shows the debug 
+// A small bank of 32-bit debug registers we can use for profiling or other
+// sundry debug purposes. Pressing X when loading a game shows the debug
 // registers. It's amazing how incredibly useful this proves to be.
 // --------------------------------------------------------------------------
 u32 debug[0x10]     __attribute__((section(".dtcm")));
@@ -60,6 +61,7 @@ u16 emuFps          __attribute__((section(".dtcm"))) = 0;
 u16 emuActFrames    __attribute__((section(".dtcm"))) = 0;
 u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
 u8  bShowDebug      __attribute__((section(".dtcm"))) = 0;
+u8  debug_screen = 0;
 
 // ------------------------------------------------------------------------------------------------
 // For the various BIOS files ... only the TI BIOS Roms are required - everything else is optional.
@@ -78,7 +80,7 @@ u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to han
 char tmpBuf[256];               // For simple printf-type output and other sundry uses.
 u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
 
-u8 SharedMemBuffer[768 * 1024]; // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS 
+u8 SharedMemBuffer[768 * 1024]; // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS
 
 u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
@@ -89,7 +91,7 @@ u16 floppy_sfx_dampen = 0;      // For Floppy Sound Effects - don't start the pl
 u8 key_push_write = 0;          // For inserting DSK filenames into the keyboard buffer
 u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard buffer
 char key_push[0x20];            // A small array for when inserting DSK filenames into the keyboard buffer
-char dsk_filename[16];          // Short filename to show on DISK Menu 
+char dsk_filename[16];          // Short filename to show on DISK Menu
 
 u16 NTSC_Timing[] __attribute__((section(".dtcm"))) = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 u16 PAL_Timing[]  __attribute__((section(".dtcm"))) = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
@@ -108,15 +110,15 @@ char initial_file[MAX_PATH];    // In case something was passed on the command l
 // The key map for the TI... mapped into the NDS controller
 // --------------------------------------------------------------------
 u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
-    JOY1_UP, 
-    JOY1_DOWN, 
-    JOY1_LEFT, 
-    JOY1_RIGHT, 
-    JOY1_FIRE, 
-    JOY2_UP, 
-    JOY2_DOWN, 
-    JOY2_LEFT, 
-    JOY2_RIGHT, 
+    JOY1_UP,
+    JOY1_DOWN,
+    JOY1_LEFT,
+    JOY1_RIGHT,
+    JOY1_FIRE,
+    JOY2_UP,
+    JOY2_DOWN,
+    JOY2_LEFT,
+    JOY2_RIGHT,
     JOY2_FIRE,
     KBD_SPACE,
     KBD_ENTER,
@@ -130,10 +132,10 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_EQUALS,
     KBD_SLASH,
     KBD_PERIOD,
-    KBD_COMMA,    
-    KBD_SEMI,   
+    KBD_COMMA,
+    KBD_SEMI,
     KBD_PLUS,
-    KBD_MINUS,    
+    KBD_MINUS,
     KBD_UP_ARROW,
     KBD_DOWN_ARROW,
     KBD_LEFT_ARROW,
@@ -154,13 +156,13 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
 // ------------------------------------------------------------
 // Utility function to show the background for the main menu
 // ------------------------------------------------------------
-void showMainMenu(void) 
+void showMainMenu(void)
 {
   dmaCopy((void*) bgGetMapPtr(bg0b),(void*) bgGetMapPtr(bg1b),32*24*2);
 }
 
 // ------------------------------------------------------------
-// Utility function to pause the sound... 
+// Utility function to pause the sound...
 // ------------------------------------------------------------
 void SoundPause(void)
 {
@@ -168,7 +170,7 @@ void SoundPause(void)
 }
 
 // ------------------------------------------------------------
-// Utility function to un pause the sound... 
+// Utility function to un pause the sound...
 // ------------------------------------------------------------
 void SoundUnPause(void)
 {
@@ -207,7 +209,7 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
         sn76496Mixer(len*2, dest, &snti99);         // Otherwise mix the channels into the buffer
         last_sample = ((s16*)dest)[len*2 - 1];      // And save off the last sample in case we need to mute...
     }
-    
+
     return  len;
 }
 
@@ -216,7 +218,7 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
 // Setup the maxmod audio stream - this will be a 16-bit Stereo PCM output at 55KHz which
 // sounds about right for the TI99.
 // -------------------------------------------------------------------------------------------
-void setupStream(void) 
+void setupStream(void)
 {
   //---------------------------------------------------------------------
   //  initialize maxmod with our soundbank including all speech samples
@@ -266,7 +268,7 @@ void setupStream(void)
   mmLoadEffect(SFX_SPORT);
   mmLoadEffect(SFX_THANITLOOKS);
   mmLoadEffect(SFX_WALKEDINTO);
-  mmLoadEffect(SFX_HELP);    
+  mmLoadEffect(SFX_HELP);
   mmLoadEffect(SFX_ANYKEYTOGO);
   mmLoadEffect(SFX_GETTINGTIRED);
   mmLoadEffect(SFX_GAMEOVER);
@@ -276,9 +278,9 @@ void setupStream(void)
   mmLoadEffect(SFX_COOLANTLOW);
   mmLoadEffect(SFX_OUTOFWATER);
   mmLoadEffect(SFX_CONGRATSCAP);
-  mmLoadEffect(SFX_LASERONTARGET);    
-  mmLoadEffect(SFX_NICESHOOTING);    
-  mmLoadEffect(SFX_GREATSHOT);    
+  mmLoadEffect(SFX_LASERONTARGET);
+  mmLoadEffect(SFX_NICESHOOTING);
+  mmLoadEffect(SFX_GREATSHOT);
   mmLoadEffect(SFX_EXTRASHIP);
   mmLoadEffect(SFX_WARNINGFUEL);
   mmLoadEffect(SFX_SORRYFUEL);
@@ -294,7 +296,7 @@ void setupStream(void)
   mmLoadEffect(SFX_DAMAGEREPAIRED);
   mmLoadEffect(SFX_EXCELLENTMANUVER);
   mmLoadEffect(SFX_FLOPPY);
-    
+
   //----------------------------------------------------------------
   //  open stream
   //----------------------------------------------------------------
@@ -310,7 +312,7 @@ void setupStream(void)
   //  when using 'automatic' filling, your callback will be triggered
   //  every time half of the wave buffer is processed.
   //
-  //  so: 
+  //  so:
   //  25000 (rate)
   //  ----- = ~21 Hz for a full pass, and ~42hz for half pass
   //  1200  (length)
@@ -326,29 +328,29 @@ void setupStream(void)
 // The TI9919 sound chip is basically the same as the Colecovision SN76496
 // chip and we already have a driver for that one and will use it.
 // ------------------------------------------------------------------------
-void dsInstallSoundEmuFIFO(void) 
+void dsInstallSoundEmuFIFO(void)
 {
   SoundPause();
-     
+
   //  ------------------------------------------------------------------
   //  The SN sound chip is for normal TI99 sound handling
   //  ------------------------------------------------------------------
   sn76496Reset(1, &snti99);         // Reset the SN sound chip
-    
+
   sn76496W(0x80 | 0x00,&snti99);    // Write new Frequency for Channel A
   sn76496W(0x00 | 0x00,&snti99);    // Write new Frequency for Channel A
   sn76496W(0x90 | 0x0F,&snti99);    // Write new Volume for Channel A
-    
+
   sn76496W(0xA0 | 0x00,&snti99);    // Write new Frequency for Channel B
   sn76496W(0x00 | 0x00,&snti99);    // Write new Frequency for Channel B
   sn76496W(0xB0 | 0x0F,&snti99);    // Write new Volume for Channel B
-    
+
   sn76496W(0xC0 | 0x00,&snti99);    // Write new Frequency for Channel C
   sn76496W(0x00 | 0x00,&snti99);    // Write new Frequency for Channel C
   sn76496W(0xD0 | 0x0F,&snti99);    // Write new Volume for Channel C
 
   sn76496W(0xFF,  &snti99);         // Disable Noise Channel
-    
+
   sn76496Mixer(8, (s16*)tmpBuf, &snti99);  // Do an initial mix conversion to clear the output
 
   setupStream();    // Setup maxmod stream...
@@ -357,7 +359,7 @@ void dsInstallSoundEmuFIFO(void)
 }
 
 // --------------------------------------------------------------
-// When we reset the machine, there are many small utility flags 
+// When we reset the machine, there are many small utility flags
 // for various expansion peripherals that must be reset.
 // --------------------------------------------------------------
 void ResetStatusFlags(void)
@@ -373,9 +375,9 @@ void ResetStatusFlags(void)
 void ResetTI(void)
 {
   Reset9918();                           //  Reset video chip
-   
+
   sn76496Reset(1, &snti99);              //  Reset the SN/TI sound chip
-  sn76496W(0x90 | 0x0F  ,&snti99);       //  Write new Volume for Channel A (off) 
+  sn76496W(0x90 | 0x0F  ,&snti99);       //  Write new Volume for Channel A (off)
   sn76496W(0xB0 | 0x0F  ,&snti99);       //  Write new Volume for Channel B (off)
   sn76496W(0xD0 | 0x0F  ,&snti99);       //  Write new Volume for Channel C (off)
 
@@ -385,7 +387,7 @@ void ResetTI(void)
   TIMER1_CR = 0;
   TIMER1_DATA=0;
   TIMER1_CR=TIMER_ENABLE  | TIMER_DIV_1024;
-    
+
   // -----------------------------------------------------------
   // Timer 2 is used to time once per second events
   // -----------------------------------------------------------
@@ -394,28 +396,28 @@ void ResetTI(void)
   TIMER2_CR=TIMER_ENABLE  | TIMER_DIV_1024;
   timingFrames  = 0;
   emuFps=0;
-    
+
   XBuf = XBuf_A;            // Set the initial screen ping-pong buffer to A
-    
+
   ResetStatusFlags();       // Some static status flags for the UI mostly
-    
+
   // -----------------------------------------------------
   // Reset some common handling for keys, caps lock, etc.
   // -----------------------------------------------------
-  alpha_lock = myConfig.capsLock;  
+  alpha_lock = myConfig.capsLock;
   meta_next_key    = 0;
   handling_meta    = 0;
-    
+
   key_push_write = 0;
   key_push_read  = 0;
-  strcpy(dsk_filename,"");    
-  
+  strcpy(dsk_filename,"");
+
   // ---------------------------------------------
   // Make sure the disk systems is up and running
   // ---------------------------------------------
   disk_init();
   disk_drive_select = 0; // Start with DSK1
-    
+
   memset(debug, 0x00, sizeof(debug));
 }
 
@@ -423,7 +425,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 {
     static u8 bShiftKeysBlanked = 0;
     static u8 bCapsKeysBlanked = 0;
-    
+
     // ----------------------------------------------------------
     // Show PAL or blanks (if NTSC) on screen
     // ----------------------------------------------------------
@@ -442,11 +444,11 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
         if (Disk[drive].driveWriteCounter)
         {
             Disk[drive].driveWriteCounter--;
-            if (Disk[drive].driveWriteCounter) 
+            if (Disk[drive].driveWriteCounter)
             {
                 sprintf(tmpBuf, "DISK %d WRITE", drive+1);
                 DS_Print(11,0,6, tmpBuf);
-                if (globalConfig.floppySound) 
+                if (globalConfig.floppySound)
                 {
                     if (++floppy_sfx_dampen & 1) mmEffect(SFX_FLOPPY);
                 }
@@ -462,7 +464,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
         else if (Disk[drive].driveReadCounter)
         {
             Disk[drive].driveReadCounter--;
-            if (Disk[drive].driveReadCounter) 
+            if (Disk[drive].driveReadCounter)
             {
                 sprintf(tmpBuf, "DISK %d READ ", drive+1);
                 DS_Print(11,0,6, tmpBuf);
@@ -482,19 +484,19 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
     // ------------------------------------------
     // Show the keyboard shift/function/control
     // ------------------------------------------
-    if(tms9901.Keyboard[TMS_KEY_FUNCTION] == 1) 
+    if(tms9901.Keyboard[TMS_KEY_FUNCTION] == 1)
     {
-        DS_Print(0,0,6, "FCTN"); 
+        DS_Print(0,0,6, "FCTN");
         bShiftKeysBlanked = 0;
     }
-    else 
+    else
     {
         if(tms9901.Keyboard[TMS_KEY_SHIFT] == 1)
         {
             DS_Print(0,0,6, "SHFT");
             bShiftKeysBlanked = 0;
         }
-        else 
+        else
         {
             if(tms9901.Keyboard[TMS_KEY_CONTROL] == 1)
             {
@@ -510,7 +512,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
                 }
             }
         }
-        
+
         if(tms9901.CapsLock)
         {
             DS_Print(2,23,6, "@");
@@ -524,7 +526,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
                 DS_Print(2,23,2, "@");
             }
         }
-        
+
     }
 }
 
@@ -553,7 +555,7 @@ void KeyPushFilename(char *filename)
 // -------------------------------------------------------------------------------
 // Simple little utlity function to show the user the first 32 files on a disk
 // and allow them to select one to put into the keyboard paste buffer. This makes
-// it easier for the user (especially on the little DS handheld) to paste in 
+// it easier for the user (especially on the little DS handheld) to paste in
 // a filename or DSK.filename (useful for Adventure, Tunnels of Doom, etc).
 // -------------------------------------------------------------------------------
 void ShowDiskListing(void)
@@ -565,7 +567,7 @@ void ShowDiskListing(void)
     }
 
     while (keysCurrent()) WAITVBL; // While any key is pressed...
-    
+
     // ---------------------------------------------------------------
     // Set all dsk listings to spaces until we read disk contents
     // ---------------------------------------------------------------
@@ -589,7 +591,7 @@ void ShowDiskListing(void)
         // -----------------------------------------
         // Now display the files for the user...
         // -----------------------------------------
-        u16 key = 0; 
+        u16 key = 0;
         u8 last_sel = 255;
         u8 sel = 0;
         while (key != KEY_A)
@@ -637,7 +639,7 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     {
         DrawCleanBackground();
     }
-    
+
     DS_Print(8,6,6,                                                 " TI DISK MENU ");
     sprintf(tmpBuf, " MOUNT   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
     sprintf(tmpBuf, " UNMOUNT DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
@@ -660,7 +662,7 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
         DS_Print(16-(strlen(tmpBuf)/2),8+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
         sprintf(tmpBuf, "(%dKB USED - %dKB FREE)", (usedSectors*256)/1024, (((numSectors-usedSectors)*256)+1023)/1024);
         DS_Print(16-(strlen(tmpBuf)/2),9+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
-        
+
         u8 col=0;
         if (strlen(Disk[disk_drive_select].filename) < 32)
         {
@@ -675,13 +677,13 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
         }
         if (strlen(tmpBuf) < 32) col=16-(strlen(tmpBuf)/2);
         if (strlen(tmpBuf) & 1) col--;
-        DS_Print(col,9+disk_menu_items+3,(sel==disk_menu_items)?2:0,tmpBuf);   
-    } 
+        DS_Print(col,9+disk_menu_items+3,(sel==disk_menu_items)?2:0,tmpBuf);
+    }
     else
     {
         DS_Print(1,9+disk_menu_items+1,(sel==disk_menu_items)?2:0,"      DISK NOT MOUNTED       ");
     }
-    
+
     DS_Print(2,22,0, "A TO SELECT, X SWITCH DRIVES");
 }
 
@@ -691,35 +693,35 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
 void DiskMenu(void)
 {
   u8 menuSelection = 0;
-    
+
   SoundPause();
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
   DiskMenuShow(true, menuSelection);
 
-  while (true) 
+  while (true)
   {
     nds_key = keysCurrent();
     if (nds_key)
     {
-        if (nds_key & KEY_UP)  
+        if (nds_key & KEY_UP)
         {
             menuSelection = (menuSelection > 0) ? (menuSelection-1):(disk_menu_items-1);
             DiskMenuShow(false, menuSelection);
         }
-        if (nds_key & KEY_DOWN)  
+        if (nds_key & KEY_DOWN)
         {
             menuSelection = (menuSelection+1) % disk_menu_items;
             DiskMenuShow(false, menuSelection);
         }
-        if (nds_key & KEY_X)  
+        if (nds_key & KEY_X)
         {
             // Wait for keyrelease...
             while (keysCurrent() & KEY_X) WAITVBL;
             disk_drive_select = (disk_drive_select+1) % MAX_DSKS;
             DiskMenuShow(true, menuSelection);
         }
-        if (nds_key & KEY_A)  
+        if (nds_key & KEY_A)
         {
             if (menuSelection == 0) // MOUNT .DSK FILE
             {
@@ -771,11 +773,11 @@ void DiskMenu(void)
                   break;
             }
         }
-        if (nds_key & KEY_B)  
+        if (nds_key & KEY_B)
         {
             break;
         }
-        
+
         while ((keysCurrent() & (KEY_UP | KEY_DOWN | KEY_A ))!=0);
         WAITVBL;WAITVBL;
     }
@@ -783,7 +785,7 @@ void DiskMenu(void)
 
   while ((keysCurrent() & (KEY_UP | KEY_DOWN | KEY_A ))!=0);
   WAITVBL;WAITVBL;
-    
+
   InitBottomScreen();  // Could be generic or overlay...
 
   SoundUnPause();
@@ -796,7 +798,7 @@ void DiskMenu(void)
 u8 bKeyClick = 0;
 
 // ------------------------------------------------------------------------
-// Show the Mini Menu - highlight the selected row. 
+// Show the Mini Menu - highlight the selected row.
 // ------------------------------------------------------------------------
 u8 mini_menu_items = 0;
 void MiniMenuShow(bool bClearScreen, u8 sel)
@@ -806,7 +808,7 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
     {
         DrawCleanBackground();
     }
-    
+
     DS_Print(8,7,6,                                           " TI MINI MENU  ");
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
@@ -824,28 +826,28 @@ u8 MiniMenu(void)
 {
   u8 retVal = META_KEY_NONE;
   u8 menuSelection = 0;
-    
+
   SoundPause();
   while ((keysCurrent() & (KEY_TOUCH | KEY_LEFT | KEY_RIGHT | KEY_A ))!=0);
 
   MiniMenuShow(true, menuSelection);
 
-  while (true) 
+  while (true)
   {
     nds_key = keysCurrent();
     if (nds_key)
     {
-        if (nds_key & KEY_UP)  
+        if (nds_key & KEY_UP)
         {
             menuSelection = (menuSelection > 0) ? (menuSelection-1):(mini_menu_items-1);
             MiniMenuShow(false, menuSelection);
         }
-        if (nds_key & KEY_DOWN)  
+        if (nds_key & KEY_DOWN)
         {
             menuSelection = (menuSelection+1) % mini_menu_items;
             MiniMenuShow(false, menuSelection);
         }
-        if (nds_key & KEY_A)  
+        if (nds_key & KEY_A)
         {
             if      (menuSelection == 0) retVal = META_KEY_HIGHSCORE;
             else if (menuSelection == 1) retVal = META_KEY_SAVESTATE;
@@ -855,12 +857,12 @@ u8 MiniMenu(void)
             else retVal = META_KEY_NONE;
             break;
         }
-        if (nds_key & KEY_B)  
+        if (nds_key & KEY_B)
         {
             retVal = META_KEY_NONE;
             break;
         }
-        
+
         while ((keysCurrent() & (KEY_UP | KEY_DOWN | KEY_A ))!=0);
         WAITVBL;WAITVBL;
     }
@@ -868,11 +870,11 @@ u8 MiniMenu(void)
 
   while ((keysCurrent() & (KEY_UP | KEY_DOWN | KEY_A ))!=0);
   WAITVBL;WAITVBL;
-    
+
   InitBottomScreen();  // Could be generic or overlay...
 
   SoundUnPause();
-    
+
   return retVal;
 }
 
@@ -890,25 +892,25 @@ u8 CheckDebugerInput(u16 iTy, u16 iTx)
         else if ((iTx >= 65)  && (iTx < 86))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
         else if ((iTx >= 86)  && (iTx < 107))  {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
         else if ((iTx >= 107) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_D]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 149))  return META_KEY_ALPHALOCK;
+        else if ((iTx >= 127) && (iTx < 149))  return META_KEY_DEBUG_NEXT;
         else if ((iTx >= 149) && (iTx < 199))  {tms9901.Keyboard[TMS_KEY_SPACE]=1;   if (!bKeyClick) bKeyClick=1;}
         else if ((iTx >= 199) && (iTx < 221))  return MiniMenu();
         else if ((iTx >= 221) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
     }
-    
+
     return META_KEY_NONE;
 }
 
 // ------------------------------------------------------------------------------------------------
-// Here we've already determined that a touch event has taken place on the DS so we are going to 
-// look up (row-by-row) what key was pressed. The routine will set the appopriate bit in the 
-// Keyboard[] array to let the emulation know that a key has been pressed. Special attention 
+// Here we've already determined that a touch event has taken place on the DS so we are going to
+// look up (row-by-row) what key was pressed. The routine will set the appopriate bit in the
+// Keyboard[] array to let the emulation know that a key has been pressed. Special attention
 // is made for the 'sticky' special keys like Function, Control and Shift.
 // ------------------------------------------------------------------------------------------------
 u8 CheckKeyboardInput(u16 iTy, u16 iTx)
 {
     if (bShowDebug) return CheckDebugerInput(iTy, iTx);
-    
+
     // --------------------------------------------------------------------------
     // Test the touchscreen rendering of the keyboard
     // --------------------------------------------------------------------------
@@ -984,11 +986,11 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     if (bKeyClick == 1)
     {
         mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
-        bKeyClick = 2;           // No more click - one was enough 
-        
+        bKeyClick = 2;           // No more click - one was enough
+
         if (handling_meta) handling_meta = 4;   // This will force the meta key to deactivate as soon as nothing is touched on the virtual keyboard screen
     }
-    
+
     return META_KEY_NONE;
 }
 
@@ -999,7 +1001,7 @@ void  __attribute__ ((noinline)) DisplayFrameCounter(u16 emuFps)
     if (globalConfig.showFPS != 2)
     {
         if (emuFps == 61) emuFps=60;
-        else if (emuFps == 59) emuFps=60;            
+        else if (emuFps == 59) emuFps=60;
     }
     if (emuFps/100) tmpBuf[0] = '0' + emuFps/100;
     else tmpBuf[0] = ' ';
@@ -1016,13 +1018,13 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
 {
   // Returns when  user has asked for a game to run...
   showMainMenu();
-    
+
   // Get the TI99 Machine Emualtor ready
   TI99Init(gpFic[ucGameAct].szName);
 
   TI99SetPal();
   TI99Run();
-  
+
   // Frame-to-frame timing...
   TIMER1_CR = 0;
   TIMER1_DATA=0;
@@ -1034,73 +1036,103 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
   TIMER2_CR=TIMER_ENABLE  | TIMER_DIV_1024;
   timingFrames  = 0;
   emuFps=0;
-    
+
   // Force the sound engine to turn on when we start emulation
   bStartSoundEngine = true;
 }
 
 char *VDP_Mode_Str[] = {"G1","G2","MC","BT","TX","--","HB","--"};
 
+void ds99_clear_debugger(void)
+{
+    for (u8 idx=0; idx<19; idx++)
+    {
+        DS_Print(0,1+idx,6,"                                ");
+    }
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+}
+
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {
     u8 idx=0;
-    
-    for (idx=0; idx<16; idx++)
-    {
-        sprintf(tmpBuf, "%-7u %04X", debug[idx], debug[idx]&0x0000FFFF);
-        DS_Print(20,1+idx,6,tmpBuf);
-    }
-    idx++;
-    sprintf(tmpBuf, "ILOP: %c %04X", (tms9900.illegalOPs ? 'Y':'N'), tms9900.lastIllegalOP);
-    DS_Print(20,idx++,6,tmpBuf);
-    if (tms9900.illegalOPs)
-    {
-        sprintf(tmpBuf, "ILOP: %6d", tms9900.illegalOPs);
-        DS_Print(20,idx,6,tmpBuf);
-    }
 
-    // Sound Register debug
-    idx = 1;
-    sprintf(tmpBuf, "SN0 %04X %04X %04X", snti99.ch0Frq, snti99.ch0Reg, snti99.ch0Att); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "SN1 %04X %04X %04X", snti99.ch1Frq, snti99.ch1Reg, snti99.ch1Att); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "SN2 %04X %04X %04X", snti99.ch2Frq, snti99.ch2Reg, snti99.ch2Att); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "NOI %04X %04X %04X", snti99.ch3Frq, snti99.ch3Reg, snti99.ch3Att); 
-    DS_Print(0,idx++,6,tmpBuf);
-    idx++;
+    if (debug_screen == 0) // Show first page of debug info
+    {
+        for (idx=0; idx<16; idx++)
+        {
+            sprintf(tmpBuf, "%-7u %04X", debug[idx], debug[idx]&0x0000FFFF);
+            DS_Print(20,1+idx,6,tmpBuf);
+        }
+        idx++;
+        sprintf(tmpBuf, "ILOP: %c %04X", (tms9900.illegalOPs ? 'Y':'N'), tms9900.lastIllegalOP);
+        DS_Print(20,idx++,6,tmpBuf);
+        if (tms9900.illegalOPs)
+        {
+            sprintf(tmpBuf, "ILOP: %6d", tms9900.illegalOPs);
+            DS_Print(20,idx,6,tmpBuf);
+        }
 
-    // Video Chip (VDP) debug
-    sprintf(tmpBuf, "VDP %02X %02X %02X %02X %2s", VDP[0], VDP[1], VDP[2], VDP[3], VDP_Mode_Str[TMS9918_Mode]); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[4], VDP[5], VDP[6], VDP[7]); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "VDP AD=%04X  ST=%02X", VAddr, VDPStatus);
-    DS_Print(0,idx++,6,tmpBuf);
-    idx++;
-   
-    // CPU debug
-    sprintf(tmpBuf, "CPU.PC     %04X", tms9900.PC); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.WP     %04X", tms9900.WP); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.ST     %04X", tms9900.ST); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.GR     %04X", tms9900.gromAddress); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.OP     %04X", tms9900.currentOp); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.IR     %04X", tms9900.idleReq); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.Bank   %08X", tms9900.bankOffset); 
-    DS_Print(0,idx++,6,tmpBuf);
-    sprintf(tmpBuf, "CPU.Cycl %10u", tms9900.cycles); 
-    DS_Print(0,idx++,6,tmpBuf);
-    idx++;
-    sprintf(tmpBuf, "SAMS %02X %02X %02X %02X %02X %02X %02X %02X H%02X", theSAMS.bankMapSAMS[2], theSAMS.bankMapSAMS[3], 
-            theSAMS.bankMapSAMS[0xA], theSAMS.bankMapSAMS[0xB], theSAMS.bankMapSAMS[0xC], theSAMS.bankMapSAMS[0xD], theSAMS.bankMapSAMS[0xE], theSAMS.bankMapSAMS[0xF], sams_highwater_bank); 
-    DS_Print(0,idx++,6,tmpBuf);
+        // Sound Register debug
+        idx = 1;
+        sprintf(tmpBuf, "SN0 %04X %04X %04X", snti99.ch0Frq, snti99.ch0Reg, snti99.ch0Att);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "SN1 %04X %04X %04X", snti99.ch1Frq, snti99.ch1Reg, snti99.ch1Att);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "SN2 %04X %04X %04X", snti99.ch2Frq, snti99.ch2Reg, snti99.ch2Att);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "NOI %04X %04X %04X", snti99.ch3Frq, snti99.ch3Reg, snti99.ch3Att);
+        DS_Print(0,idx++,6,tmpBuf);
+        idx++;
+
+        // Video Chip (VDP) debug
+        sprintf(tmpBuf, "VDP %02X %02X %02X %02X %2s", VDP[0], VDP[1], VDP[2], VDP[3], VDP_Mode_Str[TMS9918_Mode]);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[4], VDP[5], VDP[6], VDP[7]);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "VDP AD=%04X  ST=%02X", VAddr, VDPStatus);
+        DS_Print(0,idx++,6,tmpBuf);
+        idx++;
+
+        // CPU debug
+        sprintf(tmpBuf, "CPU.PC     %04X", tms9900.PC);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.WP     %04X", tms9900.WP);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.ST     %04X", tms9900.ST);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.GR     %04X", tms9900.gromAddress);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.OP     %04X", tms9900.currentOp);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.IR     %04X", tms9900.idleReq);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.Bank   %08X", tms9900.bankOffset);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "CPU.Cycl %10u", tms9900.cycles);
+        DS_Print(0,idx++,6,tmpBuf);
+        idx++;
+        sprintf(tmpBuf, "SAMS %02X %02X %02X %02X %02X %02X %02X %02X H%02X", theSAMS.bankMapSAMS[2], theSAMS.bankMapSAMS[3],
+                theSAMS.bankMapSAMS[0xA], theSAMS.bankMapSAMS[0xB], theSAMS.bankMapSAMS[0xC], theSAMS.bankMapSAMS[0xD], theSAMS.bankMapSAMS[0xE], theSAMS.bankMapSAMS[0xF], sams_highwater_bank);
+        DS_Print(0,idx++,6,tmpBuf);
+    }
+    else // Show 2nd page of debug info
+    {
+        extern u32 file_size;
+        idx = 1;
+        sprintf(tmpBuf, "FILE SIZE: %-9d", file_size);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "FILE  CRC: %08X", file_crc);
+        DS_Print(0,idx++,6,tmpBuf);
+        struct mallinfo mi = mallinfo();
+        sprintf(tmpBuf, "HEAP USED: %-9d", mi.uordblks);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "RPK PCB:   %d [%s]", cart_layout.pcb, rpk_get_pcb_name());
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "RPK ROMS:  %d", cart_layout.num_roms);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "RPK SOCK:  %d", cart_layout.num_sockets);
+        DS_Print(0,idx++,6,tmpBuf);
+    }
 }
 
 u8 handle_touch_input(void)
@@ -1109,7 +1141,7 @@ u8 handle_touch_input(void)
     touchRead(&touch);
     u16 iTx = touch.px;
     u16 iTy = touch.py;
-      
+
     // ---------------------------------
     // Check the Keyboard for input...
     // ---------------------------------
@@ -1123,17 +1155,17 @@ u8 handle_touch_input(void)
           SoundPause();
 
           //  Ask for verification
-          if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES) 
-          { 
+          if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES)
+          {
               memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
               return 1;
           }
           showMainMenu();
-          DisplayStatusLine(true);            
+          DisplayStatusLine(true);
           SoundUnPause();
         }
         break;
-            
+
         case META_KEY_HIGHSCORE:
         {
           //  Stop sound
@@ -1148,8 +1180,8 @@ u8 handle_touch_input(void)
         {
           // Stop sound
           SoundPause();
-          if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES) 
-          {                      
+          if  (showMessage("DO YOU REALLY WANT TO","SAVE GAME STATE ?") == ID_SHM_YES)
+          {
             TI99SaveState();
           }
           SoundUnPause();
@@ -1160,18 +1192,23 @@ u8 handle_touch_input(void)
         {
           // Stop sound
           SoundPause();
-          if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES) 
-          {                      
+          if  (showMessage("DO YOU REALLY WANT TO","LOAD GAME STATE ?") == ID_SHM_YES)
+          {
             TI99LoadState();
           }
           SoundUnPause();
         }
         break;
-            
+
         case META_KEY_DISKMENU:
             DiskMenu();
-            break;             
-            
+            break;
+
+        case META_KEY_DEBUG_NEXT:
+            debug_screen = (debug_screen+1) & 0x01; // We have two debug screens we can flip-flop between. Might expand someday.
+            ds99_clear_debugger();
+            break;
+
         case META_KEY_ALPHALOCK:
             if (handling_meta == 0)
             {
@@ -1225,7 +1262,7 @@ u8 handle_touch_input(void)
                 meta_next_key = META_KEY_FUNCTION;
                 handling_meta = 1;
                 DisplayStatusLine(false);
-            } 
+            }
             else if (handling_meta == 2)
             {
                 tms9901.Keyboard[TMS_KEY_FUNCTION]=0;
@@ -1236,39 +1273,39 @@ u8 handle_touch_input(void)
             }
             break;
     }
-    
+
     return 0;
 }
 
 // ------------------------------------------------------------------------
-// The main emulation loop is here... call into the TMS9900, VDP and 
+// The main emulation loop is here... call into the TMS9900, VDP and
 // run the sound engine. This is placed in fast ITCM_CODE even though it
 // really only runs at 60 fps (or 50 for PAL systems)... mainly because
 // it's the heart of our system that drives all other calls and make
 // the emulation work.  If we need ITCM_CODE space, we could probably
 // give up on putting this in fast memory and not lose much performance.
 // ------------------------------------------------------------------------
-ITCM_CODE void ds99_main(void) 
+ITCM_CODE void ds99_main(void)
 {
   u8 dampen = 0;
-      
+
   ds99_main_setup();    // Stuff we don't need in ITCM fast memory...
-    
+
   // -------------------------------------------------------------------
   // Stay in this loop running the TI99 game until the user exits...
   // -------------------------------------------------------------------
-  while(1)  
+  while(1)
   {
     // Take a tour of the TMS9900 and display the screen if necessary
-    if (!LoopTMS9900()) 
-    {   
+    if (!LoopTMS9900())
+    {
         // If we've been asked to start the sound engine, rock-and-roll!
         if (bStartSoundEngine)
         {
               bStartSoundEngine = false;
               SoundUnPause();
         }
-        
+
         // -------------------------------------------------------------
         // Stuff to do once/second such as FPS display and Debug Data
         // -------------------------------------------------------------
@@ -1296,7 +1333,7 @@ ITCM_CODE void ds99_main(void)
         emuActFrames++;
 
         // -------------------------------------------------------------------
-        // Framing timing needs to handle both NTSC and PAL 
+        // Framing timing needs to handle both NTSC and PAL
         // -------------------------------------------------------------------
         if (++timingFrames == (myConfig.isPAL ? 50:60))
         {
@@ -1315,12 +1352,12 @@ ITCM_CODE void ds99_main(void)
         {
             if (globalConfig.showFPS == 2) break;   // If Full Speed, break out...
         }
-        
+
       // Clear out the Joystick and Keyboard table - we'll check for keys below
       TMS9901_ClearJoyKeyData();
-      
+
       tms9901.CapsLock = alpha_lock; // Set the state of our Caps Lock
-        
+
       if (meta_next_key)
       {
           switch (meta_next_key)
@@ -1330,7 +1367,7 @@ ITCM_CODE void ds99_main(void)
               case META_KEY_FUNCTION:   tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
           }
       }
-      
+
       if (!(++dampen & 3))
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
@@ -1339,7 +1376,7 @@ ITCM_CODE void ds99_main(void)
               key_push_read = (key_push_read+1) & 0x1F;
           }
       }
-        
+
       if (keysCurrent() & KEY_TOUCH)
       {
           if (handle_touch_input()) return;
@@ -1350,7 +1387,7 @@ ITCM_CODE void ds99_main(void)
           {
               if (meta_next_key == 0) // if we were dealing with Alpha Lock
               {
-                  handling_meta = 0; 
+                  handling_meta = 0;
               }
               else
               {
@@ -1361,10 +1398,10 @@ ITCM_CODE void ds99_main(void)
           if (handling_meta == 4)
           {
                 // And here we only want to reset the meta key if we have released a normal key
-                meta_next_key = 0;  // No more meta key        
+                meta_next_key = 0;  // No more meta key
                 handling_meta = 0;  // We've handled a normal key... no more meta
           }
-          
+
           bKeyClick = 0;
       }
 
@@ -1372,22 +1409,22 @@ ITCM_CODE void ds99_main(void)
       //  Test NDS keypresses (ABXY, L/R) and map to corresponding TI99 keys
       // ------------------------------------------------------------------------
       nds_key  = keysCurrent();
-       
-      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X)) 
+
+      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X))
       {
             lcdSwap();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
       }
-      else        
-      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y)) 
+      else
+      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y))
       {
             DS_Print(10,0,0,"SNAPSHOT");
             screenshot();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
             DS_Print(10,0,0,"        ");
       }
-      else        
-      if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y)) 
+      else
+      if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y))
       {
           // --------------------------------------------------------------------------------------------------
           // There are 12 NDS buttons (D-Pad, XYAB, L/R and Start+Select) - we allow mapping of any of these.
@@ -1399,28 +1436,28 @@ ITCM_CODE void ds99_main(void)
                   u8 map = keyCoresp[myConfig.keymap[i]];
                   switch(map)
                   {
-                      case JOY1_UP:         
+                      case JOY1_UP:
                         if (myConfig.dpadDiagonal) {tms9901.Keyboard[TMS_KEY_JOY1_UP]=1; tms9901.Keyboard[TMS_KEY_JOY1_RIGHT]=1;}
                         else tms9901.Keyboard[TMS_KEY_JOY1_UP]=1;
                         break;
-                        
+
                       case JOY1_DOWN:
                         if (myConfig.dpadDiagonal) {tms9901.Keyboard[TMS_KEY_JOY1_DOWN]=1; tms9901.Keyboard[TMS_KEY_JOY1_LEFT]=1;}
                         else tms9901.Keyboard[TMS_KEY_JOY1_DOWN]=1;
                         break;
-                      
+
                       case JOY1_LEFT:
                         if (myConfig.dpadDiagonal) {tms9901.Keyboard[TMS_KEY_JOY1_LEFT]=1; tms9901.Keyboard[TMS_KEY_JOY1_UP]=1;}
                         else tms9901.Keyboard[TMS_KEY_JOY1_LEFT]=1;
                         break;
-                      
+
                       case JOY1_RIGHT:
                         if (myConfig.dpadDiagonal) {tms9901.Keyboard[TMS_KEY_JOY1_RIGHT]=1; tms9901.Keyboard[TMS_KEY_JOY1_DOWN]=1;}
                         else tms9901.Keyboard[TMS_KEY_JOY1_RIGHT]=1;
                         break;
-                      
+
                       case JOY1_FIRE:       tms9901.Keyboard[TMS_KEY_JOY1_FIRE]=1;  break;
-                          
+
                       case JOY2_UP:         tms9901.Keyboard[TMS_KEY_JOY2_UP]=1;    break;
                       case JOY2_DOWN:       tms9901.Keyboard[TMS_KEY_JOY2_DOWN]=1;  break;
                       case JOY2_LEFT:       tms9901.Keyboard[TMS_KEY_JOY2_LEFT]=1;  break;
@@ -1453,7 +1490,7 @@ ITCM_CODE void ds99_main(void)
                       case KBD_X:
                       case KBD_Y:
                       case KBD_Z:
-                          tms9901.Keyboard[TMS_KEY_A+(map-KBD_A)]=1;         
+                          tms9901.Keyboard[TMS_KEY_A+(map-KBD_A)]=1;
                           break;
 
                       case KBD_1:
@@ -1466,16 +1503,16 @@ ITCM_CODE void ds99_main(void)
                       case KBD_8:
                       case KBD_9:
                       case KBD_0:
-                          tms9901.Keyboard[TMS_KEY_1+(map-KBD_1)]=1;         
+                          tms9901.Keyboard[TMS_KEY_1+(map-KBD_1)]=1;
                           break;
-                          
+
                       case KBD_SPACE:       tms9901.Keyboard[TMS_KEY_SPACE]=1;     break;
                       case KBD_ENTER:       tms9901.Keyboard[TMS_KEY_ENTER]=1;     break;
 
                       case KBD_FNCT:        tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
                       case KBD_CTRL:        tms9901.Keyboard[TMS_KEY_CONTROL]=1;   break;
                       case KBD_SHIFT:       tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
-                          
+
                       case KBD_PLUS:        tms9901.Keyboard[TMS_KEY_EQUALS]=1;    tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
                       case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_SLASH]=1;     tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
                       case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
@@ -1488,7 +1525,7 @@ ITCM_CODE void ds99_main(void)
                   }
               }
           }
-      }     
+      }
     }
   }
 }
@@ -1496,7 +1533,7 @@ ITCM_CODE void ds99_main(void)
 /*********************************************************************************
  * Init DS Emulator - setup VRAM banks and background screen rendering banks
  ********************************************************************************/
-void TI99DSInit(void) 
+void TI99DSInit(void)
 {
   //  Init graphic mode (bitmap mode)
   videoSetMode(MODE_0_2D  | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
@@ -1513,7 +1550,7 @@ void TI99DSInit(void)
 
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;
-  
+
   //  Render the top screen
   bg0 = bgInit(0, BgType_Text8bpp,  BgSize_T_256x512, 31,0);
   bg1 = bgInit(1, BgType_Text8bpp,  BgSize_T_256x512, 29,0);
@@ -1525,7 +1562,7 @@ void TI99DSInit(void)
   dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1),32*24*2);
 
   DrawCleanBackground();
-    
+
   //  Find the files
   TI99FindFiles();
 }
@@ -1536,7 +1573,7 @@ void TI99DSInit(void)
 void InitBottomScreen(void)
 {
     //  Init bottom screen
-    
+
     swiWaitForVBlank();
 
     if (bShowDebug)
@@ -1567,20 +1604,20 @@ void InitBottomScreen(void)
             decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
             dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
             dmaCopy((void*) ti99kbdPal,(void*) BG_PALETTE_SUB,256*2);
-            
+
             unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
             dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
         }
     }
-    
+
     DisplayStatusLine(true);
 }
 
 /*********************************************************************************
  * Init CPU for the current game
  ********************************************************************************/
-void TI99DSInitCPU(void) 
-{ 
+void TI99DSInitCPU(void)
+{
   //  -----------------------------------------
   //  Init Main Memory and VDP Video Memory
   //  -----------------------------------------
@@ -1595,8 +1632,8 @@ void TI99DSInitCPU(void)
 // -------------------------------------------------------------
 // Only used for basic timing of moving the Mario sprite...
 // -------------------------------------------------------------
-void irqVBlank(void) 
-{ 
+void irqVBlank(void)
+{
  // Manage time
   vusCptVBL++;
 }
@@ -1611,15 +1648,15 @@ void LoadBIOSFiles(void)
     // --------------------------------------------------
     FILE *inFile1;
     FILE *inFile2;
-    
+
     inFile1 = fopen("/roms/bios/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aROM.bin", "rb");
-    
+
     inFile2 = fopen("/roms/bios/994aGROM.bin", "rb");
     if (!inFile2) inFile2 = fopen("/roms/ti99/994aGROM.bin", "rb");
     if (!inFile2) inFile2 = fopen("994aGROM.bin", "rb");
-    
+
     if (inFile1 && inFile2)
     {
         bTIBIOSFound = true;
@@ -1630,26 +1667,26 @@ void LoadBIOSFiles(void)
     }
     if (inFile1) fclose(inFile1);
     if (inFile2) fclose(inFile2);
-    
+
     inFile1 = fopen("/roms/bios/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/bios/disk.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/disk.bin", "rb");
     if (!inFile1) inFile1 = fopen("disk.bin", "rb");
-    
+
     if (inFile1) bTIDISKFound = true; else bTIDISKFound = false;
-    if (inFile1) fclose(inFile1);    
+    if (inFile1) fclose(inFile1);
 }
 
-// We call this function once at startup to allocate memory 
+// We call this function once at startup to allocate memory
 static void StartupMemoryAllocation(void)
 {
     if (isDSiMode())
     {
         theSAMS.numBanks = 256;                         // 256 * 4K = 1024K for DSi
         MemSAMS = malloc((theSAMS.numBanks) * 0x1000);  // Allocate the SAMS memory
-         
+
         MAX_CART_SIZE = (u32)(8192 * 1024);             // 8MB (8192K) Max Cart for DSi
         MemCART = malloc(MAX_CART_SIZE);                // Allocate the Cartridge Buffer
     }
@@ -1663,7 +1700,7 @@ static void StartupMemoryAllocation(void)
         // ---------------------------------------------------------------------------------------
         theSAMS.numBanks = 128;                         // 128 * 4K = 512K for DS-Lite/Phat
         MemSAMS = SharedMemBuffer + (256 * 1024);       // Set the SAMS memory area. When SAMS is enabled for the DS-Lite/Phat, cart size will drop to 256K
-        
+
         MAX_CART_SIZE = (u32)(512 * 1024);              // 512K Max Cart for DS-Lite/Phat (may get adjusted down to 256K if SAMS enabled)
         MemCART = SharedMemBuffer;                      // Set the Cartridge Buffer
     }
@@ -1673,37 +1710,37 @@ static void StartupMemoryAllocation(void)
 /*********************************************************************************
  * Program entry point - check if an argument has been passed in probably from TWL++
  ********************************************************************************/
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
   //  Init sound
   consoleDemoInit();
-    
+
   if  (!fatInitDefault()) {
      iprintf("Unable to initialize libfat!\n");
      return -1;
   }
-  
+
   // Allocate some memory for the SAMS and Cart Buffers - done one time
   StartupMemoryAllocation();
 
   // Need to load in config file if only for the global options at this point...
   FindAndLoadConfig();
- 
+
   // Read in and store the DS994a.HI file
   highscore_init();
-    
+
   lcdMainOnTop();
-    
+
   //  Init timer for frame management and install the sound handlers
   TIMER2_DATA=0;
-  TIMER2_CR=TIMER_ENABLE|TIMER_DIV_1024;  
+  TIMER2_CR=TIMER_ENABLE|TIMER_DIV_1024;
   dsInstallSoundEmuFIFO();
 
   //  Show the fade-away intro logo...
   intro_logo();
-  
-  SetYtrigger(190); //trigger 2 lines before vsync    
-    
+
+  SetYtrigger(190); //trigger 2 lines before vsync
+
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
 
@@ -1711,11 +1748,11 @@ int main(int argc, char **argv)
   // Grab the BIOS before we try to switch any directories around...
   // -----------------------------------------------------------------
   LoadBIOSFiles();
-    
+
   // -----------------------------------------------------------------
   // Handle command line argument... mostly for TWL++ to launch game.
   // -----------------------------------------------------------------
-  if (argc > 1) 
+  if (argc > 1)
   {
       //  We want to start in the directory where the file is being launched...
       if  (strchr(argv[1], '/') != NULL)
@@ -1724,7 +1761,7 @@ int main(int argc, char **argv)
           strcpy(path,  argv[1]);
           char  *ptr = &path[strlen(path)-1];
           while (*ptr !=  '/') ptr--;
-          ptr++;  
+          ptr++;
           strcpy(initial_file,  ptr);
           *ptr=0;
           chdir(path);
@@ -1747,17 +1784,17 @@ int main(int argc, char **argv)
           chdir("/roms");    // Try to start in roms area... doesn't matter if it fails
       }
   }
-    
+
   // Start off with current directory for both ROMs and DSKs
   getcwd(currentDirROMs, MAX_PATH);
   getcwd(currentDirDSKs, MAX_PATH);
-    
+
   SoundPause();
-  
+
   //  ------------------------------------------------------------
   //  We run this loop forever until game exit is selected...
   //  ------------------------------------------------------------
-  while(1)  
+  while(1)
   {
     TI99DSInit();
 
@@ -1788,8 +1825,8 @@ int main(int argc, char **argv)
         DS_Print(3,12,0,"ERROR: SEE README.MD FILE");
         while(1) ;  // We're done... Need a TI99 bios to run this emulator
     }
-  
-    while(1) 
+
+    while(1)
     {
       SoundPause();
       //  Choose option
@@ -1801,7 +1838,7 @@ int main(int argc, char **argv)
           initial_file[0] = 0;    // No more initial file...
           ReadFileCRCAndConfig(); // Get CRC32 of the file and read the config/keys
       }
-      else  
+      else
       {
           tiDSChangeOptions();
       }
@@ -1822,24 +1859,24 @@ void _putchar(char character) {};   // Not used but needed to link printf()
 // We use this routine as a bit of a cheat for handling TI99 speech. Most of the games that
 // use speech use the 0x60 'Speak External' command to handle speech. We look for this byte
 // and the three bytes after it as a sort of digital signature (a fingerprint if you will)
-// to determine what phrase is trying to be spoken. Rather than real emulation, we simply 
-// look for the digital signature of the prhase and then ask our DS MAXMOD sound system to 
-// play the speech sample. It's not perfect, but requires very little CPU power and will 
+// to determine what phrase is trying to be spoken. Rather than real emulation, we simply
+// look for the digital signature of the prhase and then ask our DS MAXMOD sound system to
+// play the speech sample. It's not perfect, but requires very little CPU power and will
 // render speech fairly well even on the oldest DS handheld systems.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 void WriteSpeechData(u8 data)
 {
     if (myConfig.noExtSpeech) return;
-    
+
     // Reading Address 0 from the Speech ROM
     if ((speechData32 == 0x40404040) && (data == 0x10))
     {
         readSpeech = 0xAA;                      // The first byte of the actual speech ROM is 0xAA and this will be enough to fool many games into thinking a Speech Synth module is attached.
     } else readSpeech = SPEECH_SENTINAL_VAL;    // This indicates just normal status read...
-    
+
     speechData32 = (speechData32 << 8) | data;
-    
+
     if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
         // Parsec
@@ -1862,44 +1899,44 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x604B8B41) mmEffect(SFX_EXTRASHIP);
         else if (speechData32 == 0x6049E3B3) mmEffect(SFX_WARNINGFUEL);
         else if (speechData32 == 0x6006F8DA) mmEffect(SFX_SORRYFUEL);
-        
+
         // Alpiner
         else if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
         else if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
         else if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
-        else if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK); 
+        else if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK);
         else if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
-        else if (speechData32 == 0x602530B1) mmEffect(SFX_UH); 
+        else if (speechData32 == 0x602530B1) mmEffect(SFX_UH);
         else if (speechData32 == 0x60A5F222) mmEffect(SFX_OOPS);
-        else if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH); 
+        else if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH);
         else if (speechData32 == 0x60293565) mmEffect(SFX_OOOOH);
-        else if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);        
-        else if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD); 
-        else if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN); 
-        else if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO); 
-        else if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT); 
-        else if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS); 
-        else if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK); 
-        else if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO); 
-        else if (speechData32 == 0x600828D2) mmEffect(SFX_HELP); 
-        else if (speechData32 == 0x600A08C1) mmEffect(SFX_ANYKEYTOGO); 
-        else if (speechData32 == 0x600EA856) mmEffect(SFX_GETTINGTIRED); 
-        else if (speechData32 == 0x60E08096) mmEffect(SFX_GAMEOVER); 
-        else if (speechData32 == 0x60C8B1CE) mmEffect(SFX_BETTERLUCK); 
+        else if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);
+        else if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD);
+        else if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN);
+        else if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO);
+        else if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT);
+        else if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS);
+        else if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK);
+        else if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO);
+        else if (speechData32 == 0x600828D2) mmEffect(SFX_HELP);
+        else if (speechData32 == 0x600A08C1) mmEffect(SFX_ANYKEYTOGO);
+        else if (speechData32 == 0x600EA856) mmEffect(SFX_GETTINGTIRED);
+        else if (speechData32 == 0x60E08096) mmEffect(SFX_GAMEOVER);
+        else if (speechData32 == 0x60C8B1CE) mmEffect(SFX_BETTERLUCK);
 
         // Moonmine
-        else if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT); 
-        else if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP); 
-        else if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT); 
-        else if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH); 
-        else if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST); 
-        else if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED); 
-        else if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN); 
-        else if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET); 
-        else if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);         
-        else if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD); 
-        else if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW); 
-        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);        
+        else if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT);
+        else if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP);
+        else if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT);
+        else if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH);
+        else if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST);
+        else if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED);
+        else if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN);
+        else if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET);
+        else if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);
+        else if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD);
+        else if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW);
+        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);
         else if (speechData32 == 0x60418FC6) mmEffect(SFX_MOONADVANCE);
         else if (speechData32 == 0x6006A851) mmEffect(SFX_CONTINUEGAME);
         else if (speechData32 == 0x600A70C7) mmEffect(SFX_COOLANTLOW);
@@ -1907,13 +1944,13 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x6002889A) mmEffect(SFX_CONGRATSCAP);
         else if (speechData32 == 0x60492BC9) mmEffect(SFX_EXTRACREW);
         else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
-        
+
         // Bigfoot
         else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); // I'll get you!
         else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling noise
         else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);   // Bigfoot Roar
         else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);    // Bird Screech
-        
+
         // Star Trek
         else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);
         else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);
@@ -1926,7 +1963,7 @@ void WriteSpeechData(u8 data)
             fprintf(fp, ": %08X\n", speechData32);
             fclose(fp);
         }
-#endif        
+#endif
     }
 }
 

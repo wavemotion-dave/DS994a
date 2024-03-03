@@ -66,6 +66,8 @@ extern u8 bResetVLatch;
 extern u8 TMS9918A_palette[16*3];
 extern tScrMode SCR[MAXSCREEN+1];
 
+extern u32   debug[];   // For debugging on the DS... 
+
 extern void RefreshLine0(u8 uY);
 extern void RefreshLine1(u8 uY);
 extern void RefreshLine2(u8 uY);
