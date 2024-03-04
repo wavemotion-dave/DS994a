@@ -135,7 +135,7 @@ void disk_cru_write(u16 address, u8 data)
             if (data)
             {
                 // The Disk Controller DSR is visible
-                memcpy(&MemCPU[0x4000], DSR1, 0x2000);
+                memcpy(&MemCPU[0x4000], DISK_DSR, 0x2000);
             }
             else
             {

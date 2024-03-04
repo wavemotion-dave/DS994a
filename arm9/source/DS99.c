@@ -299,8 +299,7 @@ void setupStream(void)
   mmLoadEffect(SFX_OHNO_SF); 
   mmLoadEffect(SFX_WHEREFLY_SF);
   mmLoadEffect(SFX_NEVERTRUST_SF);
-  mmLoadEffect(SFX_FLOPPY);
-  
+  mmLoadEffect(SFX_FLOPPY);  
 
   //----------------------------------------------------------------
   //  open stream
@@ -1546,12 +1545,12 @@ void TI99DSInit(void)
   vramSetBankA(VRAM_A_MAIN_BG);
   vramSetBankC(VRAM_C_SUB_BG);
   vramSetBankB(VRAM_B_LCD);                  // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 (used for screenshots)
-  vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)
+  vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)  
   vramSetBankE(VRAM_E_LCD );                 // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000 (used for opcode tables)
   vramSetBankF(VRAM_F_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000 (used for opcode tables)
   vramSetBankG(VRAM_G_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (used for opcode tables)
   vramSetBankH(VRAM_H_LCD );                 // Not using this for video but 32K of faster RAM always useful!  Mapped at 0x06898000 (used for opcode tables)
-  vramSetBankI(VRAM_I_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x068A0000 (used for DSR cache)
+                                             // VRAM_I_LCD already claimed by the LoadBios handler to cache the 8K TI-99/4a main BIOS and the TI Disk DSR at 0x068A0000
 
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;
@@ -1654,9 +1653,17 @@ void LoadBIOSFiles(void)
     FILE *inFile1;
     FILE *inFile2;
 
+    // We steal 16K of VDP memory for caching the 8K BIOS and 8K Disk DSR
+    vramSetBankI(VRAM_I_LCD);
+
     inFile1 = fopen("/roms/bios/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aROM.bin", "rb");
+    if (inFile1)
+    {
+        fread(fileBuf, 1, 0x2000, inFile1);
+        memcpy(MAIN_BIOS, fileBuf, 0x2000);
+    }
 
     inFile2 = fopen("/roms/bios/994aGROM.bin", "rb");
     if (!inFile2) inFile2 = fopen("/roms/ti99/994aGROM.bin", "rb");
@@ -1679,6 +1686,15 @@ void LoadBIOSFiles(void)
     if (!inFile1) inFile1 = fopen("/roms/bios/disk.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/disk.bin", "rb");
     if (!inFile1) inFile1 = fopen("disk.bin", "rb");
+    if (inFile1)
+    {
+        fread(fileBuf, 1, 0x2000, inFile1);
+        memcpy(DISK_DSR, fileBuf, 0x2000);
+    }
+    else
+    {
+        memset(DISK_DSR, 0xFF, 0x2000);
+    }
 
     if (inFile1) bTIDISKFound = true; else bTIDISKFound = false;
     if (inFile1) fclose(inFile1);
@@ -1748,7 +1764,7 @@ int main(int argc, char **argv)
 
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
-
+  
   // -----------------------------------------------------------------
   // Grab the BIOS before we try to switch any directories around...
   // -----------------------------------------------------------------

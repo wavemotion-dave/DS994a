@@ -37,7 +37,6 @@
 u8      MemCPU[0x10000];            // 64K of CPU MemCPU Space
 u8      MemGROM[0x10000];           // 64K of GROM MemCPU Space
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
-u8      DiskDSR[0x2000];            // Memory for the DiskDSR to be mapped at >4000
 u8      SwapCartBuffer[0x2000];     // A bit of memory to allow us to swap banks (inverted carts, etc)
 
 u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
@@ -47,9 +46,6 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 #define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
 #define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
-
-u16* DSR1  = ((u16*)0x068A0000);   // 8K of fast VDP memory for the first DSR (Disk Controller)
-u16* DSR2  = ((u16*)0x068A2000);   // 8K of fast VDP memory for the second DSR (Future use)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 

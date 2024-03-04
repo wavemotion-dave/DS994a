@@ -400,10 +400,12 @@ ITCM_CODE void RefreshSprites(register byte Y)
 }
 
 
-/** RefreshLine0() *******************************************/
-/** Refresh line Y (0..191) of SCREEN0, including sprites   **/
-/** in this line.                                           **/
-/*************************************************************/
+/** RefreshLine0() *********************************************/
+/** Refresh line Y (0..191) of SCREEN0, including sprites in  **/
+/** this line.  This is the only mode that shows fewer than   **/
+/** 256 horizontal pixels and so we must deal with the border **/
+/** (backdrop) here which is always the background color.     **/
+/***************************************************************/
 ITCM_CODE void RefreshLine0(u8 Y)
 {
   register byte *T,K,Offset;
@@ -614,7 +616,7 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
   bIRQ  = (iReg==1) && ((VDP[1]^value)&value&TMS9918_REG1_IRQ) && (VDPStatus&TMS9918_STAT_VBLANK);
 
   /* The TI99 is always 16K */
-  VRAMMask = 0x3FFF;    // For these machines, we only support 16K
+  VRAMMask = 0x3FFF;
 
   /* Store value into the register */
   VDP[iReg]=value;

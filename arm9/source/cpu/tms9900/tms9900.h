@@ -106,9 +106,6 @@ extern u8   SwapCartBuffer[];
 extern u8   MemType[];
 extern u16  BankMasks[];
 
-extern u16* DSR1;
-extern u16* DSR2;
-
 // ----------------------------------------------------------------------------
 // The entire state of the TMS9900 so we can easily save/load for save states.
 // ----------------------------------------------------------------------------

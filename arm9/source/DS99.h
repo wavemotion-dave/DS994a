@@ -18,9 +18,12 @@
 extern u32 MAX_CART_SIZE;   // Dynamic buffer size - if DSi we go to 8MB and for DS only 512K
 extern u8  *MemCART;        // The actual cart buffer gets allocated here.
 extern char tmpBuf[256];    // For simple printf-type output and other sundry uses.
-extern u8 fileBuf[8192];    // For DSK sector cache, general file I/O and file CRC generation use.
+extern u8 fileBuf[0x2000];  // For DSK sector cache, general file I/O and file CRC generation use. Must be at least 8K
 
 #define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}
+
+#define MAIN_BIOS ((u16*)0x068A0000)   // 8K of fast VDP memory for the main TI-99 BIOS cache
+#define DISK_DSR  ((u16*)0x068A2000)   // 8K of fast VDP memory for the Disk Controller DSR cache
 
 enum
 {

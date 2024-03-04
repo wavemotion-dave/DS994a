@@ -37,11 +37,11 @@ void DS_SetVideoModes(void)
     u8 uBcl;
     u16 uVide;
 
-    // -----------------------------------------------------------------
+    // ------------------------------------------------
     // Change graphic mode to initiate emulation.
-    // Here we can claim back 128K of VRAM which is otherwise unused
-    // but we can use it for fast memory swaps and look-up-tables.
-    // -----------------------------------------------------------------
+    // The main (top) screen only needs the VRAM_A 
+    // and we set VRAM_B as memory-mapped for CPU use.
+    // ------------------------------------------------
     videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
     videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
     vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
@@ -95,7 +95,7 @@ u8 TI99Init(char *szGame)
     // ---------------------------------------------------------------------
     ResetTI();    
     
-    // --------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------------
     // We're now ready to load the actual binary files and place them into memory.
     // We always do a re-read of the TI99 console ROM and GROM as well as load
     // the user-selected file into memory. We setup for banking possibilities.
@@ -105,25 +105,21 @@ u8 TI99Init(char *szGame)
     // xxxD.bin is a banked CPU ROM for 6000h
     // xxxG.bin is a GROM loaded into GROM memory space (also 6000h but in different GROM memory space)
     // xxx8.bin is a multi-bank non-inverted file load
-    // xxx3.bin is a multi-bank inverted file load (sometimes xxx9.bin)  
-    // --------------------------------------------------------------------------------
+    // xxx3.bin is a multi-bank inverted file load (sometimes xxx9.bin)
+    // xxx0.bin is a System GROM replacement that will be mapped at 0000h in GROM memory space
+    // ------------------------------------------------------------------------------------------------
     FILE *infile;           // We use this to read the various files in our system
     u16 numCartBanks = 1;   // Number of CART banks (8K each)
-
+    
     // ------------------------------------------------------------------
-    // Read in the main 16-bit console ROM and place into our MemCPU[]
+    // Copy the main 16-bit console ROM into place into our MemCPU[]
     // ------------------------------------------------------------------
-    infile = fopen("/roms/bios/994aROM.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aROM.bin", "rb");
-    if (!infile) infile = fopen("994aROM.bin", "rb");    
-    if (infile)
-    {
-        fread(&MemCPU[0], 0x2000, 1, infile);
-        fclose(infile);
-    }
-
+    memcpy(&MemCPU[0], MAIN_BIOS, 0x2000);
+    
     // ---------------------------------------------------------------------------------
-    // Read in the main console GROM and place into the first 24K of GROM memory space
+    // Read in the main console GROM and place into the first 24K of GROM memory space.
+    // This one isn't cached because we can override this with a '0' file in case
+    // someone wants to use Son of Board (SoB) or other replacement console GROMs.
     // ---------------------------------------------------------------------------------
     infile = fopen("/roms/bios/994aGROM.bin", "rb");
     if (!infile) infile = fopen("/roms/ti99/994aGROM.bin", "rb");
@@ -133,23 +129,6 @@ u8 TI99Init(char *szGame)
         fread(&MemGROM[0x0000], 0x6000, 1, infile);
         fclose(infile);
     }
-
-    // -------------------------------------------
-    // Read the TI Disk DSR into buffered memory
-    // -------------------------------------------
-    infile = fopen("/roms/bios/994aDISK.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aDISK.bin", "rb");
-    if (!infile) infile = fopen("994aDISK.bin", "rb");
-    if (infile)
-    {
-        fread(DiskDSR, 0x2000, 1, infile);
-        fclose(infile);
-    }
-    else
-    {
-        memset(DiskDSR, 0xFF, 0x2000);
-    }
-    memcpy(DSR1, DiskDSR, 0x2000);
 
     if (strcasecmp(strrchr(szGame, '.'), ".rpk") == 0)  
     {
