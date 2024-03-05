@@ -998,7 +998,9 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     return META_KEY_NONE;
 }
 
-
+// ---------------------------------------------------------------------------
+// A streamlined routine to display the frame counter in the upper left.
+// ---------------------------------------------------------------------------
 void  __attribute__ ((noinline)) DisplayFrameCounter(u16 emuFps)
 {
     // If not asked to run full-speed... adjust FPS so it's stable near 60
@@ -1045,6 +1047,12 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
   bStartSoundEngine = true;
 }
 
+
+// -------------------------------------------------------------------
+// Our mini-debugger shows various VDP, CPU and SN sound chip values
+// as well as some of the more relevant bits of under-the-hood
+// values. This is useful when trying to find bugs in emulation.
+// -------------------------------------------------------------------
 char *VDP_Mode_Str[] = {"G1","G2","MC","BT","TX","--","HB","--"};
 
 void ds99_clear_debugger(void)
@@ -1139,6 +1147,10 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
     }
 }
 
+// -------------------------------------------------------------------
+// Check if we have a touch-screen event and map it to the right 
+// input for emulation use.  This doesn't need to be in fast memory.
+// -------------------------------------------------------------------
 u8 handle_touch_input(void)
 {
     touchPosition touch;
@@ -1544,6 +1556,7 @@ void TI99DSInit(void)
   videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG);
   vramSetBankC(VRAM_C_SUB_BG);
+  
   vramSetBankB(VRAM_B_LCD);                  // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 (used for screenshots)
   vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)  
   vramSetBankE(VRAM_E_LCD );                 // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000 (used for opcode tables)
@@ -1551,7 +1564,7 @@ void TI99DSInit(void)
   vramSetBankG(VRAM_G_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (used for opcode tables)
   vramSetBankH(VRAM_H_LCD );                 // Not using this for video but 32K of faster RAM always useful!  Mapped at 0x06898000 (used for opcode tables)
                                              // VRAM_I_LCD already claimed by the LoadBios handler to cache the 8K TI-99/4a main BIOS and the TI Disk DSR at 0x068A0000
-
+                                             
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;
 
@@ -1617,9 +1630,9 @@ void InitBottomScreen(void)
     DisplayStatusLine(true);
 }
 
-/*********************************************************************************
- * Init CPU for the current game
- ********************************************************************************/
+// -------------------------------------------------------------------
+// Init the system to get ready for playing the currently loaded game.
+// -------------------------------------------------------------------
 void TI99DSInitCPU(void)
 {
   //  -----------------------------------------
@@ -1700,7 +1713,9 @@ void LoadBIOSFiles(void)
     if (inFile1) fclose(inFile1);
 }
 
-// We call this function once at startup to allocate memory
+// --------------------------------------------------------------------
+// We call this function once at startup to allocate and setup memory.
+// --------------------------------------------------------------------
 static void StartupMemoryAllocation(void)
 {
     if (isDSiMode())
@@ -1728,9 +1743,10 @@ static void StartupMemoryAllocation(void)
 }
 
 
-/*********************************************************************************
- * Program entry point - check if an argument has been passed in probably from TWL++
- ********************************************************************************/
+// ------------------------------------------------------
+// Program entry point - check if an argument has been 
+// passed in on the command line (probably from TWL++)
+// ------------------------------------------------------
 int main(int argc, char **argv)
 {
   //  Init sound
@@ -1872,10 +1888,6 @@ int main(int argc, char **argv)
   return(0);
 }
 
-
-void _putchar(char character) {};   // Not used but needed to link printf()
-
-
 // -------------------------------------------------------------------------------------------
 // We use this routine as a bit of a cheat for handling TI99 speech. Most of the games that
 // use speech use the 0x60 'Speak External' command to handle speech. We look for this byte
@@ -1967,27 +1979,27 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
 
         // Bigfoot
-        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU); // I'll get you!
-        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);   // Falling noise
-        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);   // Bigfoot Roar
-        else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);    // Bird Screech
+        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU);      // I'll get you!
+        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);        // Falling noise
+        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);        // Bigfoot Roar
+        else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);         // Bird Screech
 
         // Star Trek
-        else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);
-        else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);
-        else if (speechData32 == 0x600AF022) mmEffect(SFX_DAMAGEREPAIRED);
-        else if (speechData32 == 0x60ADC8DE) mmEffect(SFX_EXCELLENTMANUVER);
+        else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);   // Welcome Aboard, Captain
+        else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);      // Avoid Mines, Captain
+        else if (speechData32 == 0x600AF022) mmEffect(SFX_DAMAGEREPAIRED);  // Damage Repaired, Captain
+        else if (speechData32 == 0x60ADC8DE) mmEffect(SFX_EXCELLENTMANUVER);// Exellent Manuvering, Captain
         
         // Superfly
-        else if (speechData32 == 0x608E54A7) mmEffect(SFX_OHNO_SF);
-        else if (speechData32 == 0x60000318) mmEffect(SFX_OHYES_SF);
-        else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);
-        else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);
+        else if (speechData32 == 0x608E54A7) mmEffect(SFX_OHNO_SF);         // Oh No!
+        else if (speechData32 == 0x60000318) mmEffect(SFX_OHYES_SF);        // Ohhhh Yeeesss!
+        else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);     // Where's the Fly?
+        else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);   // Never Trust a Worm
         
 #if 0 // Enable this to debug speech and add additional sound effects by signature
         else    // Output the digital signature into a file... we can use this to try and pick out other phrases for other gamess
         {
-            FILE *fp = fopen("aaa_speech.txt", "a+");
+            FILE *fp = fopen("994a_speech.txt", "a+");
             fprintf(fp, ": %08X\n", (unsigned int)speechData32);
             fclose(fp);
         }
@@ -1995,5 +2007,6 @@ void WriteSpeechData(u8 data)
     }
 }
 
-// End of file
+void _putchar(char character) {};   // Not used but needed to link printf()
 
+// End of file

@@ -1,8 +1,8 @@
 // =====================================================================================
 // Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -31,7 +31,12 @@
 
 u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game. For split files (C/D/G) it will be the CRC of the main file (C or G if no C)
 
-
+// ---------------------------------------------------------------------------
+// Setup the main DS video modes. As usual, the top screen is primary and
+// where we map the main emulation of the TI99/4a. The bottom screen is for
+// the keyboard and various status texts. We need all of VRAM_A and VRAM_C 
+// but we can utilize the other VRAM banks as extra 16-bit CPU mapped memory.
+// ---------------------------------------------------------------------------
 void DS_SetVideoModes(void)
 {
     u8 uBcl;
@@ -39,7 +44,7 @@ void DS_SetVideoModes(void)
 
     // ------------------------------------------------
     // Change graphic mode to initiate emulation.
-    // The main (top) screen only needs the VRAM_A 
+    // The main (top) screen only needs the VRAM_A
     // and we set VRAM_B as memory-mapped for CPU use.
     // ------------------------------------------------
     videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
@@ -48,7 +53,7 @@ void DS_SetVideoModes(void)
     vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
 
     REG_BG3CNT = BG_BMP8_256x256;
-    REG_BG3PA = (1<<8); 
+    REG_BG3PA = (1<<8);
     REG_BG3PB = 0;
     REG_BG3PC = 0;
     REG_BG3PD = (1<<8);
@@ -56,7 +61,7 @@ void DS_SetVideoModes(void)
     REG_BG3Y = 0;
 
     // Init the page flipping buffer...
-    for (uBcl=0;uBcl<192;uBcl++) 
+    for (uBcl=0;uBcl<192;uBcl++)
     {
         uVide=(uBcl/12);
         dmaFillWords(uVide | (uVide<<16),pVidFlipBuf+uBcl*128,256);
@@ -67,34 +72,34 @@ void DS_SetVideoModes(void)
  * Init TI99 Engine for that game. The filename of the game is passed in to
  * this function and we will read the binary ROM(s) into memory.
  ********************************************************************************/
-u8 TI99Init(char *szGame) 
+u8 TI99Init(char *szGame)
 {
     // ------------------------------------------------------------------
     // Set the DS video modes and initialize the page-flipping buffer...
     // ------------------------------------------------------------------
     DS_SetVideoModes();
-    
+
     // ------------------------------------------------------------
     // Reset the CPU and setup for all the different memory types
     // in our system. This gets the CPU ready to rock and roll!
     // ------------------------------------------------------------
     TMS9900_Reset();
-    
+
     // ----------------------------------------------------
     // Ensure we are reading status byte for speech carts
     // ----------------------------------------------------
     readSpeech = SPEECH_SENTINAL_VAL;
-    
+
     // --------------------------------------------------
     // SAMS support... up to 512K for DS and 1MB for DSi
     // --------------------------------------------------
     SAMS_Initialize();   // Map in SAMS if enabled
-    
+
     // ---------------------------------------------------------------------
     // Perform a standard system RESET - this will also clear disk buffers
     // ---------------------------------------------------------------------
-    ResetTI();    
-    
+    ResetTI();
+
     // ------------------------------------------------------------------------------------------------
     // We're now ready to load the actual binary files and place them into memory.
     // We always do a re-read of the TI99 console ROM and GROM as well as load
@@ -110,12 +115,12 @@ u8 TI99Init(char *szGame)
     // ------------------------------------------------------------------------------------------------
     FILE *infile;           // We use this to read the various files in our system
     u16 numCartBanks = 1;   // Number of CART banks (8K each)
-    
+
     // ------------------------------------------------------------------
     // Copy the main 16-bit console ROM into place into our MemCPU[]
     // ------------------------------------------------------------------
     memcpy(&MemCPU[0], MAIN_BIOS, 0x2000);
-    
+
     // ---------------------------------------------------------------------------------
     // Read in the main console GROM and place into the first 24K of GROM memory space.
     // This one isn't cached because we can override this with a '0' file in case
@@ -130,7 +135,7 @@ u8 TI99Init(char *szGame)
         fclose(infile);
     }
 
-    if (strcasecmp(strrchr(szGame, '.'), ".rpk") == 0)  
+    if (strcasecmp(strrchr(szGame, '.'), ".rpk") == 0)
     {
         DS_Print(7,0,6, "DECOMPRESSING RPK...");
         u8 retval = rpk_load(szGame); // TODO check retval
@@ -152,7 +157,7 @@ u8 TI99Init(char *szGame)
 
         u8 fileType = toupper(tmpBuf[strlen(tmpBuf)-5]);
 
-        // Look for the classic C/D/G "mixed mode" files... 
+        // Look for the classic C/D/G "mixed mode" files...
         if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
         {
             tms9900.bankMask = 0x003F;
@@ -206,7 +211,7 @@ u8 TI99Init(char *szGame)
             fclose(infile);
             numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
             tms9900.bankMask = BankMasks[numCartBanks-1];
-            
+
             if (numCartBanks > 1)
             {
                 // If the image is inverted we need to swap 8K banks
@@ -215,15 +220,15 @@ u8 TI99Init(char *szGame)
                     for (u16 i=0; i<numCartBanks/2; i++)
                     {
                         // Swap 8k bank...
-                        memcpy(SwapCartBuffer, MemCART + (i*0x2000), 0x2000);  
+                        memcpy(SwapCartBuffer, MemCART + (i*0x2000), 0x2000);
                         memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
                         memcpy(MemCART + ((numCartBanks-i-1)*0x2000), SwapCartBuffer, 0x2000);
                     }
                 }
             }
-            
+
             memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-            
+
             // And see if there is a GROM file to go along with this load...
             tmpBuf[strlen(tmpBuf)-5] = 'G';
             infile = fopen(tmpBuf, "rb");
@@ -231,11 +236,11 @@ u8 TI99Init(char *szGame)
             {
                 fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM loaded at GROM address >6000
                 fclose(infile);
-            }            
+            }
         }
-        
+
         // --------------------------------------------------------
-        // Look for a special '0' file that we will try to load 
+        // Look for a special '0' file that we will try to load
         // into GROM bank 0,1,2 to replace System GROMs (e.g. SOB)
         // --------------------------------------------------------
         tmpBuf[strlen(tmpBuf)-5] = '0';
@@ -246,9 +251,10 @@ u8 TI99Init(char *szGame)
             fclose(infile);
         }
     }
-    
+
     // ------------------------------------------------------
     // Now handle some of the special machine types...
+    // Supercart is 32K of RAM that is CRU-banked into >6000
     // ------------------------------------------------------
     if (myConfig.cartType == CART_TYPE_SUPERCART)
     {
@@ -260,9 +266,11 @@ u8 TI99Init(char *szGame)
         memset(MemCART+(MAX_CART_SIZE - 0x8000), 0x00, 0x8000); // Clear the back-end 32K of the cartridge... we will repurpose to 32K of SUPER CART RAM
     }
 
-    // ------------------------------------------------------------
+    // --------------------------------------------------------------
     // Mini Memory maps RAM into the upper 4K of the cart slot...
-    // ------------------------------------------------------------
+    // Since there is no banking, we can just use the 4K of MemCPU[]
+    // at that location.
+    // --------------------------------------------------------------
     if (myConfig.cartType == CART_TYPE_MINIMEM)
     {
         for (u16 address = 0x7000; address < 0x8000; address++)
@@ -285,7 +293,7 @@ u8 TI99Init(char *szGame)
         {
             MemType[address>>4] = MF_CART;    // We'll do the banking manually for MBX carts
         }
-        
+
         if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
         {
             for (u16 address = 0x6C00; address < 0x7000; address++)
@@ -294,15 +302,17 @@ u8 TI99Init(char *szGame)
                 MemCPU[address] = 0x00;     // Clear out the RAM
             }
         }
-        
+
         MemType[0x6ffe>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
         MemType[0x6fff>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
         WriteBankMBX(0);
     }
-    
+
+    // -----------------------------------------------------------------------------
     // Ensure we're in the first bank... (which might be the only bank for 8K ROMs)
+    // -----------------------------------------------------------------------------
     tms9900.cartBankPtr = MemCPU+0x6000;
-    
+
     // ---------------------------------------------------------------
     // Check if there are any .dsk files associated with this load...
     // This will allow quick mounting of various .dsk files into mem.
@@ -321,7 +331,7 @@ u8 TI99Init(char *szGame)
             fclose(infile);
             getcwd(currentDirDSKs, MAX_PATH);
             disk_mount(drivesel, currentDirDSKs, tmpBuf);
-        }  
+        }
     }
 
     // ---------------------------------------------------------------
@@ -344,10 +354,9 @@ u8 TI99Init(char *szGame)
             fclose(infile);
             getcwd(currentDirDSKs, MAX_PATH);
             disk_mount(drivesel, currentDirDSKs, tmpBuf);
-        }  
+        }
     }
 
-    
     // --------------------------------------------------------------------
     // Now that we're loaded up in memory, we set the initial CPU pointers
     // to the reset vector and kick off the CPU so we're ready to emulate!
@@ -359,27 +368,27 @@ u8 TI99Init(char *szGame)
 }
 
 /*********************************************************************************
- * Run the emul
+ * Run the emulation - we start by showing the main menu screen (user picks game)
  ********************************************************************************/
-void TI99Run(void) 
+void TI99Run(void)
 {
   showMainMenu();                       // Show the game-related screen
 }
 
 /*********************************************************************************
- * Set TI99/4a Palette
+ * Set TI99/4a Palette We support only one NTSC pallete for simplicity.
  ********************************************************************************/
-void TI99SetPal(void) 
+void TI99SetPal(void)
 {
   u8 uBcl,r,g,b;
-  
+
   // -----------------------------------------------------------------------
   // The TI99/4a has a 16 color pallette... we set that up here.
   // We always use the standard NTSC color palette which is fine for now
   // but maybe in the future we add the PAL color palette for a bit more
   // authenticity.
   // -----------------------------------------------------------------------
-  for (uBcl=0;uBcl<16;uBcl++) 
+  for (uBcl=0;uBcl<16;uBcl++)
   {
     r = (u8) ((float) TMS9918A_palette[uBcl*3+0]*0.121568f);
     g = (u8) ((float) TMS9918A_palette[uBcl*3+1]*0.121568f);
@@ -397,16 +406,16 @@ void TI99SetPal(void)
 // reduce visual tearing and other artifacts. It's not strictly necessary
 // and that does slow down the loop a bit... but DSi can handle it.
 // --------------------------------------------------------------------------
-ITCM_CODE void TI99UpdateScreen(void) 
+ITCM_CODE void TI99UpdateScreen(void)
 {
     extern u16 timingFrames;
-    // ------------------------------------------------------------   
-    // If we are in 'blendMode' we will OR the last two frames. 
-    // This helps on some games where things are just 1 pixel 
+    // ------------------------------------------------------------
+    // If we are in 'blendMode' we will OR the last two frames.
+    // This helps on some games where things are just 1 pixel
     // wide and the non XL/LL DSi will just not hold onto the
-    // image long enough to render it properly for the eye to 
+    // image long enough to render it properly for the eye to
     // pick up. This takes CPU speed.
-    // ------------------------------------------------------------   
+    // ------------------------------------------------------------
     if (myConfig.frameBlend)
     {
       if (XBuf == XBuf_A)
@@ -420,7 +429,7 @@ ITCM_CODE void TI99UpdateScreen(void)
       u32 *p1 = (u32*)XBuf_A;
       u32 *p2 = (u32*)XBuf_B;
       u32 *destP = (u32*)pVidFlipBuf;
-        
+
       if (timingFrames & 1) // Only need to do this every other frame...
       {
           for (u16 i=0; i<(256*192)/4; i++)
@@ -450,21 +459,21 @@ void getfile_crc(const char *path)
 
 
 // --------------------------------------------------------------------------------
-// The main CPU loop... here we run one scanline of CPU instructions and then go 
-// check in with the VDP video chip to see if we are done rendering a frame... 
+// The main CPU loop... here we run one scanline of CPU instructions and then go
+// check in with the VDP video chip to see if we are done rendering a frame...
 // --------------------------------------------------------------------------------
-ITCM_CODE u32 LoopTMS9900() 
+ITCM_CODE u32 LoopTMS9900()
 {
     // Run one scanline worth of CPU instructions
     TMS9900_Run();
-    
+
     // Refresh VDP for this scanline
-    if(Loop9918()) 
+    if(Loop9918())
     {
         TMS9901_RaiseVDPInterrupt();
     }
-    
-    // Drop out unless end of screen is reached 
+
+    // Drop out unless end of screen is reached
     return ((CurLine == tms_end_line) ? 0:1);
 }
 

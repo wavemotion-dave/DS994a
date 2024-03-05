@@ -7,7 +7,7 @@
 //
 // The DS994a emulator is offered as-is, without any warranty.
 //
-// Bits of this code came from Clasic99 (C) Mike Brent who has graciously allowed
+// Bits of this code came from Clasic99 Copyright (c) Mike Brent who has graciously allowed
 // me to use it to help with the core TMS9900 emualation. Please see Classic99 for
 // the original CPU core and please adhere to the copyright wishes of Mike Brent
 // for any code that is duplicated here.
@@ -37,7 +37,7 @@
 u8      MemCPU[0x10000];            // 64K of CPU MemCPU Space
 u8      MemGROM[0x10000];           // 64K of GROM MemCPU Space
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
-u8      SwapCartBuffer[0x2000];     // A bit of memory to allow us to swap banks (inverted carts, etc)
+u8      SwapCartBuffer[0x2000];     // 8K of memory to allow us to swap banks (for inverted carts, 12K paging, etc)
 
 u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
 u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSI will bump this to 8MB)
@@ -51,8 +51,8 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 u16 MemoryRead16(u16 address);
 
-u16 readSpeech = SPEECH_SENTINAL_VAL;
-u8  super_bank = 0;
+u16 readSpeech __attribute__((section(".dtcm"))) = SPEECH_SENTINAL_VAL;
+u8  super_bank __attribute__((section(".dtcm"))) = 0;
 
 // A few externs from other modules...
 extern SN76496 snti99;
@@ -935,7 +935,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 break;
             case MF_SPEECH:
                 // ----------------------------------------------------------------------------------------------------------
-                // We use the sentinal 999 as meaning that we will return status. If the readSpeech value is not 999, then
+                // We use a sentinal value to mean that we will return status. If the readSpeech value is not 0x994a, then
                 // we return that value to the caller - this is often used to read the first byte of Speech ROM to make
                 // sure that it's an 0xAA value and thus produce TI Speech (as a way to detect if the module is attached).
                 // ----------------------------------------------------------------------------------------------------------

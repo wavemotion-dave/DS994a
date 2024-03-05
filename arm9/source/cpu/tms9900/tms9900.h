@@ -7,7 +7,7 @@
 //
 // The DS994a emulator is offered as-is, without any warranty.
 //
-// Bits of this code came from Clasic99 (C) Mike Brent who has graciously allowed
+// Bits of this code came from Clasic99 Copyright (c) Mike Brent who has graciously allowed
 // me to use it to help with the core TMS9900 emualation. Please see Classic99 for
 // the original CPU core and please adhere to the copyright wishes of Mike Brent
 // for any code that is duplicated here.
@@ -192,13 +192,13 @@ enum _STATUS_FLAGS
 // --------------------------------------------------------
 // Interrupt Masks... we only handle VDP and Timer
 // --------------------------------------------------------
-#define INT_VDP        2
-#define INT_TIMER      1
+#define INT_VDP                 2
+#define INT_TIMER               1
 
 // ---------------------------------------------------------------------
 // A sentinal value that we can use for fake-rendering speech samples
 // ---------------------------------------------------------------------
-#define SPEECH_SENTINAL_VAL 999
+#define SPEECH_SENTINAL_VAL     0x994a
 
 // -------------------------------------------------------------------------------------------------
 // The memory type tell us what's in a particular memory location. Be careful to keep MF_MEM16
@@ -224,14 +224,9 @@ enum _MEM_TYPE
     MF_SAMS,        // This is the SAMS memory expanded access registers at >4000
     MF_SAMS8,       // This is RAM8 except that it's banked into a larger SAMS memory pool
     MF_MBX,         // This is the MBX register that causes a bank switch at >7000
-    MF_PERIF,       // This is possibly Peripheral ROM space (Disk Controller DSR)
-    MF_UNUSED,      // This is some unused memory space... will return 0xFF
+    MF_PERIF,       // This is the Peripheral ROM space (Disk Controller DSR)
+    MF_UNUSED,      // This is some unused memory space... will return 0xFF (or, really, whatever was left in the MemCPU[] buffer at that address)
 };
-
-
-extern u32 SAMS_Read32(u32 address);
-extern void SAMS_Write32(u32 address, u32 data);
-extern void SAMS_MapDSR(u8 dataBit);
 
 extern void TMS9900_Reset(void);
 extern void TMS9900_Run(void);
@@ -240,9 +235,12 @@ extern void TMS9900_RaiseInterrupt(u16 iMask);
 extern void TMS9900_ClearInterrupt(u16 iMask);
 extern void TMS9900_SetAccurateEmulationFlag(u16 flag);
 extern void TMS9900_ClearAccurateEmulationFlag(u16 flag);
+extern u32  SAMS_Read32(u32 address);
+extern void SAMS_Write32(u32 address, u32 data);
+extern void SAMS_MapDSR(u8 dataBit);
 extern void SAMS_cru_write(u16 address, u8 dataBit);
 extern void cart_cru_write(u16 cruAddress, u8 dataBit);
-extern u8 cart_cru_read(u16 cruAddress);
+extern u8   cart_cru_read(u16 cruAddress);
 extern void WriteBankMBX(u8 bank);
 
 #endif
