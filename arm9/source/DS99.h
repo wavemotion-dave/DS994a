@@ -90,6 +90,8 @@ extern u8  kbd_key;
 extern u8 keyCoresp[MAX_KEY_OPTIONS];
 extern u16 NDS_keyMap[];
 
+extern char system_grom_path[];                  // Last known location of the 994aGROM.bin file
+
 extern volatile u16 vusCptVBL;                   // Video Management
 
 extern u8 soundEmuPause;

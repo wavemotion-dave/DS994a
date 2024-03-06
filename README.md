@@ -10,7 +10,7 @@ Features :
 -----------------------
 * Games and programs run at or near full speed across the spectrum of DS hardware (though the emulator targets the DSi / XL for optmium performance)
 * Cart loads up to 8192K (8MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
-* Mixed mode C/D/G/8/9 files supported as well as the MESS/MAME .RPK (**R**om **P**ac**K**s)
+* Mixed mode C/D/G/8/9 files supported as well as the MESS/MAME .RPK (Rom PacKs) format
 * 32K RAM Expansion built-into the base console emulation
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX, Mini-Mem and Super Carts supported with extra RAM. Use Options to select cart type
@@ -24,7 +24,7 @@ Features :
 
 Copyright :
 -----------------------
-DS99/4a is Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+DS99/4a is Copyright © 2023-2024 Dave Bernazzani (wavemotion-dave)
 
 This program is made up from a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 

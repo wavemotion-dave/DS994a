@@ -92,6 +92,7 @@ u8 key_push_write = 0;          // For inserting DSK filenames into the keyboard
 u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard buffer
 char key_push[0x20];            // A small array for when inserting DSK filenames into the keyboard buffer
 char dsk_filename[16];          // Short filename to show on DISK Menu
+char system_grom_path[64];      // Store the path to the system GROMs so we can reload as needed
 
 u16 NTSC_Timing[] __attribute__((section(".dtcm"))) = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 u16 PAL_Timing[]  __attribute__((section(".dtcm"))) = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
@@ -530,7 +531,6 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
                 DS_Print(2,23,2, "@");
             }
         }
-
     }
 }
 
@@ -1647,7 +1647,7 @@ void TI99DSInitCPU(void)
 }
 
 // -------------------------------------------------------------
-// Only used for basic timing of moving the Mario sprite...
+// Only used for basic timing of the splash screen
 // -------------------------------------------------------------
 void irqVBlank(void)
 {
@@ -1669,6 +1669,9 @@ void LoadBIOSFiles(void)
     // We steal 16K of VDP memory for caching the 8K BIOS and 8K Disk DSR
     vramSetBankI(VRAM_I_LCD);
 
+    // ------------------------------------------------------------------------
+    // Find the main console ROM which is 8K in size... load this into cache.
+    // ------------------------------------------------------------------------
     inFile1 = fopen("/roms/bios/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aROM.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aROM.bin", "rb");
@@ -1678,10 +1681,27 @@ void LoadBIOSFiles(void)
         memcpy(MAIN_BIOS, fileBuf, 0x2000);
     }
 
-    inFile2 = fopen("/roms/bios/994aGROM.bin", "rb");
-    if (!inFile2) inFile2 = fopen("/roms/ti99/994aGROM.bin", "rb");
-    if (!inFile2) inFile2 = fopen("994aGROM.bin", "rb");
+    // ------------------------------------------------------------------------
+    // Find the main system GROMs and save the path where this can be found
+    // since we will re-load these from disk on every new game/rom load.
+    // ------------------------------------------------------------------------
+    strcpy(system_grom_path, "/roms/bios/994aGROM.bin");
+    inFile2 = fopen(system_grom_path, "rb");
+    if (!inFile2) 
+    {
+        strcpy(system_grom_path, "/roms/ti99/994aGROM.bin");
+        inFile2 = fopen(system_grom_path, "rb");
+    }
+    if (!inFile2) 
+    {
+        strcpy(system_grom_path, "994aGROM.bin");
+        inFile2 = fopen(system_grom_path, "rb");
+    }
 
+    // ----------------------------------------------------------------
+    // We consider the TI BIOS requirement fulfilled only if we found
+    //  both the main system ROM and the system console GROMs.
+    // ----------------------------------------------------------------
     if (inFile1 && inFile2)
     {
         bTIBIOSFound = true;
@@ -1693,6 +1713,9 @@ void LoadBIOSFiles(void)
     if (inFile1) fclose(inFile1);
     if (inFile2) fclose(inFile2);
 
+    // ------------------------------------------------------------------------
+    // Find the TI Disk Controller ROM (optional) and load this into cache
+    // ------------------------------------------------------------------------
     inFile1 = fopen("/roms/bios/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("/roms/ti99/994aDISK.bin", "rb");
     if (!inFile1) inFile1 = fopen("994aDISK.bin", "rb");

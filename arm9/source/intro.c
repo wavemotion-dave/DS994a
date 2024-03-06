@@ -19,11 +19,8 @@
 #include "splash.h"
 #include "pdev_bg0.h"
 
-extern unsigned int vusCptVBL;
-
-void vblankIntro() {
-  vusCptVBL++;
-}
+extern u16 vusCptVBL;
+extern void irqVBlank(void);
 
 // --------------------------------------------------------------
 // Intro Splash Screen
@@ -35,7 +32,7 @@ void intro_logo(void) {
   videoSetMode(MODE_0_2D | DISPLAY_BG0_ACTIVE );
   videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE );
   vramSetBankA(VRAM_A_MAIN_BG); vramSetBankC(VRAM_C_SUB_BG);
-  irqSet(IRQ_VBLANK, vblankIntro);
+  irqSet(IRQ_VBLANK, irqVBlank);
   irqEnable(IRQ_VBLANK);
   
   // Init BG

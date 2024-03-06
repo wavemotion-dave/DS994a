@@ -126,15 +126,20 @@ u8 TI99Init(char *szGame)
     // This one isn't cached because we can override this with a '0' file in case
     // someone wants to use Son of Board (SoB) or other replacement console GROMs.
     // ---------------------------------------------------------------------------------
-    infile = fopen("/roms/bios/994aGROM.bin", "rb");
-    if (!infile) infile = fopen("/roms/ti99/994aGROM.bin", "rb");
-    if (!infile) infile = fopen("994aGROM.bin", "rb");
+    infile = fopen(system_grom_path, "rb");
     if (infile)
     {
         fread(&MemGROM[0x0000], 0x6000, 1, infile);
         fclose(infile);
+    } 
+    else
+    {
+        memset(&MemGROM[0x0000], 0xFF, 0x6000);
     }
 
+    // ------------------------------------------------------------
+    // First check if we are trying to load a ROM Pack (.rpk) file
+    // ------------------------------------------------------------
     if (strcasecmp(strrchr(szGame, '.'), ".rpk") == 0)
     {
         DS_Print(7,0,6, "DECOMPRESSING RPK...");
@@ -148,7 +153,7 @@ u8 TI99Init(char *szGame)
         }
         DS_Print(7,0,6, "                    ");
     }
-    else // Assume mixed-mode (c/d/g/8/9 etc)
+    else // Otherwise, assume mixed-mode (c/d/g/8/9 etc)
     {
         // -----------------------------------------------------------------------------
         // We're going to be manipulating the filename a bit so copy it into a buffer
