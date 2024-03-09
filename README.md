@@ -250,7 +250,7 @@ V2.1: 09-Mar-2024 by wavemotion-dave
 * GROM auto-increment of address will properly preserve the upper bits so we don't inadvertantly select the next GROM in our system (accuracy).
 * Added partial speech samples for MB Superfly.
 * Minor cleanups of SAMS handling and improved commenting in that driver.
-* Improved TMS9900 debugger for developement use.
+* Improved TMS9900 debugger for development use.
 
 V2.0: 01-Mar-2024 by wavemotion-dave
 * Support for .rpk (Rom PacKs - same as used by MAME/MESS).
