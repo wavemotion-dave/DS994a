@@ -850,13 +850,17 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
     if (MemType[address>>4]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
 }
 
-// -------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 // Technically everything in the system is a 16-bit read with an 8-bit multiplexer... but
 // we can be a little smarter and not waste the same time that an actual TI-99/4a does.
 // The routines below are general purpose and work for both the accurate and fast versions
 // of our CPU driver. We try to call into one of the above memory handlers whenever possible
 // as these are a bit complex and can slow down emulation.
-// -------------------------------------------------------------------------------------------
+//
+// It's important to remember that a 16-bit word in the TMS9900 architecture is split into
+// the even byte (high byte) and odd byte (low byte). This is opposite of conventional 
+// ARM architecture so you see us swapping these bytes fairly often by left/right shifts by 8.
+// --------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
 {
     u16 retVal;
@@ -873,8 +877,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
                 break;
             case MF_SAMS8:
-                retVal = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
-                return (retVal << 8) | (retVal >> 8);
+                return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
                 break;
             case MF_VDP_R:
                 if (address & 2) retVal = (u16)RdCtrl9918()<<8; else retVal = (u16)RdData9918()<<8;
@@ -893,6 +896,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return (retVal << 8) | (retVal >> 8);
                 break;
             case MF_SAMS:
+                // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
                 return (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] << 8) | (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] & 0xFF);
                 break;
             default:
@@ -908,7 +912,8 @@ ITCM_CODE u16 MemoryRead16(u16 address)
 }
 
 // The TI is a 16-bit system crammed into an 8-bit artchitecture (or, perhaps more acccurately, lots 
-// of 8-bit peripherals were jammed into a 16-bit architecture). 
+// of 8-bit peripherals were jammed into a 16-bit architecture). But there are byte commands that 
+// will result in an 8-bit read of memory. We handle that here.
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
     u8 memType = MemType[address>>4];
@@ -966,10 +971,15 @@ ITCM_CODE u8 MemoryRead8(u16 address)
 }
 
 
-// -----------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------
 // A few games like Borzork use 16-bit writes for things like Sound or VDP so those do need to be handled here along
-// with the more typical 16-bit writes like the internal console RAM...
-// -----------------------------------------------------------------------------------------------------------------------
+// with the more typical 16-bit writes like the internal console RAM... For the peripherals that are 8-bits but written
+// using a 16-bit operation, the odd is always written first followed by the even byte (in the TI9900 case - the high byte).
+// That's why you will see below many of the 8-bit peripherals just writing the high byte shifted down 8 bits which is
+// the end-result of a 16-bit write to an 8-bit periphal. We could actually write twice (odd byte then even byte) to
+// more closely mimic real hardware but it's not useful and chews up valuable emulation time for the peripherals that
+// don't do anything special on the odd-byte writes (however, 8-bit RAM must handle this as we do want to write both bytes).
+// -------------------------------------------------------------------------------------------------------------------------
 ITCM_CODE void MemoryWrite16(u16 address, u16 data)
 {
     address &= 0xFFFE;

@@ -47,7 +47,11 @@ void SAMS_Initialize(void)
     theSAMS.cruSAMS[0] = 0;
     theSAMS.cruSAMS[1] = 0;
     
-    // SAMS memory is bigger for the DSi where we have more room...
+    // ------------------------------------------------------------------------
+    // SAMS memory is bigger for the DSi where we have more room... See a bit 
+    // further below since with the DS-Lite/Phat we need to reduce the size 
+    // of the max cart buffer in order to support the 512K SAMS memory.
+    // ------------------------------------------------------------------------
     theSAMS.numBanks = (isDSiMode() ? 256 : 128);  // 256 * 4K = 1024K,  128 * 4K = 512K
     
     // For each bank... set the default memory banking pointers 
@@ -70,7 +74,7 @@ void SAMS_Initialize(void)
     if (myConfig.machineType == MACH_TYPE_SAMS)
     {
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
-        SAMS_cru_write(0,0);    // Swap out the DSR
+        SAMS_cru_write(0,0);    // Swap out the "DSR" (the SAMS memory mapped registers are not visible)
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode)
         
         if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
@@ -162,7 +166,7 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
                 SAMS_SwapBank(0x0F, 0xF);
             }
         }
-        else // We are dealing with the DSR enabled bit
+        else // We are dealing with the "DSR" enabled bit (there is no DSR for the SAMS, but it's more a card enable so that registers can be written to)
         {
             SAMS_MapDSR(dataBit);
         }
@@ -185,17 +189,20 @@ u8 SAMS_cru_read(u16 cruAddress)
 // ------------------------------------------------------------------
 // Map the SAMS DSR in/out at address 0>4000 which is shared
 // with the Disk Controller (and other periprhals in the future)
+// Note: SAMS does not have a traditional DSR rom - so this CRU 
+// bit is really more like a SAMS enable/disable as we are just
+// enabling the memory mapped registers here (no ROM is swapped).
 // ------------------------------------------------------------------
 void SAMS_MapDSR(u8 dataBit)
 {
-    if (dataBit == 1) // Mapping DSR in
+    if (dataBit == 1) // Mapping SAMS card in
     {
         for (u16 address = 0x4000; address < 0x4020; address += 16)
         {
             MemType[address>>4] = MF_SAMS;    // SAMS expanded memory handling
         }
     }
-    else // Mapping DSR out
+    else // Mapping the SAMS card out
     {
         for (u16 address = 0x4000; address < 0x4020; address += 16)
         {

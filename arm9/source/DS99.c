@@ -1605,7 +1605,7 @@ void InitBottomScreen(void)
     }
     else
     {
-        if (myConfig.overlay == 0)  // TI99 3D
+        if (myConfig.overlay == 0)  // TI99 3D Keyboard
         {
             decompress(ds99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
             decompress(ds99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
@@ -1615,7 +1615,7 @@ void InitBottomScreen(void)
             unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
             dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
         }
-        else // Must be TI99 Flat
+        else // Must be TI99 Flat Keyboard
         {
             decompress(ti99kbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
             decompress(ti99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
