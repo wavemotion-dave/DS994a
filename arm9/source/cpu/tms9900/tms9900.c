@@ -34,12 +34,12 @@
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
 // -------------------------------------------------------------------
-u8      MemCPU[0x10000];            // 64K of CPU MemCPU Space
-u8      MemGROM[0x10000];           // 64K of GROM MemCPU Space
+u8      MemCPU[0x10000];            // 64K of CPU Space  (the lower 8K will contain the system console ROM)
+u8      MemGROM[0x10000];           // 64K of GROM Space (the lower 24K will contain system GROMs)
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
 u8      SwapCartBuffer[0x2000];     // 8K of memory to allow us to swap banks (for inverted carts, 12K paging, etc)
 
-u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8 memory up to 8MB/512K (DSi vs DS) banked at >6000
+u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
 u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSI will bump this to 8MB)
         
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
@@ -68,7 +68,7 @@ u16 ParityTable[256]     __attribute__((section(".dtcm")));
 // Note this will only handle LAE and P - other bits to be set by instruction.
 // This is small enough that we can place it into the fast .DTCM data memory.
 // ---------------------------------------------------------------------------------
-u16 CompareZeroLookup8[0x100] __attribute__((section(".dtcm")));
+u16 CompareZeroLookup8[256] __attribute__((section(".dtcm")));
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -498,7 +498,7 @@ void TMS9900_Reset(void)
     memset(MemCART,         0xFF,(512*1024));       // The cart is not inserted to start... We map larger than this, but don't waste time clearing more than 512K
     memset(MemCPU,          0xFF, 0x10000);         // Set all of memory to 0xFF (nothing mapped until proven otherwise)
     memset(MemGROM,         0xFF, 0x10000);         // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
-    memset(&MemCPU[0x8000], 0x00, 0x400);           // Mark off RAM area by clearing bytes
+    memset(&MemCPU[0x8000], 0x00, 0x400);           // Clear the RAM area - we might randomize this area a few lines further below
     memset(&MemCPU[0x2000], 0x00, 0x2000);          // 8K of Low MemCPU Expansion from 0x2000 to 0x3FFF
     memset(&MemCPU[0xA000], 0x00, 0x6000);          // 24K of High MemCPU Expansion from 0xA000 to 0xFFFF
 
@@ -527,13 +527,16 @@ void TMS9900_Reset(void)
         }
     }
     
-    // Reset the super bank to bank 0
+    // Reset the super cart bank to bank 0
     super_bank = 0;
 
     // Reset the TMS9901 peripheral IO chip
     TMS9901_Reset();
 }
 
+// -----------------------------------------------------------------------------------------------
+// Grab the TMS9900 WP and PC from the initial words in the CPU address space to launch us.
+// -----------------------------------------------------------------------------------------------
 void TMS9900_Kickoff(void)
 {
     // And away we go!
@@ -574,13 +577,12 @@ void TMS9900_ClearAccurateEmulationFlag(u16 flag)
     tms9900.accurateEmuFlags &= ~flag;
 }
 
-//-------------------------------------------------------------------
-// The GROM increment takes into account that it's only really
-// incrementing and wrapping at the 8K boundary. The auto-increment
-// should not bump the upper 3 bits which would, effectively, select
-// the next GROM in memory. This comes at a slight speed pentalty
-// but it's minor and we want this to be bullet-accurate.
-//-------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+// The GROM increment takes into account that it's only really incrementing and wrapping 
+// at the 8K boundary. The auto-increment should not bump the upper 3 bits which would, 
+// effectively, select the next GROM in memory. This comes at a slight speed pentalty
+// but it's a minor enough hit and we want this to be bullet-accurate.
+//-----------------------------------------------------------------------------------------
 static inline __attribute__((always_inline)) u8 ReadGROM(void)
 {
     AddCycleCount(GROM_READ_CYCLES);
@@ -644,7 +646,10 @@ inline void WriteGROMAddress(u8 data)
     }
 }
 
-
+// ------------------------------------------------------------------------------------
+// Well behaved programs should not be writing to GROM space unless it's some kind
+// of GRAM-Kraker device... but we don't support that and so we'll simply do nothing.
+// ------------------------------------------------------------------------------------
 void WriteGROM(u8 data)
 {
     // Does nothing... should we chew up cycles?
@@ -736,8 +741,7 @@ inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 {
     if (MemType[address>>4] == MF_SAMS8)
     {
-        u16 data16 = *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
-        return (data16 << 8) | (data16 >> 8);
+        return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
     }        
     return __builtin_bswap16(*(u16*) (&MemCPU[address]));
 }
@@ -860,6 +864,12 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 // It's important to remember that a 16-bit word in the TMS9900 architecture is split into
 // the even byte (high byte) and odd byte (low byte). This is opposite of conventional 
 // ARM architecture so you see us swapping these bytes fairly often by left/right shifts by 8.
+//
+// So a 16-bit Memory Word on an Even Address boundary looks like this:
+//
+// MSB ---------------- LSB  |  MSB ---------------------- LSB
+//  0  1  2  3  4  5  6  7   |   8  9  10  11  12  13  14  15
+//      == EVEN BYTE ==      |          == ODD BYTE ==
 // --------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
 {
@@ -889,31 +899,32 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return retVal;
                 break;
             case MF_SPEECH:
-                return ((0x40 | 0x20) << 8) | (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                retVal = (0x40 | 0x20);             // Satisfies the games that look for the module... Bits are empty and buffer low
+                return (retVal << 8) | retVal;
                 break;
             case MF_DISK:
                 retVal = ReadTICCRegister(address);
-                return (retVal << 8) | (retVal >> 8);
+                return (retVal << 8) | retVal;
                 break;
             case MF_SAMS:
-                // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
-                return (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] << 8) | (theSAMS.bankMapSAMS[(address & 0x1E) >> 1] & 0xFF);
+                retVal = SAMS_ReadBank(address);
+                return (retVal << 8) | retVal;      // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
                 break;
             default:
-                retVal = *((u16*)(MemCPU+address));
-                return (retVal << 8) | (retVal >> 8);
+                return __builtin_bswap16(*((u16*)(MemCPU+address)));
                 break;
         }
     }
 
     // This is either console ROM or workspace RAM
-    retVal = *((u16*)(MemCPU+address));
-    return (retVal << 8) | (retVal >> 8);
+    return __builtin_bswap16(*((u16*)(MemCPU+address)));
 }
 
+// --------------------------------------------------------------------------------------------------
 // The TI is a 16-bit system crammed into an 8-bit artchitecture (or, perhaps more acccurately, lots 
 // of 8-bit peripherals were jammed into a 16-bit architecture). But there are byte commands that 
 // will result in an 8-bit read of memory. We handle that here.
+// --------------------------------------------------------------------------------------------------
 ITCM_CODE u8 MemoryRead8(u16 address)
 {
     u8 memType = MemType[address>>4];
@@ -952,14 +963,14 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 }
                 else
                 {
-                    return (0x40 | 0x20);   //TBD for now... satisfies the games that look for the module... Bits are empty and buffer low
+                    return (0x40 | 0x20);   // Datisfies the games that look for the module... Bits are empty and buffer low
                 }
                 break;
             case MF_DISK:
                 return ReadTICCRegister(address);
                 break;
             case MF_SAMS:
-                return theSAMS.bankMapSAMS[(address & 0x1E) >> 1];
+                return SAMS_ReadBank(address);
                 break;
             default:
                 return MemCPU[address];
@@ -1018,11 +1029,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 }
                 break;
             case MF_SAMS8:
-                {
-                    u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
-                    *ptr++ = (data>>8);
-                    *ptr = (data & 0xFF);
-                }
+                *((u16*)(theSAMS.memoryPtr[address>>12] + (address & 0xFFF))) = (data << 8) | (data >> 8);
                 break;
             case MF_RAM8:
                 MemCPU[address] = (data>>8);
@@ -1089,10 +1096,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 WriteTICCRegister(address, data);  // Disk Controller
                 break;
             case MF_SAMS8:
-                {
-                    u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
-                    *ptr = data;
-                }
+                *(theSAMS.memoryPtr[address>>12] + (address & 0xFFF)) = data;
                 break;
             case MF_RAM8:
                 MemCPU[address] = data;    // Expanded 32K RAM

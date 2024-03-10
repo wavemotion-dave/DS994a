@@ -31,6 +31,7 @@ extern u8 sams_highwater_bank;
 
 extern void SAMS_Initialize(void);
 extern void SAMS_WriteBank(u16 address, u8 data);
+extern u8   SAMS_ReadBank(u16 address);
 extern u8   SAMS_cru_read(u16 cruAddress);
 extern void SAMS_cru_write(u16 cruAddress, u8 dataBit);
 extern void SAMS_MapDSR(u8 dataBit);

@@ -127,6 +127,14 @@ void SAMS_WriteBank(u16 address, u8 data)
     }
 }
 
+// ----------------------------------------------------------
+// Return the current bank mapped at a particular address. 
+// ----------------------------------------------------------
+u8 SAMS_ReadBank(u16 address)
+{
+    return theSAMS.bankMapSAMS[(address & 0x1E) >> 1];
+}
+
 // ---------------------------------------------------------------------
 // The SAMS CRU is at CRU base >1E00 and has only 2 bits.. the first
 // turns on the DSR at >4000 and the second enables the mapping vs
