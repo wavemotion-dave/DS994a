@@ -48,9 +48,8 @@ void DS_SetVideoModes(void)
     // and we set VRAM_B as memory-mapped for CPU use.
     // ------------------------------------------------
     videoSetMode(MODE_5_2D | DISPLAY_BG3_ACTIVE);
-    videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
+    videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
     vramSetBankA(VRAM_A_MAIN_BG_0x06000000);      // This is our top emulation screen (where the game is played)
-    vramSetBankB(VRAM_B_LCD);                     // 128K of Video Memory mapped at 0x06820000 we can use
 
     REG_BG3CNT = BG_BMP8_256x256;
     REG_BG3PA = (1<<8);
@@ -121,21 +120,10 @@ u8 TI99Init(char *szGame)
     // ------------------------------------------------------------------
     memcpy(&MemCPU[0], MAIN_BIOS, 0x2000);
 
-    // ---------------------------------------------------------------------------------
-    // Read in the main console GROM and place into the first 24K of GROM memory space.
-    // This one isn't cached because we can override this with a '0' file in case
-    // someone wants to use Son of Board (SoB) or other replacement console GROMs.
-    // ---------------------------------------------------------------------------------
-    infile = fopen(system_grom_path, "rb");
-    if (infile)
-    {
-        fread(&MemGROM[0x0000], 0x6000, 1, infile);
-        fclose(infile);
-    } 
-    else
-    {
-        memset(&MemGROM[0x0000], 0xFF, 0x6000);
-    }
+    // ------------------------------------------------------------------
+    // Copy the system console GROM and place into our MemGROM[]
+    // ------------------------------------------------------------------
+    memcpy(&MemGROM[0], MAIN_GROM, 0x6000);
 
     // ------------------------------------------------------------
     // First check if we are trying to load a ROM Pack (.rpk) file

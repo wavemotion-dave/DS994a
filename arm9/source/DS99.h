@@ -22,8 +22,9 @@ extern u8 fileBuf[0x2000];  // For DSK sector cache, general file I/O and file C
 
 #define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}
 
-#define MAIN_BIOS ((u16*)0x068A0000)   // 8K of fast VDP memory for the main TI-99 BIOS cache
-#define DISK_DSR  ((u16*)0x068A2000)   // 8K of fast VDP memory for the Disk Controller DSR cache
+#define MAIN_GROM ((u16*)0x0689A000)   // 24K of fast VDP memory for the system console GROM cache
+#define MAIN_BIOS ((u16*)0x068A0000)   // 8K  of fast VDP memory for the main TI-99 BIOS cache
+#define DISK_DSR  ((u16*)0x068A2000)   // 8K  of fast VDP memory for the Disk Controller DSR cache
 
 enum
 {
@@ -90,9 +91,7 @@ extern u8  kbd_key;
 extern u8 keyCoresp[MAX_KEY_OPTIONS];
 extern u16 NDS_keyMap[];
 
-extern char system_grom_path[];                  // Last known location of the 994aGROM.bin file
-
-extern volatile u16 vusCptVBL;                   // Video Management
+extern u16 vusCptVBL;                            // Screen Refresh Timer
 
 extern u8 soundEmuPause;
 extern u8  bShowDebug;

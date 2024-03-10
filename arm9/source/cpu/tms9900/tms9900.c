@@ -44,8 +44,8 @@ u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512
         
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
-#define OpcodeLookup            ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table
-#define CompareZeroLookup16     ((u16*)0x06880000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table
+#define OpcodeLookup            ((u16*)0x06820000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table (normally VRAM_B)
+#define CompareZeroLookup16     ((u16*)0x06860000)   // We use 128K of semi-fast VDP memory to help with the CompareZeroLookup16[] lookup table (normally VRAM_D)
 
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
@@ -870,6 +870,9 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 // MSB ---------------- LSB  |  MSB ---------------------- LSB
 //  0  1  2  3  4  5  6  7   |   8  9  10  11  12  13  14  15
 //      == EVEN BYTE ==      |          == ODD BYTE ==
+//
+// Further, for anything on the 8-bit bus (on the other side of the multiplexer), the system 
+// will always write the odd byte first, followed by the even byte.
 // --------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
 {
@@ -1130,6 +1133,9 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 // 15 14 13  12   11 10  9 8 7 6  5 4  3 2 1 0
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
+//
+// This is a heavily utilized function call and we force it as inline even though it really 
+// balloons our use of ITCM code space in the CPU core.
 // ------------------------------------------------------------------------------------------------
 static inline __attribute__((always_inline)) void Ts(u16 bytes) 
 {
@@ -1162,7 +1168,10 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
     if (bytes&2) tms9900.srcAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-// This version makes memory calls that take into account the SAMS banking
+// -----------------------------------------------------------------------------------------
+// This version makes memory calls that take into account the SAMS banking. It's going to 
+// be a little slower and so we only swap in this version for the 'Accurate' CPU core.
+// -----------------------------------------------------------------------------------------
 static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes) 
 {
     u16 rData = REG_GET_FROM_OPCODE();
@@ -1231,7 +1240,10 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
     if (bytes&2) tms9900.dstAddress &= 0xFFFE;   // bytes is either 1 (in which case we will utilize the LSB) or 2 (in which case we mask off to 16-bits)
 }
 
-// This version makes memory calls that take into account the SAMS banking
+// -----------------------------------------------------------------------------------------
+// This version makes memory calls that take into account the SAMS banking. It's going to 
+// be a little slower and so we only swap in this version for the 'Accurate' CPU core.
+// -----------------------------------------------------------------------------------------
 static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
@@ -1284,6 +1296,9 @@ static inline __attribute__((always_inline)) void TsTd(void)
     Ts(bytes); Td(bytes);
 }
 
+// ---------------------------------------------------------------
+// This is the version for the 'Accurate' CPU core. A bit slower.
+// ---------------------------------------------------------------
 static inline __attribute__((always_inline)) void TsTd_Accurate(void)
 {
     u16 bytes = (tms9900.currentOp & 0x1000) ? SOURCE_BYTE:SOURCE_WORD;     // This handles both Word and Byte addresses

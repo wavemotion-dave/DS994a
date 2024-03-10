@@ -76,6 +76,7 @@ u16 nds_key          __attribute__((section(".dtcm"))) = 0;       // 0 if no key
 u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;        // 0 if Alpha Lock is not pressed. 1 if pressed (CAPS)
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
+u16 vusCptVBL       __attribute__((section(".dtcm"))) = 0;        // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 
 char tmpBuf[256];               // For simple printf-type output and other sundry uses.
 u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
@@ -84,7 +85,6 @@ u8 SharedMemBuffer[768 * 1024]; // This is used mostly by the DS-Lite/Phat so it
 
 u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
-volatile u16 vusCptVBL = 0;     // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
 u8 last_pal_mode = 99;          // So we show PAL properly in the upper right of the lower DS screen
 u16 floppy_sfx_dampen = 0;      // For Floppy Sound Effects - don't start the playback too often
 
@@ -92,7 +92,6 @@ u8 key_push_write = 0;          // For inserting DSK filenames into the keyboard
 u8 key_push_read  = 0;          // For inserting DSK filenames into the keyboard buffer
 char key_push[0x20];            // A small array for when inserting DSK filenames into the keyboard buffer
 char dsk_filename[16];          // Short filename to show on DISK Menu
-char system_grom_path[64];      // Store the path to the system GROMs so we can reload as needed
 
 u16 NTSC_Timing[] __attribute__((section(".dtcm"))) = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 u16 PAL_Timing[]  __attribute__((section(".dtcm"))) = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
@@ -1126,6 +1125,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         sprintf(tmpBuf, "SAMS %02X %02X %02X %02X %02X %02X %02X %02X H%02X", theSAMS.bankMapSAMS[2], theSAMS.bankMapSAMS[3],
                 theSAMS.bankMapSAMS[0xA], theSAMS.bankMapSAMS[0xB], theSAMS.bankMapSAMS[0xC], theSAMS.bankMapSAMS[0xD], theSAMS.bankMapSAMS[0xE], theSAMS.bankMapSAMS[0xF], sams_highwater_bank);
         DS_Print(0,idx++,6,tmpBuf);
+        if ((vusCptVBL & 3) == 0) sams_highwater_bank = 0;  // Reset this periodically (every 4 seconds).
     }
     else // Show 2nd page of debug info
     {
@@ -1173,7 +1173,7 @@ u8 handle_touch_input(void)
           //  Ask for verification
           if  (showMessage("DO YOU REALLY WANT TO","QUIT THE CURRENT GAME ?") == ID_SHM_YES)
           {
-              memset((u8*)0x6820000, 0x00, 0x20000);    // Reset VRAM to 0x00 to clear any potential display garbage on way out
+              memset((u8*)0x06000000, 0x00, 0x20000);    // Reset main screen VRAM to 0x00 to clear any potential display garbage on way out
               return 1;
           }
           showMainMenu();
@@ -1552,32 +1552,22 @@ ITCM_CODE void ds99_main(void)
 void TI99DSInit(void)
 {
   //  Init graphic mode (bitmap mode)
-  videoSetMode(MODE_0_2D  | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
+  videoSetMode(MODE_0_2D  | DISPLAY_BG0_ACTIVE);
   videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG);
   vramSetBankC(VRAM_C_SUB_BG);
   
-  vramSetBankB(VRAM_B_LCD);                  // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 (used for screenshots)
-  vramSetBankD(VRAM_D_LCD );                 // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)  
-  vramSetBankE(VRAM_E_LCD );                 // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000 (used for opcode tables)
-  vramSetBankF(VRAM_F_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000 (used for opcode tables)
-  vramSetBankG(VRAM_G_LCD );                 // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (used for opcode tables)
-  vramSetBankH(VRAM_H_LCD );                 // Not using this for video but 32K of faster RAM always useful!  Mapped at 0x06898000 (used for opcode tables)
-                                             // VRAM_I_LCD already claimed by the LoadBios handler to cache the 8K TI-99/4a main BIOS and the TI Disk DSR at 0x068A0000
-                                             
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;
 
   //  Render the top screen
-  bg0 = bgInit(0, BgType_Text8bpp,  BgSize_T_256x512, 31,0);
-  bg1 = bgInit(1, BgType_Text8bpp,  BgSize_T_256x512, 29,0);
-  bgSetPriority(bg0,1);bgSetPriority(bg1,0);
+  bg0 = bgInit(0, BgType_Text8bpp,  BgSize_T_256x256, 31,0);
+  bgSetPriority(bg0,1);
   decompress(splashTiles,  bgGetGfxPtr(bg0), LZ77Vram);
   decompress(splashMap,  (void*) bgGetMapPtr(bg0), LZ77Vram);
   dmaCopy((void*) splashPal,(void*)  BG_PALETTE,256*2);
-  unsigned  short dmaVal =*(bgGetMapPtr(bg0)+51*32);
-  dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1),32*24*2);
 
+  //  Render the bottom screen (we have different keyboards/overlays)
   DrawCleanBackground();
 
   //  Find the files
@@ -1655,6 +1645,21 @@ void irqVBlank(void)
   vusCptVBL++;
 }
 
+// -------------------------------------------------------------------------------------------
+// We need VRAM_A and VRAM_C for emulation use but otherwise we can utilize these other areas 
+// of VRAM for CPU use - gives us a bit more memory and it's reasonably fast 16-bit to boot!
+// -------------------------------------------------------------------------------------------
+void StealVideoRAM(void)
+{
+    vramSetBankB(VRAM_B_LCD);   // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 (used for opcode tables)
+    vramSetBankD(VRAM_D_LCD);   // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)  
+    vramSetBankE(VRAM_E_LCD);   // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000 (unused)
+    vramSetBankF(VRAM_F_LCD);   // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000 (unused)
+    vramSetBankG(VRAM_G_LCD);   // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (unused)
+    vramSetBankH(VRAM_H_LCD);   // Not using this for video but 32K of faster RAM always useful!  Mapped at 0x06898000 (cache the system console GROM 24K - 8K free at beginning)
+    vramSetBankI(VRAM_I_LCD);   // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x068A0000 (cache the 8K TI-99/4a main BIOS and the 8K TI Disk DSR)
+}
+
 // ----------------------------------------------------------------
 // Look for the TI99 BIOS ROMs in several possible locations...
 // ----------------------------------------------------------------
@@ -1666,8 +1671,10 @@ void LoadBIOSFiles(void)
     FILE *inFile1;
     FILE *inFile2;
 
-    // We steal 16K of VDP memory for caching the 8K BIOS and 8K Disk DSR
-    vramSetBankI(VRAM_I_LCD);
+    // ------------------------------------------------
+    // Grab chunks of the DS/DSi Video RAM for CPU use
+    // ------------------------------------------------
+    StealVideoRAM();               
 
     // ------------------------------------------------------------------------
     // Find the main console ROM which is 8K in size... load this into cache.
@@ -1682,25 +1689,21 @@ void LoadBIOSFiles(void)
     }
 
     // ------------------------------------------------------------------------
-    // Find the main system GROMs and save the path where this can be found
-    // since we will re-load these from disk on every new game/rom load.
+    // Find the main system GROMs which is 24K in size... load this into cache.
     // ------------------------------------------------------------------------
-    strcpy(system_grom_path, "/roms/bios/994aGROM.bin");
-    inFile2 = fopen(system_grom_path, "rb");
-    if (!inFile2) 
+    inFile2 = fopen("/roms/bios/994aGROM.bin", "rb");
+    if (!inFile2) inFile2 = fopen("/roms/ti99/994aGROM.bin", "rb");
+    if (!inFile2) inFile2 = fopen("994aGROM.bin", "rb");
+    if (inFile2)
     {
-        strcpy(system_grom_path, "/roms/ti99/994aGROM.bin");
-        inFile2 = fopen(system_grom_path, "rb");
-    }
-    if (!inFile2) 
-    {
-        strcpy(system_grom_path, "994aGROM.bin");
-        inFile2 = fopen(system_grom_path, "rb");
+        // The shared buffer is not used yet - so we steal it for the 24K file read
+        fread(SharedMemBuffer, 1, 0x6000, inFile2);
+        memcpy(MAIN_GROM, SharedMemBuffer, 0x6000);
     }
 
     // ----------------------------------------------------------------
     // We consider the TI BIOS requirement fulfilled only if we found
-    //  both the main system ROM and the system console GROMs.
+    // both the main system ROM and the system console GROMs.
     // ----------------------------------------------------------------
     if (inFile1 && inFile2)
     {
