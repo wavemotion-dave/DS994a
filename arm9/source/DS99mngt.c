@@ -59,7 +59,11 @@ void DS_SetVideoModes(void)
     REG_BG3X = 0;
     REG_BG3Y = 0;
 
-    // Init the page flipping buffer...
+    // ---------------------------------------------------------------------------------
+    // Init the page flipping buffer... The uBCL/12 below produces a stripped pattern
+    // which shows briefly while the emulation loads. You can change this to 0x0000 
+    // instead which will just show a black background. I debated between the two...
+    // ---------------------------------------------------------------------------------
     for (uBcl=0;uBcl<192;uBcl++)
     {
         uVide=(uBcl/12);
@@ -67,10 +71,10 @@ void DS_SetVideoModes(void)
     }
 }
 
-/*********************************************************************************
- * Init TI99 Engine for that game. The filename of the game is passed in to
- * this function and we will read the binary ROM(s) into memory.
- ********************************************************************************/
+// -----------------------------------------------------------------------------
+// Init TI99 Engine for that game. The filename of the game is passed in to
+// this function and we will read the binary ROM(s) into memory.
+// -----------------------------------------------------------------------------
 u8 TI99Init(char *szGame)
 {
     // ------------------------------------------------------------------
@@ -109,21 +113,26 @@ u8 TI99Init(char *szGame)
     // xxxD.bin is a banked CPU ROM for 6000h
     // xxxG.bin is a GROM loaded into GROM memory space (also 6000h but in different GROM memory space)
     // xxx8.bin is a multi-bank non-inverted file load
-    // xxx3.bin is a multi-bank inverted file load (sometimes xxx9.bin)
+    // xxx9.bin is a multi-bank inverted file load (sometimes files will use '3' here but that's been deprecated by the community)
     // xxx0.bin is a System GROM replacement that will be mapped at 0000h in GROM memory space
     // ------------------------------------------------------------------------------------------------
     FILE *infile;           // We use this to read the various files in our system
     u16 numCartBanks = 1;   // Number of CART banks (8K each)
 
     // ------------------------------------------------------------------
-    // Copy the main 16-bit console ROM into place into our MemCPU[]
+    // Grab the main 16-bit console ROM and place into our MemCPU[]
     // ------------------------------------------------------------------
     memcpy(&MemCPU[0], MAIN_BIOS, 0x2000);
 
     // ------------------------------------------------------------------
-    // Copy the system console GROM and place into our MemGROM[]
+    // Grab the system console GROM and place into our MemGROM[]
     // ------------------------------------------------------------------
     memcpy(&MemGROM[0], MAIN_GROM, 0x6000);
+    
+    // --------------------------------------------------------------------------
+    // Note: DSRs are not mapped in by default (such as the TI Disk Controller).
+    //       Those will get 'turned on' by CRU writes as needed by the system.
+    // --------------------------------------------------------------------------
 
     // ------------------------------------------------------------
     // First check if we are trying to load a ROM Pack (.rpk) file
@@ -327,10 +336,10 @@ u8 TI99Init(char *szGame)
         }
     }
 
-    // ---------------------------------------------------------------
-    // Alternate filename check for loaded disks... This one just
-    // checks for the same filename with a '1' '2' or '3' at the base
-    // ---------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // Alternate filename check for loaded disks... This one just checks
+    // for the same filename with a '1' '2' or '3' tacked on to the end.
+    // -------------------------------------------------------------------
     strcpy(tmpBuf, szGame);
     strcat(tmpBuf, "X");
     tmpBuf[strlen(tmpBuf)-4] = '.';
@@ -360,17 +369,17 @@ u8 TI99Init(char *szGame)
     return (0);
 }
 
-/*********************************************************************************
- * Run the emulation - we start by showing the main menu screen (user picks game)
- ********************************************************************************/
+// -------------------------------------------------------------------------------
+// Run the emulation - we start by showing the main menu screen (user picks game)
+// -------------------------------------------------------------------------------
 void TI99Run(void)
 {
   showMainMenu();                       // Show the game-related screen
 }
 
-/*********************************************************************************
- * Set TI99/4a Palette We support only one NTSC pallete for simplicity.
- ********************************************************************************/
+// -----------------------------------------------------------------------
+// Set TI99/4a Palette We support only one NTSC pallete for simplicity.
+// -----------------------------------------------------------------------
 void TI99SetPal(void)
 {
   u8 uBcl,r,g,b;

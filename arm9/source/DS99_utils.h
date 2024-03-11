@@ -66,7 +66,7 @@ struct __attribute__((__packed__)) GlobalConfig_t
     u8  reservedN;
     u8  reservedO;
     u8  reservedP;
-    u8  reserved[512+128]; // Not sure what we will use this for... But we had the room
+    u8  reserved[640]; // Not sure what we will use this for... But we had the room
 };
 
 struct __attribute__((__packed__)) Config_t

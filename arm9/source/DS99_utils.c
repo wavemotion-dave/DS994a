@@ -131,6 +131,10 @@ const char szKeyName[MAX_KEY_OPTIONS][20] = {
 };
 
 
+// -------------------------------------------------------------------------------------
+// The bottom (touch area) display - here we put up a generic background that is mostly
+// blank so we can draw options and menu choices. It has the TI logo in the corner.
+// -------------------------------------------------------------------------------------
 void DrawCleanBackground(void)
 {
     swiWaitForVBlank();
@@ -147,9 +151,9 @@ void DrawCleanBackground(void)
     dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b),32*24*2);
 }
 
-/*********************************************************************************
- * Show A message with YES / NO
- ********************************************************************************/
+// ---------------------------------------------------------------------------------
+// Show A message with YES / NO and return which option was picked by the user.
+// ---------------------------------------------------------------------------------
 u8 showMessage(char *szCh1, char *szCh2)
 {
   u16 iTx, iTy;
@@ -258,9 +262,9 @@ u8 showMessage(char *szCh1, char *szCh2)
 }
 
 
-/*********************************************************************************
- * Show The 14 games on the list to allow the user to choose a new game.
- ********************************************************************************/
+// ---------------------------------------------------------------------------------
+// Show The 14 games on the list to allow the user to choose a new game.
+// ---------------------------------------------------------------------------------
 void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
@@ -296,9 +300,9 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
 }
 
 
-/*********************************************************************************
- * Show The 14 DSKs on the list to allow the user to choose a new game.
- ********************************************************************************/
+// ---------------------------------------------------------------------------------
+// Show The 14 DSKs on the list to allow the user to choose a new game.
+// ---------------------------------------------------------------------------------
 void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
 {
   u16 ucBcl,ucGame;
@@ -364,9 +368,9 @@ int TI99Filescmp (const void *c1, const void *c2)
   return retVal;
 }
 
-/*********************************************************************************
- * Find files (.bin) available - sort them for display.
- ********************************************************************************/
+// -----------------------------------------------------------------------------------
+// Find ROM files (.bin) available - sort them for display and selection by the user.
+// -----------------------------------------------------------------------------------
 void TI99FindFiles(void)
 {
   u16 uNbFile;
@@ -439,9 +443,9 @@ void TI99FindFiles(void)
   }
 }
 
-/*********************************************************************************
- * Find files (.bin) available - sort them for display.
- ********************************************************************************/
+// ---------------------------------------------------------------------------------
+// Find disk files (.dsk) available - sort them for display and selection by user.
+// ---------------------------------------------------------------------------------
 void TI99FindDskFiles(void)
 {
   u16 uNbFile;
@@ -494,6 +498,9 @@ void TI99FindDskFiles(void)
 }
 
 
+// ---------------------------------------------------------------------------------
+// Allow the user to pick and load a .dsk file into memory.
+// ---------------------------------------------------------------------------------
 void TILoadDiskFile(void)
 {
   u8 bDone=false;
@@ -1116,6 +1123,11 @@ void SetDiagonals(void) // Useful for games like Q-Bert
 }
 
 
+// ---------------------------------------------------------------------------------
+// Default settings when a game is loaded but there is no previous configuration
+// saved for this game. We make some default / sensible choices that the user can
+// override as desired.
+// ---------------------------------------------------------------------------------
 void SetDefaultGameConfig(void)
 {
     MapPlayer1();
@@ -1333,9 +1345,9 @@ u8 display_options_list(bool bFullDisplay)
 }
 
 
-//*****************************************************************************
-// Change Game Options for the current game
-//*****************************************************************************
+// ---------------------------------------------------------------------------------
+// Change Game Options for the current game - user can save them out via START
+// ---------------------------------------------------------------------------------
 void tiDSGameOptions(void)
 {
     u8 optionHighlighted;
@@ -1392,7 +1404,7 @@ void tiDSGameOptions(void)
             {
                 SaveConfig(TRUE);
             }
-#if 0
+#if 0   // Future expansion in case we need another page of options
             if (keysCurrent() & (KEY_X)) // Toggle Table
             {
                 option_table = (option_table + 1) % 2;
@@ -1915,9 +1927,9 @@ void tiDSChangeOptions(void)
   while (keysCurrent()  & (KEY_START | KEY_A));
 }
 
-//*****************************************************************************
-// Displays a message on the screen
-//*****************************************************************************
+// ---------------------------------------------------------------------------------
+// Displays a message on the screen using the built in sprite/font.
+// ---------------------------------------------------------------------------------
 ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage)
 {
   u16 *pusScreen,*pusMap;
@@ -1944,9 +1956,9 @@ ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage)
   }
 }
 
-/******************************************************************************
-* Routine FadeToColor :  Fade from background to black or white
-******************************************************************************/
+// -----------------------------------------------------------------------------------
+// Routine FadeToColor-Fade from background to black or white. Used for splash intro.
+// -----------------------------------------------------------------------------------
 void FadeToColor(unsigned char ucSens, unsigned short ucBG, unsigned char ucScr, unsigned char valEnd, unsigned char uWait) {
   unsigned short ucFade;
   unsigned char ucBcl;
