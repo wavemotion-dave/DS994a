@@ -59,7 +59,7 @@ u8 XBuf_B[256*192] ALIGN(32) = {0}; // Screen is 256x192. Ping Pong Buffer B
 u8 *XBuf __attribute__((section(".dtcm"))) = XBuf_A;
 
 u32 lutTablehh[256][16];    // Look up table for colors - pre-generated for maximum speed!
-u32 fastBackgroundLut[256] __attribute__((section(".dtcm"))); // For when the color is background - hapens often enough
+u32 fastBackgroundLut[256] __attribute__((section(".dtcm"))); // For when the color is background - happens often enough
 
 u8 OH __attribute__((section(".dtcm"))) = 0;
 u8 IH __attribute__((section(".dtcm"))) = 0;
