@@ -177,6 +177,10 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
                 {
                     // Any write to pin 3 will clear the timer interrupt
                     TMS9901_ClearTimerInterrupt();
+                } 
+                else if (cruA == PIN_VDP_INT && dataBit) // Are we unmasking... Need to pass through the interrupt state (River Rescue requires this)
+                {
+                    if (tms9901.VDPIntteruptInProcess) TMS9900_RaiseInterrupt(INT_VDP); else TMS9900_ClearInterrupt(INT_VDP);
                 }
             }
         }
@@ -289,7 +293,7 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
 // On each pass of the main loop (in DS99.c) we want to clear out the joystick and 
 // keyboard information and re-accumulate any joystick presses or keyboard presses.
 // -----------------------------------------------------------------------------------------
-ITCM_CODE void TMS9901_ClearJoyKeyData(void)
+void TMS9901_ClearJoyKeyData(void)
 {
     memset(tms9901.Keyboard,  0x00, sizeof(tms9901.Keyboard));
 }

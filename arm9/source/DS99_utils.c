@@ -1746,13 +1746,12 @@ void DisplayFileName(void)
 //*****************************************************************************
 void affInfoOptions(u32 uY)
 {
-    DS_Print(2, 6,(uY==6  ? 2 : 0),("         LOAD  GAME         "));
-    DS_Print(2, 8,(uY==8  ? 2 : 0),("         PLAY  GAME         "));
+    DS_Print(2, 6,(uY==6  ? 2 : 0),("       INSERT  CARTRIDGE    "));
+    DS_Print(2, 8,(uY==8  ? 2 : 0),("         BOOT  TI99/4A      "));
     DS_Print(2,10,(uY==10 ? 2 : 0),("     REDEFINE  KEYS         "));
-    DS_Print(2,12,(uY==12 ? 2 : 0),("         GAME  OPTIONS      "));
+    DS_Print(2,12,(uY==12 ? 2 : 0),("         CART  OPTIONS      "));
     DS_Print(2,14,(uY==14 ? 2 : 0),("       GLOBAL  OPTIONS      "));
     DS_Print(2,16,(uY==16 ? 2 : 0),("         QUIT  EMULATOR     "));
-    DS_Print(6,18,0,("USE D-PAD  A=SELECT"));
 }
 
 // --------------------------------------------------------------------

@@ -20,7 +20,7 @@ Features :
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice except...)
-* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek, Bigfoot and Superfly
+* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek, Bigfoot, Superfly, Microsurgeon and Fathom
 
 Copyright :
 -----------------------
@@ -245,6 +245,13 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.2: ??-Dec-2024 by wavemotion-dave
+* Fixed paste of filenames allowing more characters (not just A-Z, 0-9)
+* Added partial sound samples for Microsurgeon.
+* Fixed incorrect stray speech sound in Fathom and added partial sound samples for Fathom.
+* Fixed River Rescue (improved VDP interrupt mask handling).
+* Minor menu cleanup and refactor.
+
 V2.1: 09-Mar-2024 by wavemotion-dave
 * Now using a small light on the CAPS/ALPHALOCK key to indicate if CAPS LOCK is on (cleaner look).
 * GROM auto-increment of address will properly preserve the upper bits so we don't inadvertantly select the next GROM in our system (accuracy).

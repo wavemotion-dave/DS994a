@@ -191,7 +191,7 @@ u8 TI99Init(char *szGame)
             infile = fopen(tmpBuf, "rb");
             if (infile != NULL)
             {
-                tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 2 banks
+                tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 1 bank
                 fread(MemCART+0x2000, 0x2000, 1, infile);   // Read 'D' file but never more than 8K
                 fclose(infile);
             }
@@ -217,7 +217,7 @@ u8 TI99Init(char *szGame)
             if (numCartBanks > 1)
             {
                 // If the image is inverted we need to swap 8K banks
-                if (fileType == '9')
+                if ((fileType == '9') || (fileType == '3')) // '3' is deprecated but there are still cart names using it...
                 {
                     for (u16 i=0; i<numCartBanks/2; i++)
                     {

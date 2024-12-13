@@ -61,6 +61,7 @@ u16 emuFps          __attribute__((section(".dtcm"))) = 0;
 u16 emuActFrames    __attribute__((section(".dtcm"))) = 0;
 u16 timingFrames    __attribute__((section(".dtcm"))) = 0;
 u8  bShowDebug      __attribute__((section(".dtcm"))) = 0;
+u8  speech_dampen   __attribute__((section(".dtcm"))) = 0;
 u8  debug_screen = 0;
 
 // ------------------------------------------------------------------------------------------------
@@ -299,6 +300,14 @@ void setupStream(void)
   mmLoadEffect(SFX_OHNO_SF); 
   mmLoadEffect(SFX_WHEREFLY_SF);
   mmLoadEffect(SFX_NEVERTRUST_SF);
+  mmLoadEffect(SFX_PATIENTREADY);
+  mmLoadEffect(SFX_VIRUS);
+  mmLoadEffect(SFX_DRLAVINE);
+  mmLoadEffect(SFX_CONDITIONCRITICAL);
+  mmLoadEffect(SFX_GOFORTH);
+  mmLoadEffect(SFX_EVILOCTOPUS);
+  mmLoadEffect(SFX_ATTENDENERGY);
+  mmLoadEffect(SFX_VOLCANICBLAST);
   mmLoadEffect(SFX_FLOPPY);  
 
   //----------------------------------------------------------------
@@ -551,7 +560,12 @@ void KeyPushFilename(char *filename)
         else if (filename[i] >= 'a' && filename[i] <= 'z')  KeyPush(TMS_KEY_A + (filename[i]-'a'));
         else if (filename[i] >= '1' && filename[i] <= '9')  KeyPush(TMS_KEY_1 + (filename[i]-'1'));
         else if (filename[i] == '0')                        KeyPush(TMS_KEY_0);
-        else if (filename[i] == '-')                        KeyPush(KBD_MINUS);
+        else if (filename[i] == '/')                        KeyPush(TMS_KEY_SLASH);
+        else if (filename[i] == ';')                        KeyPush(TMS_KEY_SEMI);
+        else if (filename[i] == '=')                        KeyPush(TMS_KEY_EQUALS);        
+        else if (filename[i] == '-')                        {KeyPush(TMS_KEY_SHIFT);KeyPush(TMS_KEY_SLASH);}
+        else if (filename[i] == '_')                        {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_U);}
+        else if (filename[i] == '~')                        {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_W);}
     }
 }
 
@@ -813,11 +827,11 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
     }
 
     DS_Print(8,7,6,                                           " TI MINI MENU  ");
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " LOAD   STATE  ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " DISK   MENU   ");  mini_menu_items++;
-    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " EXIT   MENU   ");  mini_menu_items++;
 }
 
@@ -852,11 +866,11 @@ u8 MiniMenu(void)
         }
         if (nds_key & KEY_A)
         {
-            if      (menuSelection == 0) retVal = META_KEY_HIGHSCORE;
-            else if (menuSelection == 1) retVal = META_KEY_SAVESTATE;
-            else if (menuSelection == 2) retVal = META_KEY_LOADSTATE;
-            else if (menuSelection == 3) retVal = META_KEY_DISKMENU;
-            else if (menuSelection == 4) retVal = META_KEY_QUIT;
+            if      (menuSelection == 0) retVal = META_KEY_QUIT;
+            else if (menuSelection == 1) retVal = META_KEY_HIGHSCORE;
+            else if (menuSelection == 2) retVal = META_KEY_SAVESTATE;
+            else if (menuSelection == 3) retVal = META_KEY_LOADSTATE;
+            else if (menuSelection == 4) retVal = META_KEY_DISKMENU;
             else retVal = META_KEY_NONE;
             break;
         }
@@ -1388,6 +1402,17 @@ ITCM_CODE void ds99_main(void)
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
           {
+              // Shift is always followed by the key it is modifying... 
+              if ((u8)key_push[key_push_read] == TMS_KEY_SHIFT)
+              {
+                  tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
+                  key_push_read = (key_push_read+1) & 0x1F;
+              }
+              if ((u8)key_push[key_push_read] == TMS_KEY_FUNCTION)
+              {
+                  tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
+                  key_push_read = (key_push_read+1) & 0x1F;
+              }
               tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
               key_push_read = (key_push_read+1) & 0x1F;
           }
@@ -1438,6 +1463,7 @@ ITCM_CODE void ds99_main(void)
             screenshot();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
             DS_Print(10,0,0,"        ");
+            TMS9901_RaiseVDPInterrupt();
       }
       else
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y))
@@ -1643,6 +1669,7 @@ void irqVBlank(void)
 {
  // Manage time
   vusCptVBL++;
+  if (speech_dampen) speech_dampen--;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1924,6 +1951,7 @@ int main(int argc, char **argv)
 // render speech fairly well even on the oldest DS handheld systems.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
+u8 delaySFX = 0;
 void WriteSpeechData(u8 data)
 {
     if (myConfig.noExtSpeech) return;
@@ -2005,7 +2033,7 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
 
         // Bigfoot
-        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU);      // I'll get you!
+        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU);      // I'll get you Bigfoot!
         else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);        // Falling noise
         else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);        // Bigfoot Roar
         else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);         // Bird Screech
@@ -2018,18 +2046,41 @@ void WriteSpeechData(u8 data)
         
         // Superfly
         else if (speechData32 == 0x608E54A7) mmEffect(SFX_OHNO_SF);         // Oh No!
-        else if (speechData32 == 0x60000318) mmEffect(SFX_OHYES_SF);        // Ohhhh Yeeesss!
+        else if (speechData32 == 0x60A9942F) delaySFX = 1;                  // Since 0x60000318 (Ohhhh Yeeesss!) is also shared by Fathom...
+        else if (speechData32 == 0x60000318 && delaySFX)                    // Ohhhh Yeeesss!
+        {
+            delaySFX = 0;
+            mmEffect(SFX_OHYES_SF); 
+        }
         else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);     // Where's the Fly?
         else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);   // Never Trust a Worm
         
-#if 0 // Enable this to debug speech and add additional sound effects by signature
-        else    // Output the digital signature into a file... we can use this to try and pick out other phrases for other gamess
+        // Fathom
+        else if (speechData32 == 0x6004702D) mmEffect(SFX_GOFORTH);         // Go Forth
+        else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
+        else if (speechData32 == 0x60438BD1) mmEffect(SFX_ATTENDENERGY);    // Attend do your Energy Mortal
+        else if (speechData32 == 0x6050D416) mmEffect(SFX_VOLCANICBLAST);   // Beware the Volcanic Blast        
+        
+        // Microsurgeon
+        else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);    // Patient is ready doctor
+        else if (speechData32 == 0x60C491CA)                                // Virus!
         {
+            if (!speech_dampen) {speech_dampen = 20; mmEffect(SFX_VIRUS);}
+        } 
+        else if (speechData32 == 0x600608A3) mmEffect(SFX_DRLAVINE);         // Paging Dr. Lavine
+        else if (speechData32 == 0x60D61BB4) mmEffect(SFX_CONDITIONCRITICAL);// Patient in Critical Condition
+        else
+        {
+            delaySFX = 0;   
+#if 0  // Enable this to debug speech and add additional sound effects by signature
+            // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
+            sprintf(tmpBuf, "%5d", vusCptVBL);
+            DS_Print(0,0,6, tmpBuf);
             FILE *fp = fopen("994a_speech.txt", "a+");
-            fprintf(fp, ": %08X\n", (unsigned int)speechData32);
+            fprintf(fp, "%4d: %08X\n", vusCptVBL, (unsigned int)speechData32);
             fclose(fp);
-        }
 #endif
+        }
     }
 }
 
