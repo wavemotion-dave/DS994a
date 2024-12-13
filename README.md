@@ -84,7 +84,7 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek, Bigfoot and Superfly where the sound samples are built into the emulator.
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek, Bigfoot, Superfly, Microsurgeon, and Fathom where the sound samples are built into the emulator.
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine).
 * Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
@@ -93,8 +93,8 @@ File Types Supported :
 -----------------------
 DS994a supports the following file types:
 * Files whose base filename ends in C/D/G files also known as 'mixed mode'. If there is a 'D' file, it must be exactly 8K. C is the main binary and G is the GROM binary. If a C/D/G file is detected, only the C (or G if it's GROM-only) will be shown in the file listing.
-* Files whose base filename ends in 9 are considered "inverted" files and the banks will be swapped appopriately.
-* Files whose base filename ends in 0 is considered a system GROM and can be used to replace the standard console GROMs (e.g. Son of Board).
+* Files whose base filename ends in '9' or '3' are considered "inverted" files and the banks will be swapped appopriately.
+* Files whose base filename ends in '0' is considered a system GROM and can be used to replace the standard console GROMs (e.g. Son of Board).
 * All other files are considered '8' files which is non-inverted banking up to 8192K (8MB) for the DSi and up to 512K for the older DS hardware.
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
