@@ -304,10 +304,12 @@ void setupStream(void)
   mmLoadEffect(SFX_VIRUS);
   mmLoadEffect(SFX_DRLAVINE);
   mmLoadEffect(SFX_CONDITIONCRITICAL);
+  mmLoadEffect(SFX_POWERLOW);
   mmLoadEffect(SFX_GOFORTH);
   mmLoadEffect(SFX_EVILOCTOPUS);
   mmLoadEffect(SFX_ATTENDENERGY);
   mmLoadEffect(SFX_VOLCANICBLAST);
+  mmLoadEffect(SFX_FREEME);
   mmLoadEffect(SFX_FLOPPY);  
 
   //----------------------------------------------------------------
@@ -562,7 +564,7 @@ void KeyPushFilename(char *filename)
         else if (filename[i] == '0')                        KeyPush(TMS_KEY_0);
         else if (filename[i] == '/')                        KeyPush(TMS_KEY_SLASH);
         else if (filename[i] == ';')                        KeyPush(TMS_KEY_SEMI);
-        else if (filename[i] == '=')                        KeyPush(TMS_KEY_EQUALS);        
+        else if (filename[i] == '=')                        KeyPush(TMS_KEY_EQUALS);
         else if (filename[i] == '-')                        {KeyPush(TMS_KEY_SHIFT);KeyPush(TMS_KEY_SLASH);}
         else if (filename[i] == '_')                        {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_U);}
         else if (filename[i] == '~')                        {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_W);}
@@ -2060,15 +2062,18 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
         else if (speechData32 == 0x60438BD1) mmEffect(SFX_ATTENDENERGY);    // Attend do your Energy Mortal
         else if (speechData32 == 0x6050D416) mmEffect(SFX_VOLCANICBLAST);   // Beware the Volcanic Blast        
+        else if (speechData32 == 0x6074E3B2) mmEffect(SFX_FREEME);          // Free Me Mortal
+        
         
         // Microsurgeon
-        else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);    // Patient is ready doctor
-        else if (speechData32 == 0x60C491CA)                                // Virus!
+        else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);     // Patient is ready doctor
+        else if (speechData32 == 0x600608A3) mmEffect(SFX_DRLAVINE);         // Paging Dr. Lavine
+        else if (speechData32 == 0x60D61BB4) mmEffect(SFX_CONDITIONCRITICAL);// Patient in Critical Condition
+        else if (speechData32 == 0x60AB9AAD) mmEffect(SFX_POWERLOW);         // Probe Energy Low        
+        else if (speechData32 == 0x60C491CA)                                 // Virus!
         {
             if (!speech_dampen) {speech_dampen = 20; mmEffect(SFX_VIRUS);}
         } 
-        else if (speechData32 == 0x600608A3) mmEffect(SFX_DRLAVINE);         // Paging Dr. Lavine
-        else if (speechData32 == 0x60D61BB4) mmEffect(SFX_CONDITIONCRITICAL);// Patient in Critical Condition
         else
         {
             delaySFX = 0;   

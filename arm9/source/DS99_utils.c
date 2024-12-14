@@ -1747,7 +1747,7 @@ void DisplayFileName(void)
 void affInfoOptions(u32 uY)
 {
     DS_Print(2, 6,(uY==6  ? 2 : 0),("       INSERT  CARTRIDGE    "));
-    DS_Print(2, 8,(uY==8  ? 2 : 0),("         BOOT  TI99/4A      "));
+    DS_Print(2, 8,(uY==8  ? 2 : 0),("        START  TI99/4A      "));
     DS_Print(2,10,(uY==10 ? 2 : 0),("     REDEFINE  KEYS         "));
     DS_Print(2,12,(uY==12 ? 2 : 0),("         CART  OPTIONS      "));
     DS_Print(2,14,(uY==14 ? 2 : 0),("       GLOBAL  OPTIONS      "));
@@ -1762,9 +1762,9 @@ void NoGameSelected(u32 ucY)
     unsigned short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
     while (keysCurrent()  & (KEY_START | KEY_A));
     dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
-    DS_Print(5,10,0,("   NO GAME SELECTED   "));
+    DS_Print(5,10,0,("   NO CART SELECTED   "));
     DS_Print(5,12,0,("  PLEASE, USE MENU TO "));
-    DS_Print(5,14,0,("      LOAD  GAME      "));
+    DS_Print(5,14,0,("   INSERT CARTRIDGE   "));
     while (!(keysCurrent()  & (KEY_START | KEY_A)));
     while (keysCurrent()  & (KEY_START | KEY_A));
     dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*18*2);
@@ -1847,7 +1847,7 @@ void tiDSChangeOptions(void)
       if (!ucA) {
         ucA = 0x01;
         switch (ucY) {
-          case 6 :      // LOAD GAME
+          case 6 :      // INSERT CARTRIDGE
             tiDSLoadFile();
             dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+3*32*2,32*21*2);
             if (ucGameChoice != -1)
@@ -1858,7 +1858,7 @@ void tiDSChangeOptions(void)
             ucY = 8;
             affInfoOptions(ucY);
             break;
-          case 8 :     // PLAY GAME
+          case 8 :     // START TI99/4A RUNNING
             if (ucGameChoice != -1)
             {
               bOK = 1;
@@ -1881,7 +1881,7 @@ void tiDSChangeOptions(void)
                 NoGameSelected(ucY);
             }
             break;
-          case 12 :     // GAME OPTIONS
+          case 12 :     // CART OPTIONS
             if (ucGameChoice != -1)
             {
                 tiDSGameOptions();
