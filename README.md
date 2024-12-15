@@ -251,6 +251,7 @@ V2.2: 15-Dec-2024 by wavemotion-dave
 * Added sound (speech) samples for Fathom.
 * Fixed River Rescue (improved VDP interrupt mask handling).
 * More games load with better key maps (e.g. Defender now auto-maps X and Y as Hyperspace and Smart Bomb).
+* Reverted to allowing both '3' and '9' as the file type modifiers for "inverted cart type". There are examples of both in the wild.
 * Main menu cleanup and refactor.
 
 V2.1: 09-Mar-2024 by wavemotion-dave
