@@ -159,7 +159,7 @@ Memory/System Configurations :
 -----------------------
 By default each game is configured to run on a 32K expanded system which runs 99% of all TI99/4a games. The SAMS support must be enabled on a per-game basis (you can also set to have the SAMS support enabled globally). Be aware - the SAMS handling does require a more accurate emulation core and will slow down the emulation by almost 15%.  That's fine for the DSi (or better) with the 2X CPU speed but my recommendation is to use the default 32K expanded system for virtually all games and only enable the SAMS support for the few things that need it.
 
-To complicate things further, there is also a setting for Mini-Memory (4K of RAM mapped at 7000h) and SuperCart (8K of RAM mapped at 6000h to 7FFFh).  There are a few games that need this extra 8K of memory to operate (mostly a few of the complex Infocom games).  Those games are often identified with a _SC at the end of the filename. To use those games, you would load with the Editor-Assembler (EA) module and change the Cart Type to 'Super Cart'. Since the EA cart loads into GROM space, it can allocate that extra 8K of RAM for use by the program. You would then load your program requriing SuperCart memory via EA option '5' and specifying DSK1.FILENAME
+To complicate things further, there is also a setting for Mini-Memory (4K of RAM mapped at 7000h) and SuperCart (8K or 32K of RAM mapped at 6000h to 7FFFh).  There are a few games that need this extra 8K of memory to operate (mostly a few of the complex Infocom games).  Those games are often identified with a _SC at the end of the filename. To use those games, you would load with the Editor-Assembler (EA) module and change the Cart Type to 'Super Cart'. Since the EA cart loads into GROM space, it can allocate that extra 8K of RAM for use by the program. You would then load your program requriing SuperCart memory via EA option '5' and specifying DSK1.FILENAME
 
 How do I play Adventure or Tunnels of Doom? :
 -----------------------
@@ -245,12 +245,13 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.2: ??-Dec-2024 by wavemotion-dave
+V2.2: 15-Dec-2024 by wavemotion-dave
 * Fixed paste of filenames allowing more characters (not just A-Z, 0-9)
-* Added partial sound samples for Microsurgeon.
-* Fixed incorrect stray speech sound in Fathom and added partial sound samples for Fathom.
+* Added sound (speech) samples for Microsurgeon.
+* Added sound (speech) samples for Fathom.
 * Fixed River Rescue (improved VDP interrupt mask handling).
-* Minor menu cleanup and refactor.
+* More games load with better key maps (e.g. Defender now auto-maps X and Y as Hyperspace and Smart Bomb).
+* Main menu cleanup and refactor.
 
 V2.1: 09-Mar-2024 by wavemotion-dave
 * Now using a small light on the CAPS/ALPHALOCK key to indicate if CAPS LOCK is on (cleaner look).

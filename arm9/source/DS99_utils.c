@@ -1114,6 +1114,19 @@ void MapSTSOS(void)
     myConfig.keymap[11]  = KBD_SPACE;    // NDS Select mapped to SPACE
 }
 
+void MapMicroSur(void)
+{
+    myConfig.keymap[5]   = KBD_3;        // NDS B Button
+    myConfig.keymap[6]   = KBD_1;        // NDS X Button
+    myConfig.keymap[7]   = KBD_2;        // NDS Y Button
+}
+
+void MapSpaceEnter(void)
+{
+    myConfig.keymap[6]   = KBD_SPACE;    // NDS X Button
+    myConfig.keymap[7]   = KBD_ENTER;    // NDS Y Button
+}
+
 void SetDiagonals(void) // Useful for games like Q-Bert
 {
     myConfig.keymap[0]   = JOY1_RIGHT;
@@ -1170,6 +1183,10 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x55d49b68) MapESDX();      // Zero Zap uses ESDX for movement
     
     if (file_crc == 0x742f88ce) MapSTSOS();     // Star Trek SOS maps keys uniquely
+    
+    if (file_crc == 0x51b2a37f) MapMicroSur();  // Microsurgeon maps keys uniquely
+    
+    if (file_crc == 0xc51b0a8b) MapSpaceEnter();// Defender maps keys uniquely (Space and Enter are important)
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
 
