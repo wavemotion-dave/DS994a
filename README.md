@@ -19,8 +19,7 @@ Features :
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
-* Speech is not fully emulated (but games requiring the Speech Synth will run/play - just no voice except...)
-* A few games have speech samples built-in: Parsec, Alpiner, Moonmine, Star Trek, Bigfoot, Superfly, Microsurgeon and Fathom
+* The TI Speech Synth is not fully emulated - but there are built-in speech samples for the following games: Parsec, Alpiner, Moonmine, Buck Rogers, Star Trek, MASH, Bigfoot, Superfly, Microsurgeon, Fathom, Sewermania, and Borzork.
 
 Copyright :
 -----------------------
@@ -84,7 +83,7 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - just no voice except samples on Parsec, Alpiner, Moonmine, Star Trek, Bigfoot, Superfly, Microsurgeon, and Fathom where the sound samples are built into the emulator.
+* TI Speech Module is not fully supported yet. Games that rely on the module will still play - many of the classic games have speech samples built into the emulator and will play perfectly (e.g. Alpiner, Parsec, etc)
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine).
 * Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
@@ -245,6 +244,10 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.2a: 16-Dec-2024 by wavemotion-dave
+* Refactored memory allocation to buy back almost 400K of much needed space (mostly for new speech samples)
+* Added speech samples for: MASH, Sewermania, Buck Rogers and Borzork
+
 V2.2: 15-Dec-2024 by wavemotion-dave
 * Fixed paste of filenames allowing more characters (not just A-Z, 0-9)
 * Added sound (speech) samples for Microsurgeon.

@@ -14,14 +14,14 @@
 
 #define MAX_ROMS                512
 #define MAX_DISKS               256
-#define MAX_ROM_LENGTH          128
+#define MAX_ROM_LENGTH          127
 #define MAX_PATH                128
 
 #define MAX_CONFIGS             800
 #define CONFIG_VER              0x0008
 
 #define TI99ROM                 0x01
-#define DIRECT                  0x02
+#define TI99DIR                 0x02
 
 #define ID_SHM_CANCEL           0x00
 #define ID_SHM_YES              0x01
@@ -43,7 +43,6 @@
 typedef struct {
   char szName[MAX_ROM_LENGTH];
   u8 uType;
-  u32 uCrc;
 } FIC_TI99;
 
 struct __attribute__((__packed__)) GlobalConfig_t

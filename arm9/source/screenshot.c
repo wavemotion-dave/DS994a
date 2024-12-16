@@ -1,11 +1,16 @@
 // Borrowed from Godemode9i from Rocket Robz
-#include "screenshot.h"
-
 #include <nds.h>
 #include <stdio.h>
 #include <fat.h>
 #include <dirent.h>
 #include <unistd.h>
+
+#include "screenshot.h"
+#include "printf.h"
+
+#pragma GCC push_options
+#pragma GCC optimize ("Os")
+
 
 void write16(void *address, u16 value) {
 
@@ -111,4 +116,5 @@ bool screenshot(void)
     return true;
 }
 
+#pragma GCC pop_options
 // End of file

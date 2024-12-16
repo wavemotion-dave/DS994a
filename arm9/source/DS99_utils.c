@@ -281,7 +281,7 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
       maxLen=strlen(gpFic[ucGame].szName);
       strcpy(szName,gpFic[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
-      if (gpFic[ucGame].uType == DIRECT) {
+      if (gpFic[ucGame].uType == TI99DIR) {
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
@@ -319,7 +319,7 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
       maxLen=strlen(gpDsk[ucGame].szName);
       strcpy(szName,gpDsk[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
-      if (gpDsk[ucGame].uType == DIRECT) {
+      if (gpDsk[ucGame].uType == TI99DIR) {
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
@@ -351,9 +351,9 @@ int TI99Filescmp (const void *c1, const void *c2)
       return -1;
   if (p2->szName[0] == '.' && p1->szName[0] != '.')
       return 1;
-  if ((p1->uType == DIRECT) && !(p2->uType == DIRECT))
+  if ((p1->uType == TI99DIR) && !(p2->uType == TI99DIR))
       return -1;
-  if ((p2->uType == DIRECT) && !(p1->uType == DIRECT))
+  if ((p2->uType == TI99DIR) && !(p1->uType == TI99DIR))
       return 1;
       
   // We want to do a simple string compare at this point but we want to force '0' files to sort lower
@@ -395,7 +395,7 @@ void TI99FindFiles(void)
           
         strcpy(gpFic[uNbFile].szName,szFile);
         gpFic[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
-        gpFic[uNbFile].uType = DIRECT;
+        gpFic[uNbFile].uType = TI99DIR;
         uNbFile++;
         countTI++;
       }
@@ -470,7 +470,7 @@ void TI99FindDskFiles(void)
           
         strcpy(gpDsk[uNbFile].szName,szFile);
         gpDsk[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
-        gpDsk[uNbFile].uType = DIRECT;
+        gpDsk[uNbFile].uType = TI99DIR;
         uNbFile++;
         countDSK++;
       }
@@ -503,8 +503,8 @@ void TI99FindDskFiles(void)
 // ---------------------------------------------------------------------------------
 void TILoadDiskFile(void)
 {
-  u8 bDone=false;
-  u16 ucHaut=0x00, ucBas=0x00, ucSHaut=0x00, ucSBas=0x00, romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
+  u8  bDone=false, ucHaut=0x00, ucBas=0x00, ucSHaut=0x00, ucSBas=0x00;
+  u16 romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
   s16 uLenFic=0, ucFlip=0, ucFlop=0;
 
   // Show the menu...
@@ -666,7 +666,7 @@ void TILoadDiskFile(void)
     {
       if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
 
-      if (gpDsk[ucDskAct].uType != DIRECT)
+      if (gpDsk[ucDskAct].uType != TI99DIR)
       {
         bDone=true;
         chosenDSK = ucDskAct;
@@ -745,8 +745,8 @@ void TILoadDiskFile(void)
 // ----------------------------------------------------------------
 u8 tiDSLoadFile(void)
 {
-  u8 bDone=false;
-  u16 ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00, romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
+  u8 bDone=false, ucHaut=0x00, ucBas=0x00,ucSHaut=0x00, ucSBas=0x00;
+  u16 romSelected=0, firstRomDisplay=0, nbRomPerPage, uNbRSPage;
   s16 uLenFic=0, ucFlip=0, ucFlop=0;
 
   // Show the menu...
@@ -913,7 +913,7 @@ u8 tiDSLoadFile(void)
     {
       if (keysCurrent() & KEY_X) bShowDebug = 1; else bShowDebug = 0;
 
-      if (gpFic[ucGameAct].uType != DIRECT)
+      if (gpFic[ucGameAct].uType != TI99DIR)
       {
         bDone=true;
         ucGameChoice = ucGameAct;
@@ -1205,7 +1205,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
     if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
     
-    if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard uses SAMS
+    if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.4.0 uses SAMS
+    if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.5.0 uses SAMS    
 
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM    
@@ -1607,7 +1608,8 @@ void DisplayKeymapName(u32 uY)
 // ------------------------------------------------------------------------------
 void tiDSChangeKeymap(void)
 {
-  u32 ucHaut=0x00, ucBas=0x00,ucL=0x00,ucR=0x00,ucY= 6, bOK=0, bIndTch=0;
+  u8 ucHaut=0x00, ucBas=0x00,ucL=0x00,ucR=0x00, bOK=0, bIndTch=0;
+  u16 ucY= 6;
 
   // ------------------------------------------------------
   // Clear the screen so we can put up Key Map infomation

@@ -17,6 +17,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <malloc.h>    // for mallinfo() 
+#include <unistd.h>    // for sbrk() 
 #include <fat.h>
 #include <maxmod9.h>
 
@@ -82,7 +84,7 @@ u16 vusCptVBL       __attribute__((section(".dtcm"))) = 0;        // We use this
 char tmpBuf[256];               // For simple printf-type output and other sundry uses.
 u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
 
-u8 SharedMemBuffer[768 * 1024]; // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS
+u8 *SharedMemBuffer;            // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS
 
 u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
@@ -310,7 +312,27 @@ void setupStream(void)
   mmLoadEffect(SFX_ATTENDENERGY);
   mmLoadEffect(SFX_VOLCANICBLAST);
   mmLoadEffect(SFX_FREEME);
-  mmLoadEffect(SFX_FLOPPY);  
+  mmLoadEffect(SFX_AVOIDPOSTS);
+  mmLoadEffect(SFX_WATCHHOPPERS);
+  mmLoadEffect(SFX_ALIENSAPPROACH);
+  mmLoadEffect(SFX_BZK_KILLED);
+  mmLoadEffect(SFX_BZK_CHICKEN);
+  mmLoadEffect(SFX_BZK_ESCAPE);   
+  mmLoadEffect(SFX_WELCOMEKOREA); 
+  mmLoadEffect(SFX_ATTENTIONALL); 
+  mmLoadEffect(SFX_CHOPPERS); 
+  mmLoadEffect(SFX_REPORTSURGERY); 
+  mmLoadEffect(SFX_OVERHERE); 
+  mmLoadEffect(SFX_SURGERYOOPS); 
+  mmLoadEffect(SFX_BUTTERFINGERS); 
+  mmLoadEffect(SFX_IGIVEUP); 
+  mmLoadEffect(SFX_YOUREOKAY); 
+  mmLoadEffect(SFX_NEXT); 
+  mmLoadEffect(SFX_ANALIGATOR); 
+  mmLoadEffect(SFX_DEFUSEBOMB); 
+  mmLoadEffect(SFX_FINDTHEBOMB); 
+  mmLoadEffect(SFX_FOUNDTHEBOMB); 
+  mmLoadEffect(SFX_FLOPPY);
 
   //----------------------------------------------------------------
   //  open stream
@@ -1079,6 +1101,30 @@ void ds99_clear_debugger(void)
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
 }
 
+extern u8 *fake_heap_end;   // current heap start 
+extern u8 *fake_heap_start;   // current heap end 
+
+u8* getHeapStart() { 
+   return fake_heap_start; 
+} 
+
+u8* getHeapEnd() { 
+   return (u8*)sbrk(0); 
+} 
+
+u8* getHeapLimit() { 
+   return fake_heap_end; 
+} 
+
+int getMemUsed() { // returns the amount of used memory in bytes 
+   struct mallinfo mi = mallinfo(); 
+   return mi.uordblks; 
+} 
+
+int getMemFree() { // returns the amount of free memory in bytes 
+   struct mallinfo mi = mallinfo(); 
+   return mi.fordblks + (getHeapLimit() - getHeapEnd()); 
+}
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {
     u8 idx=0;
@@ -1153,6 +1199,8 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         DS_Print(0,idx++,6,tmpBuf);
         struct mallinfo mi = mallinfo();
         sprintf(tmpBuf, "HEAP USED: %-9d", mi.uordblks);
+        DS_Print(0,idx++,6,tmpBuf);
+        sprintf(tmpBuf, "FREE MEM:  %-9d", getMemFree());
         DS_Print(0,idx++,6,tmpBuf);
         sprintf(tmpBuf, "RPK PCB:   %d [%s]", cart_layout.pcb, rpk_get_pcb_name());
         DS_Print(0,idx++,6,tmpBuf);
@@ -1804,6 +1852,8 @@ static void StartupMemoryAllocation(void)
 // ------------------------------------------------------
 int main(int argc, char **argv)
 {
+  SharedMemBuffer = malloc(768*1024);   // This is mostly used by the older DS machines for CART and SAMS storage but we steal a bit for DSK3 on the DSi
+
   //  Init sound
   consoleDemoInit();
 
@@ -1849,14 +1899,13 @@ int main(int argc, char **argv)
       //  We want to start in the directory where the file is being launched...
       if  (strchr(argv[1], '/') != NULL)
       {
-          static char path[128];
-          strcpy(path,  argv[1]);
-          char  *ptr = &path[strlen(path)-1];
+          strcpy(tmpBuf,  argv[1]);
+          char  *ptr = &tmpBuf[strlen(tmpBuf)-1];
           while (*ptr !=  '/') ptr--;
           ptr++;
           strcpy(initial_file,  ptr);
           *ptr=0;
-          chdir(path);
+          chdir(tmpBuf);
       }
       else
       {
@@ -2057,6 +2106,11 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);     // Where's the Fly?
         else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);   // Never Trust a Worm
         
+        // Buck Rogers
+        else if (speechData32 == 0x60430D39) mmEffect(SFX_AVOIDPOSTS);      // Avoid Electron Posts Buck
+        else if (speechData32 == 0x604953D6) mmEffect(SFX_WATCHHOPPERS);    // Watch the Hoppers
+        else if (speechData32 == 0x60431999) mmEffect(SFX_ALIENSAPPROACH);  // Aliens Approaching
+        
         // Fathom
         else if (speechData32 == 0x6004702D) mmEffect(SFX_GOFORTH);         // Go Forth
         else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
@@ -2064,6 +2118,37 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x6050D416) mmEffect(SFX_VOLCANICBLAST);   // Beware the Volcanic Blast        
         else if (speechData32 == 0x6074E3B2) mmEffect(SFX_FREEME);          // Free Me Mortal
         
+        // MASH
+        else if (speechData32 == 0x60222763) mmEffect(SFX_WELCOMEKOREA);    // Welcome to Korea
+        else if (speechData32 == 0x60A74EA2) mmEffect(SFX_ATTENTIONALL);    // Attention all Personnel
+        else if (speechData32 == 0x600AB8F7) mmEffect(SFX_CHOPPERS);        // Choppers
+        else if (speechData32 == 0x60550000) mmEffect(SFX_OVERHERE);        // Over Here
+        else if (speechData32 == 0x60A631D5) mmEffect(SFX_REPORTSURGERY);   // Report to Surgery
+        else if (speechData32 == 0x60274F66) mmEffect(SFX_IGIVEUP);         // I Give Up
+        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_BUTTERFINGERS);   // Butterfingers
+        else if (speechData32 == 0x600A403D) mmEffect(SFX_SURGERYOOPS);     // Oops!        
+        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_YOUREOKAY);       // YOU'RE OKAY
+        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_NEXT);            // NEXT
+        
+        // Sewermania
+        else if (speechData32 == 0x600A20B2) mmEffect(SFX_FINDTHEBOMB);     // Find The Bomb, Dave
+        else if (speechData32 == 0x6001B0DE) mmEffect(SFX_FOUNDTHEBOMB);    // Found the Bomb, Boss
+        else if (speechData32 == 0x600EC8CC) mmEffect(SFX_DEFUSEBOMB);      // Defused the Bomb
+        else if (speechData32 == 0x602150A9) mmEffect(SFX_ANALIGATOR);      // Oh No - An Alligator!
+        
+        // Borzork
+        else if (speechData32 == 0x60EDAE42)                                // Got the Humanoid!
+        {
+            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_KILLED);}
+        } 
+        else if (speechData32 == 0x60054C82)                                // Chicken Fight Like a Robot
+        {
+            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_CHICKEN);}
+        } 
+        else if (speechData32 == 0x60A5B0DA)                                // The Humanoid must not Escape
+        {
+            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_ESCAPE);}
+        } 
         
         // Microsurgeon
         else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);     // Patient is ready doctor
