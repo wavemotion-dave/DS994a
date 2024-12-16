@@ -638,7 +638,7 @@ void ShowDiskListing(void)
         while (key != KEY_A)
         {
             key = keysCurrent();
-            if (key != 0) while (!keysCurrent()) WAITVBL; // wait for release
+            if (key != 0) while (key == keysCurrent()) {WAITVBL;} // wait for release
             if (key == KEY_DOWN){if (sel < (dsk_num_files-1)) sel++;}
             if (key == KEY_UP)  {if (sel > 0) sel--;}
             WAITVBL;
@@ -2131,9 +2131,15 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_NEXT);            // NEXT
         
         // Sewermania
-        else if (speechData32 == 0x600A20B2) mmEffect(SFX_FINDTHEBOMB);     // Find The Bomb, Dave
+        else if (speechData32 == 0x600A20B2)                                // Find The Bomb, Dave
+        {
+            if (!speech_dampen) mmEffect(SFX_FINDTHEBOMB);
+        }
         else if (speechData32 == 0x6001B0DE) mmEffect(SFX_FOUNDTHEBOMB);    // Found the Bomb, Boss
-        else if (speechData32 == 0x600EC8CC) mmEffect(SFX_DEFUSEBOMB);      // Defused the Bomb
+        else if (speechData32 == 0x600EC8CC)                                // Defused the Bomb
+        {
+            speech_dampen = 120; mmEffect(SFX_DEFUSEBOMB);
+        }
         else if (speechData32 == 0x602150A9) mmEffect(SFX_ANALIGATOR);      // Oh No - An Alligator!
         
         // Borzork
