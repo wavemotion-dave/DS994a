@@ -302,16 +302,23 @@ void setupStream(void)
   mmLoadEffect(SFX_OHNO_SF); 
   mmLoadEffect(SFX_WHEREFLY_SF);
   mmLoadEffect(SFX_NEVERTRUST_SF);
+  mmLoadEffect(SFX_GETIT_SF);
   mmLoadEffect(SFX_PATIENTREADY);
   mmLoadEffect(SFX_VIRUS);
   mmLoadEffect(SFX_DRLAVINE);
   mmLoadEffect(SFX_CONDITIONCRITICAL);
   mmLoadEffect(SFX_POWERLOW);
+  mmLoadEffect(SFX_ENTERINGLUNG);
+  mmLoadEffect(SFX_ENTERINGHEART);
+  mmLoadEffect(SFX_ENTERINGKIDNEY);
+  mmLoadEffect(SFX_ENTERINGSPLEEN); 
   mmLoadEffect(SFX_GOFORTH);
   mmLoadEffect(SFX_EVILOCTOPUS);
   mmLoadEffect(SFX_ATTENDENERGY);
   mmLoadEffect(SFX_VOLCANICBLAST);
   mmLoadEffect(SFX_FREEME);
+  mmLoadEffect(SFX_SEAHORSE);
+  mmLoadEffect(SFX_TRIUMPTHED);
   mmLoadEffect(SFX_AVOIDPOSTS);
   mmLoadEffect(SFX_WATCHHOPPERS);
   mmLoadEffect(SFX_ALIENSAPPROACH);
@@ -2105,6 +2112,7 @@ void WriteSpeechData(u8 data)
         }
         else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);     // Where's the Fly?
         else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);   // Never Trust a Worm
+        else if (speechData32 == 0x602D4E8E) mmEffect(SFX_GETIT_SF);        // Get It!
         
         // Buck Rogers
         else if (speechData32 == 0x60430D39) mmEffect(SFX_AVOIDPOSTS);      // Avoid Electron Posts Buck
@@ -2113,10 +2121,12 @@ void WriteSpeechData(u8 data)
         
         // Fathom
         else if (speechData32 == 0x6004702D) mmEffect(SFX_GOFORTH);         // Go Forth
-        else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
-        else if (speechData32 == 0x60438BD1) mmEffect(SFX_ATTENDENERGY);    // Attend do your Energy Mortal
+        else if (speechData32 == 0x6000030F) mmEffect(SFX_SEAHORSE);        // Find Another Seahorse
         else if (speechData32 == 0x6050D416) mmEffect(SFX_VOLCANICBLAST);   // Beware the Volcanic Blast        
+        else if (speechData32 == 0x60438BD1) mmEffect(SFX_ATTENDENERGY);    // Attend to your Energy Mortal
         else if (speechData32 == 0x6074E3B2) mmEffect(SFX_FREEME);          // Free Me Mortal
+        else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
+        else if (speechData32 == 0x604C1D3A) mmEffect(SFX_TRIUMPTHED);      // You have Triumphed!
         
         // MASH
         else if (speechData32 == 0x60222763) mmEffect(SFX_WELCOMEKOREA);    // Welcome to Korea
@@ -2127,15 +2137,15 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x60274F66) mmEffect(SFX_IGIVEUP);         // I Give Up
         else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_BUTTERFINGERS);   // Butterfingers
         else if (speechData32 == 0x600A403D) mmEffect(SFX_SURGERYOOPS);     // Oops!        
-        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_YOUREOKAY);       // YOU'RE OKAY
-        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_NEXT);            // NEXT
+        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_YOUREOKAY);       // You're Okay
+        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_NEXT);            // Next...
         
         // Sewermania
-        else if (speechData32 == 0x600A20B2)                                // Find The Bomb, Dave
+        else if (speechData32 == 0x6001B0DE) mmEffect(SFX_FOUNDTHEBOMB);    // Found the Bomb, Boss
+        else if (speechData32 == 0x600A20B2)                                // Dave, Find The Bomb!
         {
             if (!speech_dampen) mmEffect(SFX_FINDTHEBOMB);
         }
-        else if (speechData32 == 0x6001B0DE) mmEffect(SFX_FOUNDTHEBOMB);    // Found the Bomb, Boss
         else if (speechData32 == 0x600EC8CC)                                // Defused the Bomb
         {
             speech_dampen = 120; mmEffect(SFX_DEFUSEBOMB);
@@ -2160,7 +2170,11 @@ void WriteSpeechData(u8 data)
         else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);     // Patient is ready doctor
         else if (speechData32 == 0x600608A3) mmEffect(SFX_DRLAVINE);         // Paging Dr. Lavine
         else if (speechData32 == 0x60D61BB4) mmEffect(SFX_CONDITIONCRITICAL);// Patient in Critical Condition
-        else if (speechData32 == 0x60AB9AAD) mmEffect(SFX_POWERLOW);         // Probe Energy Low        
+        else if (speechData32 == 0x60AB9AAD) mmEffect(SFX_POWERLOW);         // Probe Energy Low
+        else if (speechData32 == 0x600C0821) mmEffect(SFX_ENTERINGHEART);    // Probe Entering Heart
+        else if (speechData32 == 0x602A60E9) mmEffect(SFX_ENTERINGLUNG);     // Probe Entering Lungs
+        else if (speechData32 == 0x60068828) mmEffect(SFX_ENTERINGKIDNEY);   // Probe Entering Kidney
+        else if (speechData32 == 0x60E02E22) mmEffect(SFX_ENTERINGSPLEEN);   // Probe Entering Spleen        
         else if (speechData32 == 0x60C491CA)                                 // Virus!
         {
             if (!speech_dampen) {speech_dampen = 20; mmEffect(SFX_VIRUS);}
@@ -2168,7 +2182,7 @@ void WriteSpeechData(u8 data)
         else
         {
             delaySFX = 0;   
-#if 0  // Enable this to debug speech and add additional sound effects by signature
+#if 0 // Enable this to debug speech and add additional sound effects by signature
             // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
             sprintf(tmpBuf, "%5d", vusCptVBL);
             DS_Print(0,0,6, tmpBuf);
