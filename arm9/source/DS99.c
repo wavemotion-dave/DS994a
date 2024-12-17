@@ -2041,13 +2041,13 @@ static const SpeechTable_t SpeechTable[] =
     {0x60CEE4F9,    0x00000000,     0,  SFX_BEWARE},                // Alpiner - Beware Falling Objects
     {0x604AD7AA,    0x00000000,     0,  SFX_LOOKOUT},               // Alpiner - Lookout!
     {0x604E6839,    0x00000000,     0,  SFX_WATCHOUT},              // Alpiner - Watch Out!
-    {0x60A26A54,    0x00000000,     0,  SFX_YUCK},                  // Alpiner - Yuck!
-    {0x60AADB82,    0x00000000,     0,  SFX_YIKES},                 // Alpiner - Yikes!
-    {0x602530B1,    0x00000000,     0,  SFX_UH},                    // Alpiner - Uh!
-    {0x60A5F222,    0x00000000,     0,  SFX_OOPS},                  // Alpiner - Oops!
-    {0x602BCE6E,    0x00000000,     0,  SFX_OUCH},                  // Alpiner - Ouch!
+    {0x60A26A54,    0x00000000,    35,  SFX_YUCK},                  // Alpiner - Yuck!
+    {0x60AADB82,    0x00000000,    35,  SFX_YIKES},                 // Alpiner - Yikes!
+    {0x602530B1,    0x00000000,    35,  SFX_UH},                    // Alpiner - Uh!
+    {0x60A5F222,    0x00000000,    35,  SFX_OOPS},                  // Alpiner - Oops!
+    {0x602BCE6E,    0x00000000,    35,  SFX_OUCH},                  // Alpiner - Ouch!
+    {0x60A574FE,    0x00000000,    35,  SFX_OHNO},                  // Alpiner - Oh No!
     {0x60293565,    0x00000000,     0,  SFX_OOOOH},                 // Alpiner - Oooooh (falling)
-    {0x60A574FE,    0x00000000,     0,  SFX_OHNO},                  // Alpiner - Oh No!
     {0x60A375FE,    0x00000000,     0,  SFX_ONWARD},                // Alpiner - Onwards and Upwards
     {0x6008485C,    0x00000000,     0,  SFX_GOAGAIN},               // Alpiner - Go Again
     {0x6042A369,    0x00000000,     0,  SFX_WALKEDINTO},            // Alpiner - Walked Right Into That
@@ -2117,9 +2117,10 @@ static const SpeechTable_t SpeechTable[] =
     {0x60274F66,    0x00000000,     0,  SFX_IGIVEUP},               // MASH - I Give Up
     {0x60AB0FEE,    0x00000000,     0,  SFX_BUTTERFINGERS},         // MASH - Butterfingers
     {0x600A403D,    0x00000000,     0,  SFX_SURGERYOOPS},           // MASH - Oops!
-    {0x6004282A,    0x00000000,     0,  SFX_NEXT},                  // MASH - You're Okay
-    {0x60EADE8D,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - Next...
-    {0x60AA761A,    0x00000000,     0,  SFX_THANKSDOC},             // MASH - Thanks Doc
+    {0x6004282A,    0x00000000,     0,  SFX_NEXT},                  // MASH - Next...
+    {0x60EADE8D,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - You're Okay
+    {0x60AA761A,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - You're Okay (give second possibility)
+    {0x60E06263,    0x00000000,     0,  SFX_THANKSDOC},             // MASH - Thanks Doc
 
     {0x600A20B2,    0x00000000,     0,  SFX_FINDTHEBOMB},           // Sewermania - Dave, Find the Bomb!
     {0x6001B0DE,    0x00000000,     0,  SFX_FOUNDTHEBOMB},          // Sewermania - Found the Bomb, Boss
@@ -2133,7 +2134,7 @@ static const SpeechTable_t SpeechTable[] =
     {0x600C0821,    0x00000000,     0,  SFX_ENTERINGHEART},         // Microsurgeon - Probe Entering Heart
     {0x602A60E9,    0x00000000,     0,  SFX_ENTERINGLUNG},          // Microsurgeon - Probe Entering Lungs
     {0x60068828,    0x00000000,     0,  SFX_ENTERINGKIDNEY},        // Microsurgeon - Probe Entering Kidney
-    {0x60E02E22,    0x00000000,     0,  SFX_ENTERINGSPLEEN},        // Microsurgeon - Probe Entering Spleen
+    {0x60E02E22,    0x6008F8D1,     0,  SFX_ENTERINGSPLEEN},        // Microsurgeon - Probe Entering Spleen
     {0x60C491CA,    0x00000000,    20,  SFX_VIRUS},                 // Microsurgeon - Virus!
 
     {0x60EDAE42,    0x00000000,   180,  SFX_BZK_KILLED},            // Borzork - Got the Humanoid!
@@ -2174,8 +2175,8 @@ void WriteSpeechData(u8 data)
             {
                 if ((SpeechTable[idx].prev_signature == 0x00000000) || (SpeechTable[idx].prev_signature == prev_speechData32))
                 {
-                    mmEffect(SpeechTable[idx].sfx);
-                    speech_dampen = SpeechTable[idx].delay_after;
+                    mmEffect(SpeechTable[idx].sfx);                 // Play the speech (.wav) sound effect now. If another happens to be playing, both will be heard (I think we have like 5 channels)
+                    speech_dampen = SpeechTable[idx].delay_after;   // The delay for "no more speech until" is in 1/60th of a second units ticked by the DS irqVBlank() handler.
                     break;
                 }
             }
@@ -2183,7 +2184,7 @@ void WriteSpeechData(u8 data)
         }
         prev_speechData32 = speechData32;
 
-#if 0 // Enable this to debug speech and add additional sound effects by signature
+#if 1 // Enable this to debug speech and add additional sound effects by signature
         // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
         sprintf(tmpBuf, "%5d", vusCptVBL);
         DS_Print(0,0,6, tmpBuf);
