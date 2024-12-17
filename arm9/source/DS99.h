@@ -81,6 +81,14 @@ enum
 #define META_KEY_DISKMENU       10
 #define META_KEY_DEBUG_NEXT     11
 
+typedef struct
+{
+    u32     signature;
+    u32     prev_signature;
+    u8      delay_after;
+    u8      sfx;
+} SpeechTable_t;
+
 extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;

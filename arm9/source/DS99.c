@@ -17,8 +17,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <malloc.h>    // for mallinfo() 
-#include <unistd.h>    // for sbrk() 
+#include <malloc.h>    // for mallinfo()
+#include <unistd.h>    // for sbrk()
 #include <fat.h>
 #include <maxmod9.h>
 
@@ -299,7 +299,7 @@ void setupStream(void)
   mmLoadEffect(SFX_DAMAGEREPAIRED);
   mmLoadEffect(SFX_EXCELLENTMANUVER);
   mmLoadEffect(SFX_OHYES_SF);
-  mmLoadEffect(SFX_OHNO_SF); 
+  mmLoadEffect(SFX_OHNO_SF);
   mmLoadEffect(SFX_WHEREFLY_SF);
   mmLoadEffect(SFX_NEVERTRUST_SF);
   mmLoadEffect(SFX_GETIT_SF);
@@ -311,7 +311,7 @@ void setupStream(void)
   mmLoadEffect(SFX_ENTERINGLUNG);
   mmLoadEffect(SFX_ENTERINGHEART);
   mmLoadEffect(SFX_ENTERINGKIDNEY);
-  mmLoadEffect(SFX_ENTERINGSPLEEN); 
+  mmLoadEffect(SFX_ENTERINGSPLEEN);
   mmLoadEffect(SFX_GOFORTH);
   mmLoadEffect(SFX_EVILOCTOPUS);
   mmLoadEffect(SFX_ATTENDENERGY);
@@ -324,21 +324,24 @@ void setupStream(void)
   mmLoadEffect(SFX_ALIENSAPPROACH);
   mmLoadEffect(SFX_BZK_KILLED);
   mmLoadEffect(SFX_BZK_CHICKEN);
-  mmLoadEffect(SFX_BZK_ESCAPE);   
-  mmLoadEffect(SFX_WELCOMEKOREA); 
-  mmLoadEffect(SFX_ATTENTIONALL); 
-  mmLoadEffect(SFX_CHOPPERS); 
-  mmLoadEffect(SFX_REPORTSURGERY); 
-  mmLoadEffect(SFX_OVERHERE); 
-  mmLoadEffect(SFX_SURGERYOOPS); 
-  mmLoadEffect(SFX_BUTTERFINGERS); 
-  mmLoadEffect(SFX_IGIVEUP); 
-  mmLoadEffect(SFX_YOUREOKAY); 
-  mmLoadEffect(SFX_NEXT); 
-  mmLoadEffect(SFX_ANALIGATOR); 
-  mmLoadEffect(SFX_DEFUSEBOMB); 
-  mmLoadEffect(SFX_FINDTHEBOMB); 
-  mmLoadEffect(SFX_FOUNDTHEBOMB); 
+  mmLoadEffect(SFX_BZK_ESCAPE);
+  mmLoadEffect(SFX_BZK_INTRUDERALERT);
+  mmLoadEffect(SFX_BZK_ATTACKHUMANOID);
+  mmLoadEffect(SFX_WELCOMEKOREA);
+  mmLoadEffect(SFX_ATTENTIONALL);
+  mmLoadEffect(SFX_CHOPPERS);
+  mmLoadEffect(SFX_REPORTSURGERY);
+  mmLoadEffect(SFX_OVERHERE);
+  mmLoadEffect(SFX_SURGERYOOPS);
+  mmLoadEffect(SFX_BUTTERFINGERS);
+  mmLoadEffect(SFX_IGIVEUP);
+  mmLoadEffect(SFX_YOUREOKAY);
+  mmLoadEffect(SFX_NEXT);
+  mmLoadEffect(SFX_THANKSDOC);
+  mmLoadEffect(SFX_ANALIGATOR);
+  mmLoadEffect(SFX_DEFUSEBOMB);
+  mmLoadEffect(SFX_FINDTHEBOMB);
+  mmLoadEffect(SFX_FOUNDTHEBOMB);
   mmLoadEffect(SFX_FLOPPY);
 
   //----------------------------------------------------------------
@@ -1108,29 +1111,29 @@ void ds99_clear_debugger(void)
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
 }
 
-extern u8 *fake_heap_end;   // current heap start 
-extern u8 *fake_heap_start;   // current heap end 
+extern u8 *fake_heap_end;   // current heap start
+extern u8 *fake_heap_start;   // current heap end
 
-u8* getHeapStart() { 
-   return fake_heap_start; 
-} 
+u8* getHeapStart() {
+   return fake_heap_start;
+}
 
-u8* getHeapEnd() { 
-   return (u8*)sbrk(0); 
-} 
+u8* getHeapEnd() {
+   return (u8*)sbrk(0);
+}
 
-u8* getHeapLimit() { 
-   return fake_heap_end; 
-} 
+u8* getHeapLimit() {
+   return fake_heap_end;
+}
 
-int getMemUsed() { // returns the amount of used memory in bytes 
-   struct mallinfo mi = mallinfo(); 
-   return mi.uordblks; 
-} 
+int getMemUsed() { // returns the amount of used memory in bytes
+   struct mallinfo mi = mallinfo();
+   return mi.uordblks;
+}
 
-int getMemFree() { // returns the amount of free memory in bytes 
-   struct mallinfo mi = mallinfo(); 
-   return mi.fordblks + (getHeapLimit() - getHeapEnd()); 
+int getMemFree() { // returns the amount of free memory in bytes
+   struct mallinfo mi = mallinfo();
+   return mi.fordblks + (getHeapLimit() - getHeapEnd());
 }
 void __attribute__ ((noinline)) ds99_show_debugger(void)
 {
@@ -1219,7 +1222,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
 }
 
 // -------------------------------------------------------------------
-// Check if we have a touch-screen event and map it to the right 
+// Check if we have a touch-screen event and map it to the right
 // input for emulation use.  This doesn't need to be in fast memory.
 // -------------------------------------------------------------------
 u8 handle_touch_input(void)
@@ -1459,7 +1462,7 @@ ITCM_CODE void ds99_main(void)
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
           {
-              // Shift is always followed by the key it is modifying... 
+              // Shift is always followed by the key it is modifying...
               if ((u8)key_push[key_push_read] == TMS_KEY_SHIFT)
               {
                   tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
@@ -1639,7 +1642,7 @@ void TI99DSInit(void)
   videoSetModeSub(MODE_0_2D | DISPLAY_BG0_ACTIVE  | DISPLAY_BG1_ACTIVE | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE);
   vramSetBankA(VRAM_A_MAIN_BG);
   vramSetBankC(VRAM_C_SUB_BG);
-  
+
   //  Stop blending effect of intro
   REG_BLDCNT=0; REG_BLDCNT_SUB=0; REG_BLDY=0; REG_BLDY_SUB=0;
 
@@ -1730,13 +1733,13 @@ void irqVBlank(void)
 }
 
 // -------------------------------------------------------------------------------------------
-// We need VRAM_A and VRAM_C for emulation use but otherwise we can utilize these other areas 
+// We need VRAM_A and VRAM_C for emulation use but otherwise we can utilize these other areas
 // of VRAM for CPU use - gives us a bit more memory and it's reasonably fast 16-bit to boot!
 // -------------------------------------------------------------------------------------------
 void StealVideoRAM(void)
 {
     vramSetBankB(VRAM_B_LCD);   // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06820000 (used for opcode tables)
-    vramSetBankD(VRAM_D_LCD);   // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)  
+    vramSetBankD(VRAM_D_LCD);   // Not using this for video but 128K of faster RAM always useful! Mapped at 0x06860000 (used for opcode tables)
     vramSetBankE(VRAM_E_LCD);   // Not using this for video but 64K of faster RAM always useful!  Mapped at 0x06880000 (unused)
     vramSetBankF(VRAM_F_LCD);   // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06890000 (unused)
     vramSetBankG(VRAM_G_LCD);   // Not using this for video but 16K of faster RAM always useful!  Mapped at 0x06894000 (unused)
@@ -1758,7 +1761,7 @@ void LoadBIOSFiles(void)
     // ------------------------------------------------
     // Grab chunks of the DS/DSi Video RAM for CPU use
     // ------------------------------------------------
-    StealVideoRAM();               
+    StealVideoRAM();
 
     // ------------------------------------------------------------------------
     // Find the main console ROM which is 8K in size... load this into cache.
@@ -1854,7 +1857,7 @@ static void StartupMemoryAllocation(void)
 
 
 // ------------------------------------------------------
-// Program entry point - check if an argument has been 
+// Program entry point - check if an argument has been
 // passed in on the command line (probably from TWL++)
 // ------------------------------------------------------
 int main(int argc, char **argv)
@@ -1892,7 +1895,7 @@ int main(int argc, char **argv)
 
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);
-  
+
   // -----------------------------------------------------------------
   // Grab the BIOS before we try to switch any directories around...
   // -----------------------------------------------------------------
@@ -2009,9 +2012,144 @@ int main(int argc, char **argv)
 // render speech fairly well even on the oldest DS handheld systems.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
-u8 delaySFX = 0;
+
+static const SpeechTable_t SpeechTable[] =
+{
+  // ----------------------------------------------------
+  // Digital-Sig    Prev-Sig    Delay   SFX to play
+  // ----------------------------------------------------
+    {0x60108058,    0x00000000,     0,  SFX_PRESS_FIRE},            // Parsec - Press Fire to Begin
+    {0x604D7399,    0x00000000,     0,  SFX_DESTROYED},             // Parsec - Alien Destroyed
+    {0x604BCBD6,    0x00000000,     0,  SFX_GOODSHOT},              // Parsec - Good Shot
+    {0x60C6703A,    0x00000000,     0,  SFX_NICESHOOTING},          // Parsec - Nice Shooting
+    {0x6046E3B2,    0x00000000,     0,  SFX_GREATSHOT},             // Parsec - Great Shot
+    {0x60E00025,    0x00000000,     0,  SFX_LASERONTARGET},         // Parsec - Laser on Target
+    {0x6040066E,    0x00000000,     0,  SFX_ATTACKING},             // Parsec - Aliens Attacking
+    {0x6043F77E,    0x00000000,     0,  SFX_ADVANCING},             // Parsec - Aliens Advancing
+    {0x600E0821,    0x00000000,     0,  SFX_ASTEROID},              // Parsec - Beware the Asteroid Belt
+    {0x60090846,    0x00000000,     0,  SFX_COUNTDOWN},             // Parsec - Countdown Begins
+    {0x6071A647,    0x00000000,     0,  SFX_5},                     // Parsec - Five
+    {0x600A48A5,    0x00000000,     0,  SFX_4},                     // Parsec - Four
+    {0x60080826,    0x00000000,     0,  SFX_3},                     // Parsec - Three
+    {0x600D586E,    0x00000000,     0,  SFX_2},                     // Parsec - Two
+    {0x604967BB,    0x00000000,     0,  SFX_1},                     // Parsec - One
+    {0x6030B4EA,    0x00000000,     0,  SFX_ADVANCELEVEL},          // Parsec - Advance to Next Level
+    {0x604B8B41,    0x00000000,     0,  SFX_EXTRASHIP},             // Parsec - Extra Ship
+    {0x6049E3B3,    0x00000000,     0,  SFX_WARNINGFUEL},           // Parsec - Warning Fuel Low
+    {0x6006F8DA,    0x00000000,     0,  SFX_SORRYFUEL},             // Parsec - Fuel Empty
+
+    {0x60CEE4F9,    0x00000000,     0,  SFX_BEWARE},                // Alpiner - Beware Falling Objects
+    {0x604AD7AA,    0x00000000,     0,  SFX_LOOKOUT},               // Alpiner - Lookout!
+    {0x604E6839,    0x00000000,     0,  SFX_WATCHOUT},              // Alpiner - Watch Out!
+    {0x60A26A54,    0x00000000,     0,  SFX_YUCK},                  // Alpiner - Yuck!
+    {0x60AADB82,    0x00000000,     0,  SFX_YIKES},                 // Alpiner - Yikes!
+    {0x602530B1,    0x00000000,     0,  SFX_UH},                    // Alpiner - Uh!
+    {0x60A5F222,    0x00000000,     0,  SFX_OOPS},                  // Alpiner - Oops!
+    {0x602BCE6E,    0x00000000,     0,  SFX_OUCH},                  // Alpiner - Ouch!
+    {0x60293565,    0x00000000,     0,  SFX_OOOOH},                 // Alpiner - Oooooh (falling)
+    {0x60A574FE,    0x00000000,     0,  SFX_OHNO},                  // Alpiner - Oh No!
+    {0x60A375FE,    0x00000000,     0,  SFX_ONWARD},                // Alpiner - Onwards and Upwards
+    {0x6008485C,    0x00000000,     0,  SFX_GOAGAIN},               // Alpiner - Go Again
+    {0x6042A369,    0x00000000,     0,  SFX_WALKEDINTO},            // Alpiner - Walked Right Into That
+    {0x6050B498,    0x00000000,     0,  SFX_SPORT},                 // Alpiner - Great Move Sport
+    {0x600248BE,    0x00000000,     0,  SFX_THANITLOOKS},           // Alpiner - Harder than it Looks, Isn't It?
+    {0x60C130D8,    0x00000000,     0,  SFX_DUCK},                  // Alpiner - You forgot to duck
+    {0x60108002,    0x00000000,     0,  SFX_MEANTO},                // Alpiner - Did you mean to do that?
+    {0x600828D2,    0x00000000,     0,  SFX_HELP},                  // Alpiner - Heeeeeeelp!
+    {0x600A08C1,    0x00000000,     0,  SFX_ANYKEYTOGO},            // Alpiner - Press any key to go on
+    {0x600EA856,    0x00000000,     0,  SFX_GETTINGTIRED},          // Alpiner - Getting Tired Already?
+    {0x60E08096,    0x00000000,     0,  SFX_GAMEOVER},              // Alpiner - Game Over
+    {0x60C8B1CE,    0x00000000,     0,  SFX_BETTERLUCK},            // Alpiner - Better luck next time
+
+    {0x60C2E42E,    0x00000000,     0,  SFX_LASEROVERHEAT},         // Moonmine - Laser Overheated
+    {0x604C91D2,    0x00000000,     0,  SFX_MONSTERDAMAGEDSHIP},    // Moonmine - Monster Damaged Ship
+    {0x6006A83A,    0x00000000,     0,  SFX_UNKNOWNOBJECT},         // Moonmine - Unknown Object Ahead
+    {0x604CFFBE,    0x00000000,     0,  SFX_ZYGAPPROACH},           // Moonmine - Zygonaut Approaching
+    {0x6004B0C7,    0x00000000,     0,  SFX_CREWLOST},              // Moonmine - Crew Member Lost
+    {0x6044D55C,    0x00000000,     0,  SFX_MONSTERDESTROYED},      // Moonmine - Monster Destroyed
+    {0x604E1DB1,    0x00000000,     0,  SFX_GOODSHOTCAPTAIN},       // Moonmine - Good Shot Captain
+    {0x602EADC1,    0x00000000,     0,  SFX_ZYGNEVERGET},           // Moonmine - You'll Never Get Me!
+    {0x604377A9,    0x00000000,     0,  SFX_ZYGHAHA},               // Moonmine - Hahahahahah!
+    {0x60CA64B7,    0x00000000,     0,  SFX_WATERAHEAD},            // Moonmine - Water Ahead
+    {0x604691D2,    0x00000000,     0,  SFX_MONSTERATTACKEDCREW},   // Moonmine - Monster Attacked Crew
+    {0x604AE227,    0x00000000,     0,  SFX_WAYTOGOCAP},            // Moonmine - Way to go Captain
+    {0x60418FC6,    0x00000000,     0,  SFX_MOONADVANCE},           // Moonmine - Advanced to next level
+    {0x6006A851,    0x00000000,     0,  SFX_CONTINUEGAME},          // Moonmine - Continue game, Captain
+    {0x600A70C7,    0x00000000,     0,  SFX_COOLANTLOW},            // Moonmine - Coolant Low
+    {0x60C508AD,    0x00000000,     0,  SFX_OUTOFWATER},            // Moonmine - Out of Water
+    {0x6002889A,    0x00000000,     0,  SFX_CONGRATSCAP},           // Moonmine - Congratulations Captain
+    {0x60492BC9,    0x00000000,     0,  SFX_EXTRACREW},             // Moonmine - Extra Crew Member
+    {0x604955A9,    0x00000000,     0,  SFX_BONUSPOINTS},           // Moonmine - Bonus Points Gained
+
+    {0x60CCAEBE,    0x00000000,     0,  SFX_BIG_GETYOU},            // Bigfoot - I'll get you Bigfoot!
+    {0x6044A6B5,    0x00000000,     0,  SFX_BIG_FALL},              // Bigfoot - Falling noise
+    {0x60C97263,    0x00000000,     0,  SFX_BIG_ROAR},              // Bigfoot - Bigfoot Roar
+    {0x608272B9,    0x00000000,     0,  SFX_BIG_CAW},               // Bigfoot - Bird Screech
+
+    {0x60261765,    0x00000000,     0,  SFX_WELCOMEABOARD},         // Star Trek - Welcome Aboard, Captain
+    {0x60ABC96A,    0x00000000,     0,  SFX_AVOIDMINES},            // Star Trek - Avoid Mines, Captain
+    {0x600AF022,    0x00000000,     0,  SFX_DAMAGEREPAIRED},        // Star Trek - Damage Repaired, Captain
+    {0x60ADC8DE,    0x00000000,     0,  SFX_EXCELLENTMANUVER},      // Star Trek - Excellent Maneuvering, Captain
+
+    {0x60AAA061,    0x00000000,     0,  SFX_WHEREFLY_SF},           // Superfly - Where's the Fly?
+    {0x60A6704A,    0x00000000,     0,  SFX_NEVERTRUST_SF},         // Superfly - Never Trust a Worm
+    {0x608E54A7,    0x00000000,     0,  SFX_OHNO_SF},               // Superfly - Oh No!
+    {0x602D4E8E,    0x00000000,     0,  SFX_GETIT_SF},              // Superfly - Get It!
+    {0x60000318,    0x60A9942F,     0,  SFX_OHYES_SF},              // Superfly - Ohhhh Yeeesss! (digital sig also used by Fathom)
+
+    {0x60430D39,    0x00000000,     0,  SFX_AVOIDPOSTS},            // Buck Rogers - Avoid Electron Posts Buck
+    {0x604953D6,    0x00000000,     0,  SFX_WATCHHOPPERS},          // Buck Rogers - Watch the Hoppers
+    {0x60431999,    0x00000000,     0,  SFX_ALIENSAPPROACH},        // Buck Rogers - Aliens Approaching
+
+    {0x6004702D,    0x00000000,     0,  SFX_GOFORTH},               // Fathom - Go Forth
+    {0x6000030F,    0x00000000,     0,  SFX_SEAHORSE},              // Fathom - Find Another Seahorse
+    {0x6050D416,    0x00000000,     0,  SFX_VOLCANICBLAST},         // Fathom - Beware the Volcanic Blast
+    {0x60438BD1,    0x00000000,     0,  SFX_ATTENDENERGY},          // Fathom - Attend to your Energy Mortal
+    {0x6074E3B2,    0x00000000,     0,  SFX_FREEME},                // Fathom - Free Me Mortal
+    {0x604E711A,    0x00000000,     0,  SFX_EVILOCTOPUS},           // Fathom - Beware The Evil Octopus!
+    {0x604C1D3A,    0x00000000,     0,  SFX_TRIUMPTHED},            // Fathom - You have Triumphed!
+
+    {0x60222763,    0x00000000,     0,  SFX_WELCOMEKOREA},          // MASH - Welcome to Korea
+    {0x60A74EA2,    0x00000000,     0,  SFX_ATTENTIONALL},          // MASH - Attention all Personnel
+    {0x600AB8F7,    0x00000000,     0,  SFX_CHOPPERS},              // MASH - Choppers
+    {0x60550000,    0x00000000,     0,  SFX_OVERHERE},              // MASH - Over Here
+    {0x60A631D5,    0x00000000,     0,  SFX_REPORTSURGERY},         // MASH - Report to Surgery
+    {0x60274F66,    0x00000000,     0,  SFX_IGIVEUP},               // MASH - I Give Up
+    {0x60AB0FEE,    0x00000000,     0,  SFX_BUTTERFINGERS},         // MASH - Butterfingers
+    {0x600A403D,    0x00000000,     0,  SFX_SURGERYOOPS},           // MASH - Oops!
+    {0x60AB0FEE,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - You're Okay
+    {0x60AB0FEE,    0x00000000,     0,  SFX_NEXT},                  // MASH - Next...
+    {0x60AA761A,    0x00000000,     0,  SFX_THANKSDOC},             // MASH - Thanks Doc
+
+    {0x600A20B2,    0x00000000,     0,  SFX_FINDTHEBOMB},           // Sewermania - Dave, Find the Bomb!
+    {0x6001B0DE,    0x00000000,     0,  SFX_FOUNDTHEBOMB},          // Sewermania - Found the Bomb, Boss
+    {0x600EC8CC,    0x00000000,   120,  SFX_DEFUSEBOMB},            // Sewermania - Defused the Bomb, Boss
+    {0x602150A9,    0x00000000,     0,  SFX_ANALIGATOR},            // Sewermania - Oh No! An Alligator!
+
+    {0x6008102A,    0x00000000,     0,  SFX_PATIENTREADY},          // Microsurgeon - Patient is ready doctor
+    {0x600608A3,    0x00000000,     0,  SFX_DRLAVINE},              // Microsurgeon - Paging Dr. Lavine
+    {0x60D61BB4,    0x00000000,     0,  SFX_CONDITIONCRITICAL},     // Microsurgeon - Patient in Critical Condition
+    {0x60AB9AAD,    0x00000000,     0,  SFX_POWERLOW},              // Microsurgeon - Probe Energy Low
+    {0x600C0821,    0x00000000,     0,  SFX_ENTERINGHEART},         // Microsurgeon - Probe Entering Heart
+    {0x602A60E9,    0x00000000,     0,  SFX_ENTERINGLUNG},          // Microsurgeon - Probe Entering Lungs
+    {0x60068828,    0x00000000,     0,  SFX_ENTERINGKIDNEY},        // Microsurgeon - Probe Entering Kidney
+    {0x60E02E22,    0x00000000,     0,  SFX_ENTERINGSPLEEN},        // Microsurgeon - Probe Entering Spleen
+    {0x60C491CA,    0x00000000,    20,  SFX_VIRUS},                 // Microsurgeon - Virus!
+
+    {0x60EDAE42,    0x00000000,   180,  SFX_BZK_KILLED},            // Borzork - Got the Humanoid!
+    {0x60054C82,    0x00000000,   180,  SFX_BZK_CHICKEN},           // Borzork - Chicken Fight Like a Robot
+    {0x60A5B0DA,    0x00000000,   180,  SFX_BZK_ESCAPE},            // Borzork - The Humanoid must not Escape
+    {0x60258F42,    0x00000000,   120,  SFX_BZK_ATTACKHUMANOID},    // Borzork - Attack the Humanoid
+    {0x60280327,    0x00000000,   120,  SFX_BZK_INTRUDERALERT},     // Borzork - Intruder Alert! Intruder Alert! (start screen)
+    {0x60C3AF06,    0x60A38F3E,   120,  SFX_BZK_INTRUDERALERT},     // Borzork - Intruder Alert! Intruder Alert! (otto)
+
+    {0x00000000,    0x00000000,     0,  255},                       // End of table...
+};
+
+
 void WriteSpeechData(u8 data)
 {
+    static u32 prev_speechData32 = 0x00000000;
     if (myConfig.noExtSpeech) return;
 
     // Reading Address 0 from the Speech ROM
@@ -2024,173 +2162,35 @@ void WriteSpeechData(u8 data)
 
     if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
-        // Parsec
-             if (speechData32 == 0x60108058) mmEffect(SFX_PRESS_FIRE);
-        else if (speechData32 == 0x604D7399) mmEffect(SFX_DESTROYED);
-        else if (speechData32 == 0x604BCBD6) mmEffect(SFX_GOODSHOT);
-        else if (speechData32 == 0x60C6703A) mmEffect(SFX_NICESHOOTING);
-        else if (speechData32 == 0x6046E3B2) mmEffect(SFX_GREATSHOT);
-        else if (speechData32 == 0x60E00025) mmEffect(SFX_LASERONTARGET);
-        else if (speechData32 == 0x6040066E) mmEffect(SFX_ATTACKING);
-        else if (speechData32 == 0x6043F77E) mmEffect(SFX_ADVANCING);
-        else if (speechData32 == 0x600E0821) mmEffect(SFX_ASTEROID);
-        else if (speechData32 == 0x60090846) mmEffect(SFX_COUNTDOWN);
-        else if (speechData32 == 0x6071A647) mmEffect(SFX_5);
-        else if (speechData32 == 0x600A48A5) mmEffect(SFX_4);
-        else if (speechData32 == 0x60080826) mmEffect(SFX_3);
-        else if (speechData32 == 0x600D586E) mmEffect(SFX_2);
-        else if (speechData32 == 0x604967BB) mmEffect(SFX_1);
-        else if (speechData32 == 0x6030B4EA) mmEffect(SFX_ADVANCELEVEL);
-        else if (speechData32 == 0x604B8B41) mmEffect(SFX_EXTRASHIP);
-        else if (speechData32 == 0x6049E3B3) mmEffect(SFX_WARNINGFUEL);
-        else if (speechData32 == 0x6006F8DA) mmEffect(SFX_SORRYFUEL);
+        if (speech_dampen) return;  // We are in a delay period... do not speak anything
 
-        // Alpiner
-        else if (speechData32 == 0x60CEE4F9) mmEffect(SFX_BEWARE);
-        else if (speechData32 == 0x604AD7AA) mmEffect(SFX_LOOKOUT);
-        else if (speechData32 == 0x604E6839) mmEffect(SFX_WATCHOUT);
-        else if (speechData32 == 0x60A26A54) mmEffect(SFX_YUCK);
-        else if (speechData32 == 0x60AADB82) mmEffect(SFX_YIKES);
-        else if (speechData32 == 0x602530B1) mmEffect(SFX_UH);
-        else if (speechData32 == 0x60A5F222) mmEffect(SFX_OOPS);
-        else if (speechData32 == 0x602BCE6E) mmEffect(SFX_OUCH);
-        else if (speechData32 == 0x60293565) mmEffect(SFX_OOOOH);
-        else if (speechData32 == 0x60A574FE) mmEffect(SFX_OHNO);
-        else if (speechData32 == 0x60A375FE) mmEffect(SFX_ONWARD);
-        else if (speechData32 == 0x6008485C) mmEffect(SFX_GOAGAIN);
-        else if (speechData32 == 0x6042A369) mmEffect(SFX_WALKEDINTO);
-        else if (speechData32 == 0x6050B498) mmEffect(SFX_SPORT);
-        else if (speechData32 == 0x600248BE) mmEffect(SFX_THANITLOOKS);
-        else if (speechData32 == 0x60C130D8) mmEffect(SFX_DUCK);
-        else if (speechData32 == 0x60108002) mmEffect(SFX_MEANTO);
-        else if (speechData32 == 0x600828D2) mmEffect(SFX_HELP);
-        else if (speechData32 == 0x600A08C1) mmEffect(SFX_ANYKEYTOGO);
-        else if (speechData32 == 0x600EA856) mmEffect(SFX_GETTINGTIRED);
-        else if (speechData32 == 0x60E08096) mmEffect(SFX_GAMEOVER);
-        else if (speechData32 == 0x60C8B1CE) mmEffect(SFX_BETTERLUCK);
-
-        // Moonmine
-        else if (speechData32 == 0x60C2E42E) mmEffect(SFX_LASEROVERHEAT);
-        else if (speechData32 == 0x604C91D2) mmEffect(SFX_MONSTERDAMAGEDSHIP);
-        else if (speechData32 == 0x6006A83A) mmEffect(SFX_UNKNOWNOBJECT);
-        else if (speechData32 == 0x604CFFBE) mmEffect(SFX_ZYGAPPROACH);
-        else if (speechData32 == 0x6004B0C7) mmEffect(SFX_CREWLOST);
-        else if (speechData32 == 0x6044D55C) mmEffect(SFX_MONSTERDESTROYED);
-        else if (speechData32 == 0x604E1DB1) mmEffect(SFX_GOODSHOTCAPTAIN);
-        else if (speechData32 == 0x602EADC1) mmEffect(SFX_ZYGNEVERGET);
-        else if (speechData32 == 0x604377A9) mmEffect(SFX_ZYGHAHA);
-        else if (speechData32 == 0x60CA64B7) mmEffect(SFX_WATERAHEAD);
-        else if (speechData32 == 0x604691D2) mmEffect(SFX_MONSTERATTACKEDCREW);
-        else if (speechData32 == 0x604AE227) mmEffect(SFX_WAYTOGOCAP);
-        else if (speechData32 == 0x60418FC6) mmEffect(SFX_MOONADVANCE);
-        else if (speechData32 == 0x6006A851) mmEffect(SFX_CONTINUEGAME);
-        else if (speechData32 == 0x600A70C7) mmEffect(SFX_COOLANTLOW);
-        else if (speechData32 == 0x60C508AD) mmEffect(SFX_OUTOFWATER);
-        else if (speechData32 == 0x6002889A) mmEffect(SFX_CONGRATSCAP);
-        else if (speechData32 == 0x60492BC9) mmEffect(SFX_EXTRACREW);
-        else if (speechData32 == 0x604955A9) mmEffect(SFX_BONUSPOINTS);
-
-        // Bigfoot
-        else if (speechData32 == 0x60CCAEBE) mmEffect(SFX_BIG_GETYOU);      // I'll get you Bigfoot!
-        else if (speechData32 == 0x6044A6B5) mmEffect(SFX_BIG_FALL);        // Falling noise
-        else if (speechData32 == 0x60C97263) mmEffect(SFX_BIG_ROAR);        // Bigfoot Roar
-        else if (speechData32 == 0x608272B9) mmEffect(SFX_BIG_CAW);         // Bird Screech
-
-        // Star Trek
-        else if (speechData32 == 0x60261765) mmEffect(SFX_WELCOMEABOARD);   // Welcome Aboard, Captain
-        else if (speechData32 == 0x60ABC96A) mmEffect(SFX_AVOIDMINES);      // Avoid Mines, Captain
-        else if (speechData32 == 0x600AF022) mmEffect(SFX_DAMAGEREPAIRED);  // Damage Repaired, Captain
-        else if (speechData32 == 0x60ADC8DE) mmEffect(SFX_EXCELLENTMANUVER);// Exellent Manuvering, Captain
-        
-        // Superfly
-        else if (speechData32 == 0x608E54A7) mmEffect(SFX_OHNO_SF);         // Oh No!
-        else if (speechData32 == 0x60A9942F) delaySFX = 1;                  // Since 0x60000318 (Ohhhh Yeeesss!) is also shared by Fathom...
-        else if (speechData32 == 0x60000318 && delaySFX)                    // Ohhhh Yeeesss!
+        u16 idx=0;
+        // ----------------------------------------------------------------------------------------
+        // Look for this digital signature in our table map... if found, we play the speech sample
+        // ----------------------------------------------------------------------------------------
+        while (SpeechTable[idx].signature != 0x00000000)
         {
-            delaySFX = 0;
-            mmEffect(SFX_OHYES_SF); 
+            if (SpeechTable[idx].signature == speechData32)
+            {
+                if ((SpeechTable[idx].prev_signature == 0x00000000) || (SpeechTable[idx].prev_signature == prev_speechData32))
+                {
+                    mmEffect(SpeechTable[idx].sfx);
+                    speech_dampen = SpeechTable[idx].delay_after;
+                    break;
+                }
+            }
+            idx++;
         }
-        else if (speechData32 == 0x60AAA061) mmEffect(SFX_WHEREFLY_SF);     // Where's the Fly?
-        else if (speechData32 == 0x60A6704A) mmEffect(SFX_NEVERTRUST_SF);   // Never Trust a Worm
-        else if (speechData32 == 0x602D4E8E) mmEffect(SFX_GETIT_SF);        // Get It!
-        
-        // Buck Rogers
-        else if (speechData32 == 0x60430D39) mmEffect(SFX_AVOIDPOSTS);      // Avoid Electron Posts Buck
-        else if (speechData32 == 0x604953D6) mmEffect(SFX_WATCHHOPPERS);    // Watch the Hoppers
-        else if (speechData32 == 0x60431999) mmEffect(SFX_ALIENSAPPROACH);  // Aliens Approaching
-        
-        // Fathom
-        else if (speechData32 == 0x6004702D) mmEffect(SFX_GOFORTH);         // Go Forth
-        else if (speechData32 == 0x6000030F) mmEffect(SFX_SEAHORSE);        // Find Another Seahorse
-        else if (speechData32 == 0x6050D416) mmEffect(SFX_VOLCANICBLAST);   // Beware the Volcanic Blast        
-        else if (speechData32 == 0x60438BD1) mmEffect(SFX_ATTENDENERGY);    // Attend to your Energy Mortal
-        else if (speechData32 == 0x6074E3B2) mmEffect(SFX_FREEME);          // Free Me Mortal
-        else if (speechData32 == 0x604E711A) mmEffect(SFX_EVILOCTOPUS);     // Beware The Evil Octopus!
-        else if (speechData32 == 0x604C1D3A) mmEffect(SFX_TRIUMPTHED);      // You have Triumphed!
-        
-        // MASH
-        else if (speechData32 == 0x60222763) mmEffect(SFX_WELCOMEKOREA);    // Welcome to Korea
-        else if (speechData32 == 0x60A74EA2) mmEffect(SFX_ATTENTIONALL);    // Attention all Personnel
-        else if (speechData32 == 0x600AB8F7) mmEffect(SFX_CHOPPERS);        // Choppers
-        else if (speechData32 == 0x60550000) mmEffect(SFX_OVERHERE);        // Over Here
-        else if (speechData32 == 0x60A631D5) mmEffect(SFX_REPORTSURGERY);   // Report to Surgery
-        else if (speechData32 == 0x60274F66) mmEffect(SFX_IGIVEUP);         // I Give Up
-        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_BUTTERFINGERS);   // Butterfingers
-        else if (speechData32 == 0x600A403D) mmEffect(SFX_SURGERYOOPS);     // Oops!        
-        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_YOUREOKAY);       // You're Okay
-        else if (speechData32 == 0x60AB0FEE) mmEffect(SFX_NEXT);            // Next...
-        
-        // Sewermania
-        else if (speechData32 == 0x6001B0DE) mmEffect(SFX_FOUNDTHEBOMB);    // Found the Bomb, Boss
-        else if (speechData32 == 0x600A20B2)                                // Dave, Find The Bomb!
-        {
-            if (!speech_dampen) mmEffect(SFX_FINDTHEBOMB);
-        }
-        else if (speechData32 == 0x600EC8CC)                                // Defused the Bomb
-        {
-            speech_dampen = 120; mmEffect(SFX_DEFUSEBOMB);
-        }
-        else if (speechData32 == 0x602150A9) mmEffect(SFX_ANALIGATOR);      // Oh No - An Alligator!
-        
-        // Borzork
-        else if (speechData32 == 0x60EDAE42)                                // Got the Humanoid!
-        {
-            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_KILLED);}
-        } 
-        else if (speechData32 == 0x60054C82)                                // Chicken Fight Like a Robot
-        {
-            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_CHICKEN);}
-        } 
-        else if (speechData32 == 0x60A5B0DA)                                // The Humanoid must not Escape
-        {
-            if (!speech_dampen) {speech_dampen = 180; mmEffect(SFX_BZK_ESCAPE);}
-        } 
-        
-        // Microsurgeon
-        else if (speechData32 == 0x6008102A) mmEffect(SFX_PATIENTREADY);     // Patient is ready doctor
-        else if (speechData32 == 0x600608A3) mmEffect(SFX_DRLAVINE);         // Paging Dr. Lavine
-        else if (speechData32 == 0x60D61BB4) mmEffect(SFX_CONDITIONCRITICAL);// Patient in Critical Condition
-        else if (speechData32 == 0x60AB9AAD) mmEffect(SFX_POWERLOW);         // Probe Energy Low
-        else if (speechData32 == 0x600C0821) mmEffect(SFX_ENTERINGHEART);    // Probe Entering Heart
-        else if (speechData32 == 0x602A60E9) mmEffect(SFX_ENTERINGLUNG);     // Probe Entering Lungs
-        else if (speechData32 == 0x60068828) mmEffect(SFX_ENTERINGKIDNEY);   // Probe Entering Kidney
-        else if (speechData32 == 0x60E02E22) mmEffect(SFX_ENTERINGSPLEEN);   // Probe Entering Spleen        
-        else if (speechData32 == 0x60C491CA)                                 // Virus!
-        {
-            if (!speech_dampen) {speech_dampen = 20; mmEffect(SFX_VIRUS);}
-        } 
-        else
-        {
-            delaySFX = 0;   
+        prev_speechData32 = speechData32;
+
 #if 0 // Enable this to debug speech and add additional sound effects by signature
-            // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
-            sprintf(tmpBuf, "%5d", vusCptVBL);
-            DS_Print(0,0,6, tmpBuf);
-            FILE *fp = fopen("994a_speech.txt", "a+");
-            fprintf(fp, "%4d: %08X\n", vusCptVBL, (unsigned int)speechData32);
-            fclose(fp);
+        // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
+        sprintf(tmpBuf, "%5d", vusCptVBL);
+        DS_Print(0,0,6, tmpBuf);
+        FILE *fp = fopen("994a_speech.txt", "a+");
+        fprintf(fp, "%5d: %08X  [%3d]\n", vusCptVBL, (unsigned int)speechData32, SpeechTable[idx].sfx);
+        fclose(fp);
 #endif
-        }
     }
 }
 
