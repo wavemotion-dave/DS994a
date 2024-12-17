@@ -2097,9 +2097,9 @@ static const SpeechTable_t SpeechTable[] =
     {0x602D4E8E,    0x00000000,     0,  SFX_GETIT_SF},              // Superfly - Get It!
     {0x60000318,    0x60A9942F,     0,  SFX_OHYES_SF},              // Superfly - Ohhhh Yeeesss! (digital sig also used by Fathom)
 
-    {0x60430D39,    0x00000000,     0,  SFX_AVOIDPOSTS},            // Buck Rogers - Avoid Electron Posts Buck
+    {0x60430D39,    0x00000000,     0,  SFX_AVOIDPOSTS},            // Buck Rogers - Avoid Electron Posts, Buck
     {0x604953D6,    0x00000000,     0,  SFX_WATCHHOPPERS},          // Buck Rogers - Watch the Hoppers
-    {0x60431999,    0x00000000,     0,  SFX_ALIENSAPPROACH},        // Buck Rogers - Aliens Approaching
+    {0x60431999,    0x00000000,     0,  SFX_ALIENSAPPROACH},        // Buck Rogers - Aliens are Approaching
 
     {0x6004702D,    0x00000000,     0,  SFX_GOFORTH},               // Fathom - Go Forth
     {0x6000030F,    0x00000000,     0,  SFX_SEAHORSE},              // Fathom - Find Another Seahorse
@@ -2117,8 +2117,8 @@ static const SpeechTable_t SpeechTable[] =
     {0x60274F66,    0x00000000,     0,  SFX_IGIVEUP},               // MASH - I Give Up
     {0x60AB0FEE,    0x00000000,     0,  SFX_BUTTERFINGERS},         // MASH - Butterfingers
     {0x600A403D,    0x00000000,     0,  SFX_SURGERYOOPS},           // MASH - Oops!
-    {0x60AB0FEE,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - You're Okay
-    {0x60AB0FEE,    0x00000000,     0,  SFX_NEXT},                  // MASH - Next...
+    {0x6004282A,    0x00000000,     0,  SFX_NEXT},                  // MASH - You're Okay
+    {0x60EADE8D,    0x00000000,     0,  SFX_YOUREOKAY},             // MASH - Next...
     {0x60AA761A,    0x00000000,     0,  SFX_THANKSDOC},             // MASH - Thanks Doc
 
     {0x600A20B2,    0x00000000,     0,  SFX_FINDTHEBOMB},           // Sewermania - Dave, Find the Bomb!
