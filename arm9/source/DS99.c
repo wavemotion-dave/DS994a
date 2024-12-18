@@ -332,6 +332,7 @@ void setupStream(void)
   mmLoadEffect(SFX_CHOPPERS);
   mmLoadEffect(SFX_REPORTSURGERY);
   mmLoadEffect(SFX_OVERHERE);
+  mmLoadEffect(SFX_MEDIC);
   mmLoadEffect(SFX_SURGERYOOPS);
   mmLoadEffect(SFX_BUTTERFINGERS);
   mmLoadEffect(SFX_IGIVEUP);
@@ -2113,6 +2114,7 @@ static const SpeechTable_t SpeechTable[] =
     {0x60A74EA2,    0x00000000,     0,  SFX_ATTENTIONALL},          // MASH - Attention all Personnel
     {0x600AB8F7,    0x00000000,     0,  SFX_CHOPPERS},              // MASH - Choppers
     {0x60550000,    0x00000000,     0,  SFX_OVERHERE},              // MASH - Over Here
+    {0x60249286,    0x00000000,     0,  SFX_MEDIC},                 // MASH - Medic
     {0x60A631D5,    0x00000000,     0,  SFX_REPORTSURGERY},         // MASH - Report to Surgery
     {0x60274F66,    0x00000000,     0,  SFX_IGIVEUP},               // MASH - I Give Up
     {0x60AB0FEE,    0x00000000,     0,  SFX_BUTTERFINGERS},         // MASH - Butterfingers
@@ -2130,11 +2132,11 @@ static const SpeechTable_t SpeechTable[] =
     {0x6008102A,    0x00000000,     0,  SFX_PATIENTREADY},          // Microsurgeon - Patient is ready doctor
     {0x600608A3,    0x00000000,     0,  SFX_DRLAVINE},              // Microsurgeon - Paging Dr. Lavine
     {0x60D61BB4,    0x00000000,     0,  SFX_CONDITIONCRITICAL},     // Microsurgeon - Patient in Critical Condition
-    {0x60AB9AAD,    0x00000000,     0,  SFX_POWERLOW},              // Microsurgeon - Probe Energy Low
-    {0x600C0821,    0x00000000,     0,  SFX_ENTERINGHEART},         // Microsurgeon - Probe Entering Heart
-    {0x602A60E9,    0x00000000,     0,  SFX_ENTERINGLUNG},          // Microsurgeon - Probe Entering Lungs
-    {0x60068828,    0x00000000,     0,  SFX_ENTERINGKIDNEY},        // Microsurgeon - Probe Entering Kidney
-    {0x60E02E22,    0x6008F8D1,     0,  SFX_ENTERINGSPLEEN},        // Microsurgeon - Probe Entering Spleen
+    {0x60AB9AAD,    0x00000000,   120,  SFX_POWERLOW},              // Microsurgeon - Probe Energy Low
+    {0x600C0821,    0x6068291F,     0,  SFX_ENTERINGHEART},         // Microsurgeon - Probe Entering Heart
+    {0x602A60E9,    0x6068291F,     0,  SFX_ENTERINGLUNG},          // Microsurgeon - Probe Entering Lungs
+    {0x60068828,    0x6068291F,     0,  SFX_ENTERINGKIDNEY},        // Microsurgeon - Probe Entering Kidney
+    {0x6008F8D1,    0x6068291F,     0,  SFX_ENTERINGSPLEEN},        // Microsurgeon - Probe Entering Spleen
     {0x60C491CA,    0x00000000,    20,  SFX_VIRUS},                 // Microsurgeon - Virus!
 
     {0x60EDAE42,    0x00000000,   180,  SFX_BZK_KILLED},            // Borzork - Got the Humanoid!
@@ -2184,12 +2186,12 @@ void WriteSpeechData(u8 data)
         }
         prev_speechData32 = speechData32;
 
-#if 1 // Enable this to debug speech and add additional sound effects by signature
+#if 0 // Enable this to debug speech and add additional sound effects by signature
         // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
         sprintf(tmpBuf, "%5d", vusCptVBL);
         DS_Print(0,0,6, tmpBuf);
         FILE *fp = fopen("994a_speech.txt", "a+");
-        fprintf(fp, "%5d: %08X  [%3d]\n", vusCptVBL, (unsigned int)speechData32, SpeechTable[idx].sfx);
+        fprintf(fp, "%5d: 0x%08X  [%3d]\n", vusCptVBL, (unsigned int)speechData32, SpeechTable[idx].sfx);
         fclose(fp);
 #endif
     }
