@@ -1127,6 +1127,12 @@ void MapSpaceEnter(void)
     myConfig.keymap[7]   = KBD_ENTER;    // NDS Y Button
 }
 
+void MapSpaceSpace(void)
+{
+    myConfig.keymap[6]   = KBD_SPACE;    // NDS X Button
+    myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
+}
+
 void SetDiagonals(void) // Useful for games like Q-Bert
 {
     myConfig.keymap[0]   = JOY1_RIGHT;
@@ -1187,6 +1193,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x51b2a37f) MapMicroSur();  // Microsurgeon maps keys uniquely
     
     if (file_crc == 0xc51b0a8b) MapSpaceEnter();// Defender maps keys uniquely (Space and Enter are important)
+    
+    if (file_crc == 0x5a238af2) MapSpaceSpace();// Moon Mine makes heavy use of SPACE
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
 

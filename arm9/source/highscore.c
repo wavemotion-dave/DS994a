@@ -19,11 +19,10 @@
 #include "DS99_utils.h"
 
 // ------------------------------------------------------------------------------
-// With only 125 released games plus 25-50 prototypes and 50-ish homebrews,
-// this game limit should be more than enough to handle the entire library.
+// This game limit should be more than enough to handle normal TI library use.
 // ------------------------------------------------------------------------------
-#define MAX_HS_GAMES    575         // Fits just barely into 128K which is all we want to use
-#define HS_VERSION      0x0006      // Changing this will wipe high scores on the next install
+#define MAX_HS_GAMES    570         // Fits just barely into 96K which is all we want to use (3 SD blocks)
+#define HS_VERSION      0x0007      // Changing this will wipe high scores on the next install
 
 // --------------------------------------------------------------------------
 // We allow sorting on various criteria. By default sorting is high-to-low.
@@ -42,12 +41,11 @@ void highscore_save(void);
 // ---------------------------------------------------------
 struct score_t
 {
-    char    initials[4];        // With NULL this is only 3 ascii characters
-    char    score[7];           // Six digits of score
-    char    reserved[5];        // For the future...
-    u16  year;                  // Date score was achieved. We'll auto-fill this from DS time
-    u8   month;
-    u8   day;
+    char    initials[4];        // With NULL this is only 3 ASCII characters
+    char    score[7];           // Six digits of score plus NULL
+    u16     year;               // Date score was achieved. We'll auto-fill this from DS time
+    u8      month;              // ..
+    u8      day;                // ..
 };
 
 // -------------------------------------------------------------------------------------------
@@ -56,13 +54,13 @@ struct score_t
 struct highscore_t
 {
     u32  crc;
-    char    notes[21];
+    char notes[16];
     u16  options;
     struct score_t scores[10];
 };
 
 // -----------------------------------------------------------------------------------
-// We save up to 300 games worth of scores. We also have a spot for default initials
+// We save up to 570 games worth of scores. We also have a spot for default initials
 // so we can re-use the last initials for the last high-score entered. Saves time
 // for most people who are always the ones using their DS system.
 // -----------------------------------------------------------------------------------
@@ -82,6 +80,58 @@ struct score_t score_entry;
 char hs_line[64];
 
 
+// ---------------------------------------------------------
+// This is the older (bloated) struct... we will convert
+// ---------------------------------------------------------
+struct old_score_t
+{
+    char    initials[4];        // With NULL this is only 3 ASCII characters
+    char    score[7];           // Six digits of score plus NULL
+    char    reserved[5];
+    u16     year;               // Date score was achieved. We'll auto-fill this from DS time
+    u8      month;              // ..
+    u8      day;                // ..
+};
+struct old_highscore_t
+{
+    u32  crc;
+    char notes[21];
+    u16  options;
+    struct old_score_t scores[10];
+};
+
+// Version 0006 was out there for a long time... the new streamlined version 0007 gives us
+// about 32K more free space but we want to be kind to long-time users of DS99/4a so we 
+// will do a one-time upgrade from 0006 to 0007.
+void convert_version_0006_to_0007(void)
+{
+    struct old_highscore_t old_hs;
+    FILE *fp = fopen("/data/DS994a.hi", "rb");
+    if (fp != NULL)
+    {
+        highscores.version = HS_VERSION;
+        fread(hs_line, 1, 6, fp);   // Skip version and default initials... they are already in the right place in the structure
+        for (u16 i=0; i<MAX_HS_GAMES; i++)
+        {
+            fread(&old_hs, 1, sizeof(old_hs), fp);   // Read old high score... we'll move it over to the new structure below
+            highscores.highscore_table[i].crc = old_hs.crc;
+            highscores.highscore_table[i].options = old_hs.options;
+            memcpy(highscores.highscore_table[i].notes, old_hs.notes, 15);
+            highscores.highscore_table[i].notes[15] = 0;
+            for (u8 j=0; j<10; j++)
+            {
+                strcpy(highscores.highscore_table[i].scores[j].score, old_hs.scores[j].score);
+                strcpy(highscores.highscore_table[i].scores[j].initials, old_hs.scores[j].initials);
+                highscores.highscore_table[i].scores[j].year = old_hs.scores[j].year;
+                highscores.highscore_table[i].scores[j].day = old_hs.scores[j].day;
+                highscores.highscore_table[i].scores[j].month = old_hs.scores[j].month;
+            }
+        }
+        fclose(fp);
+        highscore_save();
+    }
+}
+
 // ------------------------------------------------------------------------------------
 // Run through the entire highscores data and get a checksum. Mostly to make sure
 // that it hasn't been tampered with or corrupted on disk.
@@ -93,7 +143,7 @@ u32 highscore_checksum(void)
 
     for (int i=0; i<(int)sizeof(highscores) - 4; i++)
     {
-           sum = *ptr++;
+        sum = *ptr++;
     }
     return sum;
 }
@@ -119,11 +169,19 @@ void highscore_init(void)
         fread(&highscores, sizeof(highscores), 1, fp);
         fclose(fp);
 
-        if (highscore_checksum() != highscores.checksum) create_defaults = 1;
+        if (highscores.version != HS_VERSION) // Check that the version matches - otherwise blast back defaults
+        {
+            if (highscores.version == 0x0006) convert_version_0006_to_0007();
+            else create_defaults = 1;
+        }
+        else // Make sure the checksum is correct - otherwise blast back defaults
+        {
+            if (highscore_checksum() != highscores.checksum) create_defaults = 1;
+        }
     }
     else
     {
-        create_defaults = 1;
+        create_defaults = 1; // File not found... blast defaults
     }
 
     if (create_defaults)  // Doesn't exist yet or is invalid... create defaults and save it...
@@ -133,13 +191,12 @@ void highscore_init(void)
         for (int i=0; i<MAX_HS_GAMES; i++)
         {
             highscores.highscore_table[i].crc = 0x00000000;
-            strcpy(highscores.highscore_table[i].notes, "                    ");
+            strcpy(highscores.highscore_table[i].notes, "               ");
             highscores.highscore_table[i].options = 0x0000;
             for (int j=0; j<10; j++)
             {
                 strcpy(highscores.highscore_table[i].scores[j].score, "000000");
                 strcpy(highscores.highscore_table[i].scores[j].initials, "   ");
-                strcpy(highscores.highscore_table[i].scores[j].reserved, "     ");
                 highscores.highscore_table[i].scores[j].year = 0;
                 highscores.highscore_table[i].scores[j].month = 0;
                 highscores.highscore_table[i].scores[j].day = 0;
@@ -457,7 +514,7 @@ void highscore_entry(short foundIdx, u32 crc)
 void highscore_options(short foundIdx, u32 crc)
 {
     u16 options = 0x0000;
-    static char notes[21];
+    static char notes[16];
     char bEntryDone = 0;
     char blink=0;
     unsigned short entry_idx=0;
@@ -491,7 +548,7 @@ void highscore_options(short foundIdx, u32 crc)
         {
             if ((keysCurrent() & KEY_RIGHT) || (keysCurrent() & KEY_A))
             {
-                if (entry_idx < 19) entry_idx++;
+                if (entry_idx < 14) entry_idx++;
                 blink=25;
                 dampen=15;
             }
@@ -558,13 +615,12 @@ void highscore_options(short foundIdx, u32 crc)
             {
                 highscores.highscore_table[foundIdx].crc = 0x00000000;
                 highscores.highscore_table[foundIdx].options = 0x0000;
-                strcpy(highscores.highscore_table[foundIdx].notes, "                    ");
-                strcpy(notes, "                    ");
+                strcpy(highscores.highscore_table[foundIdx].notes, "               ");
+                strcpy(notes, "               ");
                 for (int j=0; j<10; j++)
                 {
                     strcpy(highscores.highscore_table[foundIdx].scores[j].score, "000000");
                     strcpy(highscores.highscore_table[foundIdx].scores[j].initials, "   ");
-                    strcpy(highscores.highscore_table[foundIdx].scores[j].reserved, "    ");
                     highscores.highscore_table[foundIdx].scores[j].year = 0;
                     highscores.highscore_table[foundIdx].scores[j].month = 0;
                     highscores.highscore_table[foundIdx].scores[j].day = 0;
@@ -578,7 +634,7 @@ void highscore_options(short foundIdx, u32 crc)
             dampen--;
         }
 
-        sprintf(hs_line, "%-20s", notes);
+        sprintf(hs_line, "%-16s", notes);
         if ((++blink % 60) > 30)
         {
             hs_line[entry_idx] = '_';

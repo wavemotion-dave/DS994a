@@ -2011,6 +2011,15 @@ int main(int argc, char **argv)
 // look for the digital signature of the prhase and then ask our DS MAXMOD sound system to
 // play the speech sample. It's not perfect, but requires very little CPU power and will
 // render speech fairly well even on the oldest DS handheld systems.
+//
+// To ensure that the digital signature is unique, we can use a 'prev-sig' to help identify
+// some sound samples. This is only needed in a few cases where the primary digital signature
+// might conflict across two games. It is possible that future games that utilize speech could
+// hit one of these signatures - but that's a problem for another day.
+//
+// The delay below can be used to ensure no other speech sample (including the one that will
+// be played) is interrupted by another speech sample. A real TI-09/4a Speech Synth will 
+// queue them up but that's not how it works with MaxMod and the SFX sound effect handling.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
 

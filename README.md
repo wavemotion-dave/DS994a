@@ -244,9 +244,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.2a: 16-Dec-2024 by wavemotion-dave
-* Refactored memory allocation to buy back almost 400K of much needed space (mostly for new speech samples)
-* Added speech samples for: MASH, Sewermania, Buck Rogers and Borzork
+V2.3: 19-Dec-2024 by wavemotion-dave
+* Refactored memory allocation to buy back almost 400K of much needed DS RAM (mostly for new speech samples)
+* Added speech samples for: MASH, Sewermania, Buck Rogers and Borzork and added missing samples for Fathom and Microsurgeon.
+* Re-sampled Superfly for improved speech.
+* Minor tweaks and improvements under the hood to get ready for 2025!
 
 V2.2: 15-Dec-2024 by wavemotion-dave
 * Fixed paste of filenames allowing more characters (not just A-Z, 0-9)
