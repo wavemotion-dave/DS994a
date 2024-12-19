@@ -697,6 +697,7 @@ void highscore_display(u32 crc)
         if (keysCurrent() & KEY_Y) highscore_options(foundIdx, crc);
     }
 
+    while (keysCurrent()) WAITVBL; // While any key is pressed...
     InitBottomScreen();
 }
 

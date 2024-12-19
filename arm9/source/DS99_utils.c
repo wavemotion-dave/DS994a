@@ -1133,6 +1133,13 @@ void MapSpaceSpace(void)
     myConfig.keymap[7]   = KBD_SPACE;    // NDS Y Button
 }
 
+void Map123(void)
+{
+    myConfig.keymap[5]   = KBD_2;        // NDS B Button
+    myConfig.keymap[6]   = KBD_1;        // NDS X Button
+    myConfig.keymap[7]   = KBD_3;        // NDS Y Button
+}
+
 void SetDiagonals(void) // Useful for games like Q-Bert
 {
     myConfig.keymap[0]   = JOY1_RIGHT;
@@ -1197,6 +1204,9 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x5a238af2) MapSpaceSpace();// Moon Mine makes heavy use of SPACE
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
+    
+    if (file_crc == 0x2807a67f) Map123();
+    if (file_crc == 0x06da3412) Map123();    
 
     if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
     if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions

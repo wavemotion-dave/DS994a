@@ -835,7 +835,7 @@ void DiskMenu(void)
     }
   }
 
-  while ((keysCurrent() & (KEY_UP | KEY_DOWN | KEY_A ))!=0);
+  while (keysCurrent()) WAITVBL; // While any key is pressed...
   WAITVBL;WAITVBL;
 
   InitBottomScreen();  // Could be generic or overlay...
