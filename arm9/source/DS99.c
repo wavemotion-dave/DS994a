@@ -294,6 +294,7 @@ void setupStream(void)
   mmLoadEffect(SFX_BIG_FALL);
   mmLoadEffect(SFX_BIG_ROAR);
   mmLoadEffect(SFX_BIG_CAW);
+  mmLoadEffect(SFX_BIG_GOTYOU);
   mmLoadEffect(SFX_WELCOMEABOARD);
   mmLoadEffect(SFX_AVOIDMINES);
   mmLoadEffect(SFX_DAMAGEREPAIRED);
@@ -2095,6 +2096,7 @@ static const SpeechTable_t SpeechTable[] =
     {0x6044A6B5,    0x00000000,     0,  SFX_BIG_FALL},              // Bigfoot - Falling noise
     {0x60C97263,    0x00000000,     0,  SFX_BIG_ROAR},              // Bigfoot - Bigfoot Roar
     {0x608272B9,    0x00000000,     0,  SFX_BIG_CAW},               // Bigfoot - Bird Screech
+    {0x60100230,    0x6042173C,     0,  SFX_BIG_GOTYOU},            // Bigfoot - Now I've got you!
 
     {0x60261765,    0x00000000,     0,  SFX_WELCOMEABOARD},         // Star Trek - Welcome Aboard, Captain
     {0x60ABC96A,    0x00000000,     0,  SFX_AVOIDMINES},            // Star Trek - Avoid Mines, Captain
