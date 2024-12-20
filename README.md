@@ -14,11 +14,11 @@ Features :
 * 32K RAM Expansion built-into the base console emulation
 * SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX, Mini-Mem and Super Carts supported with extra RAM. Use Options to select cart type
-* Save and Load State
+* Save and Load State (one slot per game)
 * High score saving for up to 10 scores per game
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
-* Disk Support for DSK1, DSK2 and DSK3 up to 360K each using a modification for the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* Disk Support for DSK1, DSK2 and DSK3 up to 360K each using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * The TI Speech Synth is not fully emulated - but there are built-in speech samples for the following games: Parsec, Alpiner, Moonmine, Buck Rogers, Star Trek, MASH, Bigfoot, Superfly, Microsurgeon, Fathom, Sewermania, and Borzork.
 
 Copyright :
@@ -57,7 +57,7 @@ Credits :
 * Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code plus some helpful consults.
 * Thanks to Pete Eberlein for his help debugging and some great ideas and a bit of code from his upcoming BuLWiP emulator.
 * Thanks to ti99iuc over on AtariAge for the original DS99/4a logo and to StephenJ for the updated 2.0 logo.
-* Thanks to Darryl Hirschler for the TI99 Keyboard Graphic.
+* Thanks to Darryl Hirschler for the TI99 Keyboard Graphics.
 * Thanks to the 99ers over on the AtariAge site for their help in grokking memory layouts and banking schemes as well as testing and providing feedback.
 
 Installation :
@@ -83,8 +83,8 @@ BIOS files should be placed in either /roms/bios (recommended - that's where the
 
 Known Issues :
 -----------------------
-* TI Speech Module is not fully supported yet. Games that rely on the module will still play - many of the classic games have speech samples built into the emulator and will play perfectly (e.g. Alpiner, Parsec, etc)
-* MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine).
+* TI Speech Module is not fully supported. Games that rely on the module will still play fine - and many of the classic games have speech samples built into the emulator and will play and sound just as you remember them (e.g. Alpiner, Parsec, Moonmine, etc)
+* MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine: e.g. Bigfoot, Superfly, etc).
 * Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
 
 
@@ -110,7 +110,7 @@ When you load Tunnels of Doom, it will automatically mount TunnelsOfDoom_1.dsk
 
 For something like Realms of Antiquity you can have:
 
-- roa_8.bin   - The 128K cart
+- roa_8.bin   - The 256K cart
 - roa_1.dsk   - The first disk to mount as DSK1
 - roa_2.dsk   - The second disk to mount as DSK2
 - roa_3.dsk   - The third disk to mount as DSK3
@@ -135,7 +135,16 @@ Be sure to use the START button to save out your configuration options so they p
 
 Emulated Disk Drives :
 -----------------------
-DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. On the DSi, all three disks are fully buffered read/write. On the older DS-Lite/Phat, only the first two drives are fully buffered and read/write. DSK3 is read-only. I'm using the TI99 standard Disk Controller but with a modification to allow up to 360KB drives to be supported. Any writes to disk should be auto-persisted and writen back to the SD card. Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the DS is not perfect. With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around. If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally... this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
+DS994a will support 3 Disk Drives all at up to 360KB as DSK1, DSK2 and DSK3. On the DSi, all three disks are fully buffered read/write. 
+On the older DS-Lite/Phat, only the first two drives are fully buffered and read/write. DSK3 is read-only. 
+I'm using the TI99 standard Disk Controller but with a modification to allow up to 360KB disks to be supported. 
+Any writes to disk should be auto-persisted and written back to the SD card. 
+Please be aware that I've seen the rare glitch when writing to some SD cards - emulation coupled with homebrew libraries for writing the SD on the DS is not perfect. 
+With that in mind, I've added some safeguards... before the write takes place, I rename the original .DSK to .DSK.BAK so it's hanging around.
+If the write fails and freezes up, the next time you boot the emulator and load that disk, it will check if the .DSK.BAK file is around and will revert to that
+as needed (it does mean that you will have lost your last save...). Also, in the DISK MENU you can 'BACKUP DISK' which you should do occasionally...
+this will make a /BAK directory and copy the desired .DSK file into that directory for safe-keeping. Using these precautionary methods, you should be able 
+to work around any potential glitches when writing the disk files back to the SD card. Most users will not run into such issues.
 
 Keyboards and Menus :
 -----------------------
@@ -185,7 +194,7 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 
 How do I play Frogger? :
 -----------------------
-No way to start the game? That's because it utlizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine. Star Trek similarly uses P2 controls and you'll want to map a few other keys for Photon Torpedos and Warp to various DS keys for maximum playability. If you're using a standard ROM for FFrogger, the emulator should auto-set this by default.
+No way to start the game? That's because it utilizes Joystick 2 unlike most every other game. Before the game starts, go into Controller Settings and press the X button to toggle form P1 controls to P2 controls. Save those controls out - the game should work fine. Star Trek similarly uses P2 controls and you'll want to map a few other keys for Photon Torpedos and Warp to various DS keys for maximum play-ability. If you're using a standard ROM for Frogger, the emulator should auto-set this by default.
 
 How do I play Q-Bert? :
 -----------------------
@@ -193,7 +202,10 @@ A few games want you to press diagonals for movement such as Q-Bert. This is a l
 
 How do I play Bigfoot and other MBX games? :
 -----------------------
-Some of the Milton Bradley games use a cart banking scheme known as MBX (they also had a set of peripherals called the MBX System). DS994a needs to be told that a cart is an MBX cart.  Some of the MBX carts had extra memory. So after you select an MBX game like Bigfoot, you must go into GAME OPTIONS and tell it that it's an MBX cart (in this case 'With RAM'). Then the game should play fine. 
+Some of the Milton Bradley games use a cart banking scheme known as MBX (they also had a set of peripherals called the MBX System). 
+DS994a needs to be told that a cart is an MBX cart.  Some of the MBX carts had extra memory. 
+So after you select an MBX game like Bigfoot, you must go into GAME OPTIONS and tell it that it's an MBX cart (in this case 'With RAM'). 
+Then the game should play fine. If you are using a well-curated ROM set, the emulator should auto-detect these settings and run properly without user intervention here.
 
 Blend Mode (DSi) :
 -----------------------
