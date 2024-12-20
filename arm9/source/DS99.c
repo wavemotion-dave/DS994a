@@ -1865,6 +1865,7 @@ static void StartupMemoryAllocation(void)
 int main(int argc, char **argv)
 {
   SharedMemBuffer = malloc(768*1024);   // This is mostly used by the older DS machines for CART and SAMS storage but we steal a bit for DSK3 on the DSi
+  memset(SharedMemBuffer, 0x00, 768*1024);
 
   //  Init sound
   consoleDemoInit();

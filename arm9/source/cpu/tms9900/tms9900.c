@@ -777,17 +777,17 @@ ITCM_CODE void WriteRAM16a(u16 address, u16 data)
     }        
     else
     {
-        if (myConfig.RAMMirrors)
+        if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
         {
-            if (!MemType[address>>4])  // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
-            {
-                *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
-                *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
-                *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
-                *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
-            } // Else fall through and perform normal write below
+            *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
         }
-        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+        else
+        {
+            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+        }
     }
 }
 
@@ -966,7 +966,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 }
                 else
                 {
-                    return (0x40 | 0x20);   // Datisfies the games that look for the module... Bits are empty and buffer low
+                    return (0x40 | 0x20);   // Satisfies the games that look for the module... Bits are empty and buffer low
                 }
                 break;
             case MF_DISK:

@@ -75,7 +75,7 @@ void SAMS_Initialize(void)
     {
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
         SAMS_cru_write(0,0);    // Swap out the "DSR" (the SAMS memory mapped registers are not visible)
-        SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode)
+        SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode which is basically like having a 32K expansion)
         
         if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
     }
