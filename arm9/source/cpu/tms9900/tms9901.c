@@ -113,7 +113,7 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         if (cruAddress & 0xFC00)
         {
-            if ((cruAddress & 0xF80) == 0x880)       // Disk support from >880 to >888 (CRU base >1000)
+            if ((cruAddress & 0xF80) == 0x880)       // Disk support from >880 to >888 (CRU base >1100)
             {
                 disk_cru_write(cruAddress, dataBit);
             }
