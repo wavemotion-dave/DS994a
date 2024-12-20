@@ -19,6 +19,8 @@ extern u32 MAX_CART_SIZE;   // Dynamic buffer size - if DSi we go to 8MB and for
 extern u8  *MemCART;        // The actual cart buffer gets allocated here.
 extern char tmpBuf[256];    // For simple printf-type output and other sundry uses.
 extern u8 fileBuf[0x2000];  // For DSK sector cache, general file I/O and file CRC generation use. Must be at least 8K
+extern u8 *SharedMemBuffer; // A bit of shared memory for the system to use allocated from the heap
+
 
 #define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}
 

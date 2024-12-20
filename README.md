@@ -262,6 +262,7 @@ V2.3: 19-Dec-2024 by wavemotion-dave
 * Added speech samples for: MASH, Sewermania, Buck Rogers and Borzork and added missing samples for Fathom and Microsurgeon.
 * Re-sampled Superfly for improved speech.
 * Minor tweaks and improvements under the hood to get ready for 2025!
+* V2.3a - hot fix for Realms of Antiquity which was no longer loading properly on a DSi system. Sorry about that!
 
 V2.2: 15-Dec-2024 by wavemotion-dave
 * Fixed paste of filenames allowing more characters (not just A-Z, 0-9)

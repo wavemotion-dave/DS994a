@@ -92,7 +92,6 @@ void disk_init(void)
     
     if (isDSiMode())
     {
-        extern u8 SharedMemBuffer[];
         Disk[DSK3].image = SharedMemBuffer; // For DSi we fully buffer 360K for DSK3. The DSi is otherwise not really using the SharedMemBuffer[]
     }
     else
