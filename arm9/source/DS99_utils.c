@@ -1329,7 +1329,7 @@ struct options_t
 const struct options_t Option_Table[2][20] =
 {
     {
-        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD"},                                                                                 &myConfig.overlay,      2},
+        {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD", "ALPHA KBD"},                                                                    &myConfig.overlay,      3},
         {"FRAME SKIP",     {"OFF", "SHOW 3/4", "SHOW 1/2"},                                                                                  &myConfig.frameSkip,    3},
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                    &myConfig.frameBlend,   2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                                    &myConfig.maxSprites,   2},
@@ -1476,7 +1476,7 @@ const struct options_t GlobalOption_Table[] =
     {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
     {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
     {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                  &globalConfig.romsDIR,       3},
-    {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD"},                        &globalConfig.overlay,       2},
+    {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD", "ALPHA KBD"},           &globalConfig.overlay,       3},
     {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
     {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
     {"DEF FRAMESKP",   {"OFF", "ON"},                                           &globalConfig.frameSkip,     2},

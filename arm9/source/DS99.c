@@ -37,6 +37,7 @@
 #include "intro.h"
 #include "ds99kbd.h"
 #include "ti99kbd.h"
+#include "alphakbd.h"
 #include "debug.h"
 #include "options.h"
 #include "splash.h"
@@ -1047,6 +1048,94 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     return META_KEY_NONE;
 }
 
+// The Alpha-Numeric Keyboard has a slightly different layout with some Text-Adventure macros across the top...
+u8 CheckKeyboardInput_alpha(u16 iTy, u16 iTx)
+{
+    if (bShowDebug) return CheckDebugerInput(iTy, iTx);
+
+    // --------------------------------------------------------------------------
+    // Test the touchscreen rendering of the keyboard
+    // --------------------------------------------------------------------------
+    if ((iTy >= 8) && (iTy < 42))        // Row 1 (macro row)
+    {
+        if (key_push_read == key_push_write) // Only process if we have nothing in the macro key queue
+        {
+            if      ((iTx >= 1)   && (iTx < 52))   {KeyPush(TMS_KEY_T);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 52)  && (iTx < 102))  {KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_R);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 102) && (iTx < 152))  {KeyPush(TMS_KEY_L);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_K); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 152) && (iTx < 202))  {KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_X);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_M); KeyPush(TMS_KEY_I);KeyPush(TMS_KEY_N);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 202) && (iTx < 254))  {KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P);KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_N);  KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            WAITVBL;
+        }
+    }
+    else if ((iTy >= 42) && (iTy < 81))        // Row 2 (QWERTY row)
+    {
+        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_E]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_R]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_T]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_Y]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_U]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_I]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 202) && (iTx < 227))  {tms9901.Keyboard[TMS_KEY_O]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 227) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 81) && (iTy < 120))       // Row 3 (ASDF row)
+    {
+        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_D]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_F]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_G]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_H]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_J]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_K]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 202) && (iTx < 227))  {tms9901.Keyboard[TMS_KEY_L]=1;      if (!bKeyClick) bKeyClick=1;}
+        
+        if (key_push_read == key_push_write) // Only process if we have nothing in the macro key queue
+        {
+            if ((iTx >= 227) && (iTx < 254))  {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_S); if (!bKeyClick) bKeyClick=1;}
+            WAITVBL;WAITVBL;
+        }
+    }
+    else if ((iTy >= 120) && (iTy < 159))       // Row 4 (ZXCV row)
+    {
+        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_X]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_C]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_V]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_N]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_M]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 202) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
+    }
+    else if ((iTy >= 159) && (iTy <= 192))       // Row 5 (SPACE BAR row)
+    {
+        if      ((iTx >= 1)   && (iTx < 27))   return META_KEY_ALPHALOCK;
+        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_3]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 102) && (iTx < 200))  {tms9901.Keyboard[TMS_KEY_SPACE]=1;   if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 200) && (iTx < 221))  return MiniMenu();
+        else if ((iTx >= 221) && (iTx < 255))  DiskMenu();
+    }
+
+    // ----------------------------------------------------------------
+    // This is only set to 1 if a normal (non meta) key is pressed...
+    // ----------------------------------------------------------------
+    if (bKeyClick == 1)
+    {
+        mmEffect(SFX_KEYCLICK);  // Play short key click for feedback...
+        bKeyClick = 2;           // No more click - one was enough
+
+        if (handling_meta) handling_meta = 4;   // This will force the meta key to deactivate as soon as nothing is touched on the virtual keyboard screen
+    }
+
+    return META_KEY_NONE;
+}
+
 // ---------------------------------------------------------------------------
 // A streamlined routine to display the frame counter in the upper left.
 // ---------------------------------------------------------------------------
@@ -1237,7 +1326,7 @@ u8 handle_touch_input(void)
     // ---------------------------------
     // Check the Keyboard for input...
     // ---------------------------------
-    u8 meta = CheckKeyboardInput(iTy, iTx);
+    u8 meta = (myConfig.overlay == 2) ? CheckKeyboardInput_alpha(iTy, iTx) : CheckKeyboardInput(iTy, iTx);
 
     switch (meta)
     {
@@ -1689,6 +1778,16 @@ void InitBottomScreen(void)
             decompress(ds99kbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
             dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
             dmaCopy((void*) ds99kbdPal,(void*) BG_PALETTE_SUB,256*2);
+
+            unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
+            dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
+        }
+        else if (myConfig.overlay == 2)  // Alpha Keyboard
+        {
+            decompress(alphakbdTiles, bgGetGfxPtr(bg0b),  LZ77Vram);
+            decompress(alphakbdMap, (void*) bgGetMapPtr(bg0b),  LZ77Vram);
+            dmaCopy((void*) bgGetMapPtr(bg0b)+32*30*2,(void*) bgGetMapPtr(bg1b),32*24*2);
+            dmaCopy((void*) alphakbdPal,(void*) BG_PALETTE_SUB,256*2);
 
             unsigned  short dmaVal = *(bgGetMapPtr(bg1b)+24*32);
             dmaFillWords(dmaVal | (dmaVal<<16),(void*)  bgGetMapPtr(bg1b),32*24*2);
