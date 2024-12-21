@@ -149,14 +149,14 @@ Keyboards and Menus :
 -----------------------
 Two virtual keyboards are supported... both emulate the look and feel of a real TI keyboard. One has a slightly 3D/raised-key look and the other is a more flat look. Experiment and find the one that best suits you - you can set a global default choice in the Global Configuration menu. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
 
-![TI99 Virtual Keyboard](https://github.com/wavemotion-dave/DS994a/blob/main/tikbd.png)
+![TI99 Virtual Keyboard](png/tikbd.png)  ![TI99 Alpha Keyboard](png/alphakbd.png)
 
 Key Mapping :
 -----------------------
 You can map all 12 of the DS keys (ABXY, D-Pad, Start, Select, Left/Right Shoulder Buttons) to any TI key (Joystick 1, Joystick 2 or Keyboard Key). 
 By default the shoulder buttons are used for FCTN and SHIFT which is convienent as there are many games that require the Function keys. You can also press the X key to toggle P1, P2 and Keyboard Game mapping while in the "Configure Keys" area.
 
-![Key Map Screen](https://github.com/wavemotion-dave/DS994a/blob/main/keymaps.bmp)
+![Key Map Screen](png/keymaps.bmp)
 
 There are also some special keys that are always available:
 * Hold Left Shoulder + Right Shoulder + X and you will swap the top/bottom screens.
@@ -179,7 +179,7 @@ Some of the most well-remembered games on the TI99/4a were the Scott Adam's Adve
 * For some adventure games you should enable the ALPHA LOCK key in Game Options or use the ALPHA LOCK key on the TI99 Keyboard.
 * For Tunnels you load the game by selecting 2) DISK and then type in the name of the quest you want to play (usually named just "QUEST" without the DSK1 part). Or you can use the DISK menu to list what's on a disk and paste it in automatically.
 
-![Tunnels of Doom](https://github.com/wavemotion-dave/DS994a/blob/main/tod.bmp)
+![Tunnels of Doom](png/tod.bmp)
 
 How do I play Realms of Antiquity? :
 -----------------------
@@ -189,7 +189,7 @@ In 2020 a new C-RPG was released for the TI99/4a called Realms of Antiquity. A l
 * Using the TI Menu in the upper right... mount DSK1 with ROAGAME.DSK, DSK2 with ROAWORLD12.DSK and DSK3 with ROAWORLD34.DSK
 * Enjoy - save often and make use of the BACKUP DISK to occasionally save off the ROAGAME.DSK (DSK1) into a /bak directory for maximum caution in case something ever goes wrong with writing the master copy.
 
-![Realms of Antiquity](https://github.com/wavemotion-dave/DS994a/blob/main/roa.bmp)
+![Realms of Antiquity](png/roa.bmp)
 
 How do I play Frogger? :
 -----------------------
