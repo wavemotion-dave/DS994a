@@ -147,7 +147,7 @@ to work around any potential glitches when writing the disk files back to the SD
 
 Keyboards and Menus :
 -----------------------
-Two virtual keyboards are supported... both emulate the look and feel of a real TI keyboard. One has a slightly 3D/raised-key look and the other is a more flat look. Experiment and find the one that best suits you - you can set a global default choice in the Global Configuration menu. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. 
+Two virtual keyboards are supported... both emulate the look and feel of a real TI keyboard. One has a slightly 3D/raised-key look and the other is a more flat look. Experiment and find the one that best suits you - you can set a global default choice in the Global Configuration menu. Pressing the TI logo in the upper right will bring up a mini-menu to let you save the game state, exit the game, load up a .DSK image, etc. For Text-Adventure games (such as the Scott Adams Adventure series), a streamlined alpha-keyboard can be used to help with thumb-typing.
 
 ![TI99 Virtual Keyboard](png/tikbd.png)  ![TI99 Alpha Keyboard](png/alphakbd.png)
 
