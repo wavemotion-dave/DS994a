@@ -565,7 +565,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
 
         if(tms9901.CapsLock)
         {
-            DS_Print(2,23,6, "@");
+            DS_Print((myConfig.overlay == 2) ? 23:2,23,6, "@");
             bCapsKeysBlanked = 0;
         }
         else
@@ -573,7 +573,7 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             if (!bCapsKeysBlanked)
             {
                 bCapsKeysBlanked = 1;
-                DS_Print(2,23,2, "@");
+                DS_Print((myConfig.overlay == 2) ? 23:2,23,2, "@");
             }
         }
     }
@@ -1060,65 +1060,65 @@ u8 CheckKeyboardInput_alpha(u16 iTy, u16 iTx)
     {
         if (key_push_read == key_push_write) // Only process if we have nothing in the macro key queue
         {
-            if      ((iTx >= 1)   && (iTx < 52))   {KeyPush(TMS_KEY_T);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 52)  && (iTx < 102))  {KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_R);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 102) && (iTx < 152))  {KeyPush(TMS_KEY_L);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_K); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 152) && (iTx < 202))  {KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_X);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_M); KeyPush(TMS_KEY_I);KeyPush(TMS_KEY_N);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 202) && (iTx < 254))  {KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P);KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_N);  KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            if      ((iTx >= 1)   && (iTx < 53))   {KeyPush(TMS_KEY_T);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 53)  && (iTx < 103))  {KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_R);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 103) && (iTx < 153))  {KeyPush(TMS_KEY_L);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_K); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 153) && (iTx < 203))  {KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_X);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_M); KeyPush(TMS_KEY_I);KeyPush(TMS_KEY_N);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 203) && (iTx < 254))  {KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P);KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_N);  KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
             WAITVBL;
         }
     }
     else if ((iTy >= 42) && (iTy < 81))        // Row 2 (QWERTY row)
     {
-        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_E]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_R]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_T]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_Y]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_U]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_I]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 202) && (iTx < 227))  {tms9901.Keyboard[TMS_KEY_O]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 227) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 28))   {tms9901.Keyboard[TMS_KEY_Q]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 28)  && (iTx < 53))   {tms9901.Keyboard[TMS_KEY_W]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 53)  && (iTx < 78))   {tms9901.Keyboard[TMS_KEY_E]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 78)  && (iTx < 103))  {tms9901.Keyboard[TMS_KEY_R]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 103) && (iTx < 128))  {tms9901.Keyboard[TMS_KEY_T]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 128) && (iTx < 153))  {tms9901.Keyboard[TMS_KEY_Y]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 153) && (iTx < 178))  {tms9901.Keyboard[TMS_KEY_U]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 178) && (iTx < 203))  {tms9901.Keyboard[TMS_KEY_I]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 203) && (iTx < 228))  {tms9901.Keyboard[TMS_KEY_O]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 228) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_P]=1;      if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 81) && (iTy < 120))       // Row 3 (ASDF row)
     {
-        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_D]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_F]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_G]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_H]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_J]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_K]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 202) && (iTx < 227))  {tms9901.Keyboard[TMS_KEY_L]=1;      if (!bKeyClick) bKeyClick=1;}
-        
+        if      ((iTx >= 1)   && (iTx < 28))   {tms9901.Keyboard[TMS_KEY_A]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 28)  && (iTx < 53))   {tms9901.Keyboard[TMS_KEY_S]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 53)  && (iTx < 78))   {tms9901.Keyboard[TMS_KEY_D]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 78)  && (iTx < 103))  {tms9901.Keyboard[TMS_KEY_F]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 103) && (iTx < 128))  {tms9901.Keyboard[TMS_KEY_G]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 128) && (iTx < 153))  {tms9901.Keyboard[TMS_KEY_H]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 153) && (iTx < 178))  {tms9901.Keyboard[TMS_KEY_J]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 178) && (iTx < 203))  {tms9901.Keyboard[TMS_KEY_K]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 203) && (iTx < 228))  {tms9901.Keyboard[TMS_KEY_L]=1;      if (!bKeyClick) bKeyClick=1;}
         if (key_push_read == key_push_write) // Only process if we have nothing in the macro key queue
         {
-            if ((iTx >= 227) && (iTx < 254))  {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_S); if (!bKeyClick) bKeyClick=1;}
+            if ((iTx >= 228) && (iTx < 254))  {KeyPush(TMS_KEY_FUNCTION);KeyPush(TMS_KEY_S); if (!bKeyClick) bKeyClick=1;}
             WAITVBL;WAITVBL;
         }
     }
     else if ((iTy >= 120) && (iTy < 159))       // Row 4 (ZXCV row)
     {
-        if      ((iTx >= 1)   && (iTx < 27))   {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_X]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_C]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_V]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 102) && (iTx < 127))  {tms9901.Keyboard[TMS_KEY_B]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 127) && (iTx < 152))  {tms9901.Keyboard[TMS_KEY_N]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 152) && (iTx < 177))  {tms9901.Keyboard[TMS_KEY_M]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 177) && (iTx < 202))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 202) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
+        if      ((iTx >= 1)   && (iTx < 28))   {tms9901.Keyboard[TMS_KEY_Z]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 28)  && (iTx < 53))   {tms9901.Keyboard[TMS_KEY_X]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 53)  && (iTx < 78))   {tms9901.Keyboard[TMS_KEY_C]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 78)  && (iTx < 103))  {tms9901.Keyboard[TMS_KEY_V]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 103) && (iTx < 128))  {tms9901.Keyboard[TMS_KEY_B]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 128) && (iTx < 153))  {tms9901.Keyboard[TMS_KEY_N]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 153) && (iTx < 178))  {tms9901.Keyboard[TMS_KEY_M]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 178) && (iTx < 203))  {tms9901.Keyboard[TMS_KEY_PERIOD]=1; if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 203) && (iTx < 254))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
     }
     else if ((iTy >= 159) && (iTy <= 192))       // Row 5 (SPACE BAR row)
     {
-        if      ((iTx >= 1)   && (iTx < 27))   return META_KEY_ALPHALOCK;
-        else if ((iTx >= 27)  && (iTx < 52))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 52)  && (iTx < 77))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 77)  && (iTx < 102))  {tms9901.Keyboard[TMS_KEY_3]=1;      if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 102) && (iTx < 200))  {tms9901.Keyboard[TMS_KEY_SPACE]=1;   if (!bKeyClick) bKeyClick=1;}
-        else if ((iTx >= 200) && (iTx < 221))  return MiniMenu();
+             if ((iTx >= 0)   && (iTx < 21))   {tms9901.Keyboard[TMS_KEY_1]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 21)  && (iTx < 40))   {tms9901.Keyboard[TMS_KEY_2]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 40)  && (iTx < 59))   {tms9901.Keyboard[TMS_KEY_3]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 59)  && (iTx < 78))   {tms9901.Keyboard[TMS_KEY_4]=1;      if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 78)  && (iTx < 179))  {tms9901.Keyboard[TMS_KEY_SPACE]=1;  if (!bKeyClick) bKeyClick=1;}
+        else if ((iTx >= 179) && (iTx < 201))  return META_KEY_ALPHALOCK;
+        else if ((iTx >= 201) && (iTx < 221))  return MiniMenu();
         else if ((iTx >= 221) && (iTx < 255))  DiskMenu();
     }
 
