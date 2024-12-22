@@ -31,17 +31,33 @@
 #include "../tms9918a/tms9918a.h"
 #include "../sn76496/SN76496.h"
 
+// ---------------------------------------------------------
+// Memory map for the TI-99/4a:
+// ---------------------------------------------------------
+// 0000 - 1FFF     Console ROM
+// 2000 - 3FFF     (8K, low memory expansion)
+// 4000 - 5FFF     Peripheral card ROM (whichever one swapped in)
+// 6000 - 7FFF     Cartridge ROM (module port), Sometimes SuperSpace RAM
+// 8000 - 83FF     Scratchpad RAM (256 bytes, mirrored)
+// 8400 - 87FF     TI Sound chip write
+// 8800 - 8BFF     VDP Read   (8800 read, 8802 status)
+// 8C00 - 8FFF     VDP Write  (8C00 data, 8C02 address)
+// 9000 - 93FF     Speech Synth read
+// 9400 - 97FF     Speech Synth write
+// 9800 - 9BFF     GROM Read  (9800 read, 9802 read addr+1)
+// 9C00 - 9FFF     GROM Write (9C00 data, 9C02 address)
+// A000 - FFFF     (24K, high memory expansion)
+
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
 // -------------------------------------------------------------------
 u8      MemCPU[0x10000];            // 64K of CPU Space  (the lower 8K will contain the system console ROM)
 u8      MemGROM[0x10000];           // 64K of GROM Space (the lower 24K will contain system GROMs)
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
-u8      SwapCartBuffer[0x2000];     // 8K of memory to allow us to swap banks (for inverted carts, 12K paging, etc)
 
-u8      *MemCART  __attribute__((section(".dtcm")));    // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
+u8     *MemCART  __attribute__((section(".dtcm")));     // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
 u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSI will bump this to 8MB)
-        
+
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
 #define OpcodeLookup            ((u16*)0x06820000)   // We use 128K of semi-fast VDP memory to help with the OpcodeLookup[] lookup table (normally VRAM_B)
@@ -437,9 +453,9 @@ void TMS9900_Reset(void)
     // Now mark off the memory hotspots where we need to take special action on
     // read/write plus all of the possible mirrors, etc. that can be used...
     // ------------------------------------------------------------------------------
-    for (u16 address = 0x8400; address < 0x8600; address += 2)
+    for (u16 address = 0x8400; address < 0x8800; address += 2)
     {
-        MemType[address>>4] = MF_SOUND;   // TI Sound Chip responds to any even address between >8400 and >85EF
+        MemType[address>>4] = MF_SOUND;   // TI Sound Chip responds to any even address between >8400 and >87FE
     }
 
     for (u16 address = 0x8800; address < 0x8C00; address += 4)
@@ -656,10 +672,11 @@ void WriteGROM(u8 data)
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
-// At one time I was using memcpy() to put the bank into the right spot into the MemCPU[] which is GREAT when you want to read (simplifies
-// the memory access) but sucks if there is a lot of bank switching going on... turns out carts like Donkey Kong and Dig Dug were doing a
-// ton of bankswitches and the memory copy was too slow to render those games... so we have to do this using a cart offset which is fast
-// enough to render those games full-speed but does mean our memory reads and PC fetches are a little more complicated...
+// TI carts bank with writes to the ROM area at >6000 and up (e.g. write to >6000 is bank 0, write to >6002 is bank 1, write to >6004 is 
+// bank 3,etc). At one time I was using memcpy() to put the bank into the right spot into the MemCPU[] which is GREAT when you want to read
+// (simplifies the memory access) but sucks if there is a lot of bank switching going on... turns out carts like Donkey Kong and Dig Dug 
+// were doing a ton of bankswitches and the memory copy was too slow to render those games... so we have to do this using a cart offset 
+// which is fast enough to render those games full-speed but does mean our memory reads and PC fetches are a little more complicated...
 //
 // Anyway... the maximum cart size that can be supported by this traditional banking scheme is (8192 / 2 = 4096 banks of 8K or 32MB!).
 // That's huge - larger than all of the available 16MB of RAM on a DSi and way bigger than the 4MB of RAM on a DS-Lite/Phat. We don't 
@@ -667,11 +684,15 @@ void WriteGROM(u8 data)
 // -------------------------------------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) void WriteBank(u16 address)
 {
-    u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
-    bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
-    tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
-    if (bank == 0) tms9900.cartBankPtr = &MemCPU[0x6000];   // Bank 0 can just point back into the main memory which always has bank 0 ROM
-    else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // And point to the right place in memory for cart fetches
+    // If we are PAGEDCRU, a write to ROM should do nothing... Red Baron appears to hit the ROM for reasons unknown.
+    if (myConfig.cartType != CART_TYPE_PAGEDCRU)
+    {
+        u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
+        bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
+        tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
+        if (bank == 0) tms9900.cartBankPtr = &MemCPU[0x6000];   // Bank 0 can just point back into the main memory which always has bank 0 ROM
+        else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // And point to the right place in memory for cart fetches
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -688,6 +709,16 @@ inline __attribute__((always_inline)) void WriteBankMBX(u8 bank)
 // ------------------------------------------------------------------------------
 // For the few carts that use CRU banking... does not need to be in fast memory.
 // This is mainly DataBiotics carts (2-8 banks) and Super Carts (only 4 banks).
+// This CRU cart bank logic is borrowed from MAME and produces this map:
+//   Bank     Writing '1' to CRU Address...
+//     0      '1' written to >802  (>401 as we've already shifted down)
+//     1      '1' written to >806  (>403 as we've already shifted down)
+//     2      '1' written to >80A  (>405 as we've already shifted down)
+//     3      '1' written to >80E  (>407 as we've already shifted down)
+//     4      '1' written to >812  (>409 as we've already shifted down)
+//     5      '1' written to >816  (>40B as we've already shifted down)
+//     6      '1' written to >81A  (>40D as we've already shifted down)
+//     7      '1' written to >81E  (>40F as we've already shifted down)
 // ------------------------------------------------------------------------------
 u8 cart_cru_shadow[16] = {0};
 void cart_cru_write(u16 cruAddress, u8 dataBit)  
@@ -699,6 +730,7 @@ void cart_cru_write(u16 cruAddress, u8 dataBit)
         if ((cruAddress > 0) && (dataBit != 0)) // Is the bit ON and we are above the base address?
         {
             u8 bank = (cruAddress-1)/2;                         // Swap in the new bank - logic borrowed from MAME
+            bank &= tms9900.bankMask;                           // Mask the 8K bank within the size of the ROM
             tms9900.bankOffset = (bank*0x2000);                 // Keep this up to date for SAVE/LOAD state
             tms9900.cartBankPtr = MemCART+tms9900.bankOffset;   // And point to the right place in memory for cart fetches
         }
@@ -1025,6 +1057,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 break;
             case MF_MBX:
                 if (address >= 0x6ffe) WriteBankMBX(data>>8);
+                // We purposely don't use an 'else' here as the banking 'register' at >6ffe is also in the RAM area if this cart is mapped as MBX with RAM
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) // If it's got RAM mapped here... we treat it like RAM8
                 {
                     MemCPU[address] = (data>>8);

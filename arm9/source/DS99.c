@@ -189,8 +189,70 @@ void SoundUnPause(void)
 #define sample_rate  27965      // To match the driver in sn76496 - this is good enough quality for the DS
 #define buffer_size  (512+12)   // Enough buffer that we don't have to fill it too often
 
-mm_ds_system sys  __attribute__((section(".dtcm")));
-mm_stream myStream __attribute__((section(".dtcm")));
+mm_ds_system    sys      __attribute__((section(".dtcm")));
+mm_stream       myStream __attribute__((section(".dtcm")));
+
+// -----------------------------------------------------------------------------------
+// For Wave Direct sampling, we sample every scanline and place into a buffer so that
+// when the system calls OurSoundMixer(), we have samples we can load up and play...
+// -----------------------------------------------------------------------------------
+#define WAVE_DIRECT_BUF_SIZE 0x7FF
+u16 wave_mixer_read=0;
+u16 wave_mixer_write=0;
+s16 wave_mixer[WAVE_DIRECT_BUF_SIZE+1];
+u8  wave_direct_skip=0;
+s16 wave_breather = 0;
+s16 wave_mixbuf[16];
+
+// -------------------------------------------------------------------------
+// For direct sampling, this tells us for a given scanline how many samples
+// to process... this gets us to the magic sample_rate. Crude but effective.
+// -------------------------------------------------------------------------
+u8 wave_direct_sample_table[256] = 
+{
+  2,1,2,2,2,2,1,2,     2,2,1,2,2,2,2,2,
+  2,2,1,2,2,2,1,2,     2,2,2,1,2,2,2,1,
+  2,2,2,1,2,2,2,2,     2,1,2,2,1,2,2,2,
+  2,2,2,2,1,2,2,2,     2,2,2,2,2,1,2,2,
+
+  2,2,1,2,2,1,2,2,     2,2,2,1,2,2,1,2,
+  2,2,2,2,2,2,1,2,     2,1,2,2,2,2,2,1,
+  2,2,2,2,2,2,2,1,     1,2,2,2,2,2,2,2,
+  1,2,2,2,2,2,2,2,     2,1,2,2,2,2,1,2,
+
+  2,1,2,2,2,1,2,2,     2,2,2,2,2,2,1,2,
+  2,2,2,2,2,2,1,2,     2,1,2,2,2,1,2,1,
+  2,2,2,2,2,2,2,1,     1,2,2,1,2,2,2,2,
+  1,2,2,2,2,1,2,2,     2,1,2,2,2,2,2,1,
+
+  2,1,2,2,2,2,2,2,     2,2,1,2,2,2,1,2,
+  2,2,1,2,2,2,2,2,     2,1,2,1,2,2,2,1,
+  2,2,2,1,2,2,2,2,     2,2,2,2,1,2,2,2,
+  2,2,2,2,1,2,2,2,     2,1,2,2,2,1,2,2,
+};
+
+// -------------------------------------------------------------------------------------------------
+// This is called when we are configured for 'Wave Direct' and will process samples to synchronize
+// with the scanline processing. This is not as smooth as the normal sound driver and takes more
+// CPU power but will help render sound those few games that utilize digitize speech techniques.
+// -------------------------------------------------------------------------------------------------
+void processDirectAudio(void)
+{
+    int len = wave_direct_sample_table[wave_direct_skip++];
+
+    sn76496Mixer(len*2, wave_mixbuf, &snti99);
+    if (wave_breather) {return;}
+    for (int i=0; i<len*2; i++)
+    {
+        // ------------------------------------------------------------------------
+        // We normalize the samples and mix them carefully to minimize clipping...
+        // ------------------------------------------------------------------------
+        wave_mixer[wave_mixer_write] = (s16)wave_mixbuf[i];
+        wave_mixer_write++; wave_mixer_write &= WAVE_DIRECT_BUF_SIZE;
+        if (((wave_mixer_write+1)&WAVE_DIRECT_BUF_SIZE) == wave_mixer_read) {wave_breather = (WAVE_DIRECT_BUF_SIZE+1) >> 1; break;}
+    }
+}
+
 
 // -------------------------------------------------------------------------------------------
 // maxmod will call this routine when the buffer is half-empty and requests that
@@ -207,6 +269,18 @@ ITCM_CODE mm_word OurSoundMixer(mm_word len, mm_addr dest, mm_stream_formats for
         {
            *p++ = last_sample;      // To prevent pops and clicks... just keep outputting the last sample
         }
+    }
+    else if (myConfig.sounddriver == 2) // Wave Direct
+    {
+        s16 *p = (s16*)dest;
+        for (int i=0; i<len*2; i++)
+        {
+            if (wave_breather) {wave_breather--;}
+            if (wave_mixer_read == wave_mixer_write) processDirectAudio();
+            *p++ = wave_mixer[wave_mixer_read];
+            wave_mixer_read++; wave_mixer_read &= WAVE_DIRECT_BUF_SIZE;
+        }
+        p--; last_sample = *p;
     }
     else
     {
@@ -381,7 +455,7 @@ void setupStream(void)
 void dsInstallSoundEmuFIFO(void)
 {
   SoundPause();
-
+  
   //  ------------------------------------------------------------------
   //  The SN sound chip is for normal TI99 sound handling
   //  ------------------------------------------------------------------
@@ -430,6 +504,11 @@ void ResetTI(void)
   sn76496W(0x90 | 0x0F  ,&snti99);       //  Write new Volume for Channel A (off)
   sn76496W(0xB0 | 0x0F  ,&snti99);       //  Write new Volume for Channel B (off)
   sn76496W(0xD0 | 0x0F  ,&snti99);       //  Write new Volume for Channel C (off)
+  
+  // For the direct sound driver...
+  memset(wave_mixer,   0x00, sizeof(wave_mixer));
+  wave_mixer_read=0;
+  wave_mixer_write=0;
 
   // -----------------------------------------------------------
   // Timer 1 is used to time frame-to-frame of actual emulation
@@ -2264,7 +2343,7 @@ static const SpeechTable_t SpeechTable[] =
 void WriteSpeechData(u8 data)
 {
     static u32 prev_speechData32 = 0x00000000;
-    if (myConfig.noExtSpeech) return;
+    if (myConfig.sounddriver == 1) return; // Check if the Speech Module is disabled...
 
     // Reading Address 0 from the Speech ROM
     if ((speechData32 == 0x40404040) && (data == 0x10))

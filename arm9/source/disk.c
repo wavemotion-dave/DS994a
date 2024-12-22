@@ -437,7 +437,7 @@ void disk_unmount(u8 drive)
     }
 }
 
-ITCM_CODE void disk_read_from_sd(u8 drive)
+void disk_read_from_sd(u8 drive)
 {
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
@@ -457,7 +457,7 @@ ITCM_CODE void disk_read_from_sd(u8 drive)
     }
 }
 
-ITCM_CODE void disk_write_to_sd(u8 drive)
+void disk_write_to_sd(u8 drive)
 {
     // Only DSK1 and DSK2 support write-back on DS-Lite/Phat
     if (isDSiMode() || (drive != DSK3))

@@ -102,7 +102,6 @@ enum _OPCODES
 extern u8   MemCPU[];
 extern u8   MemGROM[];
 extern u8   DiskDSR[];
-extern u8   SwapCartBuffer[];
 extern u8   MemType[];
 extern u16  BankMasks[];
 

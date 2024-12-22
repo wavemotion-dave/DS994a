@@ -222,9 +222,9 @@ u8 TI99Init(char *szGame)
                     for (u16 i=0; i<numCartBanks/2; i++)
                     {
                         // Swap 8k bank...
-                        memcpy(SwapCartBuffer, MemCART + (i*0x2000), 0x2000);
+                        memcpy(fileBuf, MemCART + (i*0x2000), 0x2000);
                         memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
-                        memcpy(MemCART + ((numCartBanks-i-1)*0x2000), SwapCartBuffer, 0x2000);
+                        memcpy(MemCART + ((numCartBanks-i-1)*0x2000), fileBuf, 0x2000);
                     }
                 }
             }

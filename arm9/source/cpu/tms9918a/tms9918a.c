@@ -784,6 +784,13 @@ ITCM_CODE byte Loop9918(void)
   extern void TI99UpdateScreen(void);
   register byte bIRQ;
 
+  // Wave Direct - for games that need this (e.g. Dragon's Lair Demo, Ghostbusters), we sample audio every scanline
+  if (myConfig.sounddriver == 2)
+  {
+      void processDirectAudio(void);
+      processDirectAudio();
+  }
+
   /* No IRQ yet */
   bIRQ=0;
 

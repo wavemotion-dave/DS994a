@@ -85,7 +85,8 @@ Known Issues :
 -----------------------
 * TI Speech Module is not fully supported. Games that rely on the module will still play fine - and many of the classic games have speech samples built into the emulator and will play and sound just as you remember them (e.g. Alpiner, Parsec, Moonmine, etc)
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine: e.g. Bigfoot, Superfly, etc).
-* Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output.
+* Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output perfectly. Any imperfections in sound are on my emulator and not the fantastic work of Tursi.
+* Sound in Red Baron is not correct. Engine Idle is extremely high pitched.
 
 File Types Supported :
 -----------------------

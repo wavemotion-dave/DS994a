@@ -99,6 +99,26 @@ void TMS9901_Reset(void)
 // as needed to clock out one or more bits (up to the full 16 bits) to the CRU. The CPU
 // calls that bring us here will already have shifted down the cruAddress so we're dealing
 // with 0-31 for the main CRU bits.
+//
+// The following is the typical TI-99/4a use of CRU address ranges:
+//      0000-07FE   Internal Use (the 32 main CRU bits are mapped here - mirrored)
+//      0800-0FFE   Reserved (CRU paging uses this... SuperSpace II and Databiotics carts)
+//      1000-10FE   Horizon RAMDisk or IDE Harddisk
+//      1100-11FE   Disk Controller
+//      1200-12FE   Reserved
+//      1300-13FE   RS-232 (Primary)
+//      1400-14FE   Unassigned 
+//      1500-15FE   RS-232 (Secondary)
+//      1600-16FE   Unassigned
+//      1700-17FE   HEX-BUS Interface
+//      1800-18FE   Thermal Printer
+//      1900-19FE   Reserved
+//      1A00-1AFE   Unassigned
+//      1B00-1BFE   Unassigned
+//      1C00-1CFE   Video Controller Card
+//      1D00-1DFE   IEEE 488 Bus Controller Card
+//      1E00-1EFE   Unassigned
+//      1F00-1FFE   P-Code Card
 // -----------------------------------------------------------------------------------------
 ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
 {
@@ -113,20 +133,20 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         if (cruAddress & 0xFC00)
         {
-            if ((cruAddress & 0xF80) == 0x880)       // Disk support from >880 to >888 (CRU base >1100)
+            if ((cruAddress & 0xF80) == (0x1100 >> 1))       // Disk support at CRU base >1100
             {
                 disk_cru_write(cruAddress, dataBit);
             }
-            else if ((cruAddress & 0xFFE) == 0xF00)  // SAMS support at >F00 and >F01 (CRU base >1E00)
+            else if ((cruAddress & 0xFFE) == (0x1E00 >> 1))  // SAMS support at CRU base >1E00
             {
                 SAMS_cru_write(cruAddress, dataBit);
             }
-            else if ((cruAddress & 0xF80) == 0x400)  // Cart-based CRU bankswitching... (CRU base >800)
+            else if ((cruAddress & 0xF80) == (0x800 >> 1))   // Cart-based CRU bankswitching at CRU base >800
             {
                 cart_cru_write(cruAddress, dataBit);
             }
         }
-        else  // This is the internal console CRU bits below CRU base >400... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
+        else  // This is the internal console CRU bits below CRU base >800... the famous 32 CRU bits that must be handled in either TIMER mode or IO mode.
         {
             u8 cruA = cruAddress & 0x1F; // Map down to 32 bits...
             

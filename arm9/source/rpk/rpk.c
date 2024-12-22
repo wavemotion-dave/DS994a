@@ -408,9 +408,9 @@ u8 rpk_load_paged379i(void)
             // Swap all 8k banks... this cart is inverted and this will make the page selecting work
             for (u16 i=0; i<numCartBanks/2; i++)
             {
-                memcpy(SwapCartBuffer, MemCART + (i*0x2000), 0x2000);
+                memcpy(fileBuf, MemCART + (i*0x2000), 0x2000);
                 memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
-                memcpy(MemCART + ((numCartBanks-i-1)*0x2000), SwapCartBuffer, 0x2000);
+                memcpy(MemCART + ((numCartBanks-i-1)*0x2000), fileBuf, 0x2000);
             }
 
             memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
@@ -426,9 +426,9 @@ u8 rpk_load_paged379i(void)
 u8 rpk_load_pagedcru(void)
 {
     u8 err = 0;
-
-    tms9900.bankMask = 0x0000;  // Paged CRU does not use traditional banking
-
+    
+    tms9900.bankMask = 0x0000;  // Paged CRU does not use traditional banking but we still need to mask it - see below.
+    
     // ------------------------------------------------------------------------------------
     // For each ROM in our layout we load it in to the appopriate CPU/GROM memory area...
     // ------------------------------------------------------------------------------------
@@ -444,6 +444,9 @@ u8 rpk_load_pagedcru(void)
                 {
                     memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // This cart gets loaded directly into main memory
                     myConfig.cartType = CART_TYPE_PAGEDCRU;
+                    
+                    u16 numCartBanks = (fileinfo->uncompressed_size / 0x2000) + ((fileinfo->uncompressed_size % 0x2000) ? 1:0);
+                    tms9900.bankMask = BankMasks[numCartBanks-1];   // Ensure we mask to the size of the uncompressed ROM
                 } else err = 1;
             } else err = 1;
         }
