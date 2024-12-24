@@ -38,6 +38,7 @@ extern u8 TICC_DIR;
 extern u8 bDiskDeviceInstalled;
 extern u8 diskSideSelected;
 extern u8 driveSelected;
+extern u8 motorOn;
 
 extern void disk_init(void);
 extern u8   ReadTICCRegister(u16 address);

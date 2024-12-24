@@ -102,8 +102,11 @@ enum _OPCODES
 extern u8   MemCPU[];
 extern u8   MemGROM[];
 extern u8   DiskDSR[];
-extern u8   MemType[];
 extern u16  BankMasks[];
+extern u8   MemType[0x10000>>4];
+
+extern u8 cart_cru_shadow[16];
+extern u8 super_bank;
 
 // ----------------------------------------------------------------------------
 // The entire state of the TMS9900 so we can easily save/load for save states.
@@ -206,6 +209,10 @@ enum _STATUS_FLAGS
 // Any memory access to a non-zero value here will incur a timing pentalty. This pentalty is also
 // incurred by the VDP which is technically on the 16-bit bus but is wired to the high byte (which 
 // I guess incurs the pentaly... though I'm unsure why... we follow Classic99 timing here...)
+//
+// Be careful if you change this table as we save out the MemTypes[] as part of the Save State
+// in case we have mapped in/out some DSR specific registers... the reserved spots can be 
+// repurposed in the future to add more memory types / register access for other peripherals.
 // -------------------------------------------------------------------------------------------------
 enum _MEM_TYPE
 {
@@ -217,13 +224,19 @@ enum _MEM_TYPE
     MF_CART_NB,     // This is non-banked TI Cart access at >6000
     MF_VDP_R,       // This is the TMS9918a Video chip access - Read
     MF_VDP_W,       // This is the TMS9918a Video chip access - Write
-    MF_DISK,        // This is the TI Disk Controller
-    MF_GROMR,       // This is the TMS9918a GROM read access
-    MF_GROMW,       // This is the TMS9918a GROM write access
+    MF_GROMR,       // This is the system GROM read access
+    MF_GROMW,       // This is the system GROM write access
     MF_SAMS,        // This is the SAMS memory expanded access registers at >4000
     MF_SAMS8,       // This is RAM8 except that it's banked into a larger SAMS memory pool
     MF_MBX,         // This is the MBX register that causes a bank switch at >7000
     MF_PERIF,       // This is the Peripheral ROM space (Disk Controller DSR)
+    MF_DISK,        // This is the TI Disk Controller Registers
+    MF_RES1,        // Reserved for future use...
+    MF_RES2,        // Reserved for future use...
+    MF_RES3,        // Reserved for future use...
+    MF_RES4,        // Reserved for future use...
+    MF_RES5,        // Reserved for future use...
+    MF_RES6,        // Reserved for future use...
     MF_UNUSED,      // This is some unused memory space... will return 0xFF (or, really, whatever was left in the MemCPU[] buffer at that address)
 };
 

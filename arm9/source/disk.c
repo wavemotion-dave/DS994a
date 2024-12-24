@@ -3,8 +3,8 @@
 // very simplified DSK support. We utilize the TI99 Disk Controller
 // DSR along with support for simple 90K, 180K and 360K raw sector disks.
 // This should be enough to load up Scott Adam's Adventure Games 
-// and Tunnels of Doom quests.  Despite the heavy similification
-// and porting of the code, Mike's original copyright remains below:
+// and Tunnels of Doom quests.  Despite the heavy similification and
+// porting of the code to the DS, Mike's original copyright remains below:
 //
 //
 // (C) 2013 Mike Brent aka Tursi aka HarmlessLion.com
@@ -64,6 +64,7 @@ u8 TICC_DIR=0;   // 0 means towards track 0
 u8 bDiskDeviceInstalled  = 0;       // DSR installed or not installed... We don't do much with this yet.
 u8 diskSideSelected      = 0;       // Side 0 or Side 1
 u8 driveSelected         = DSK1;    // We support DSK1, DSK2 and DSK3
+u8 motorOn               = 0;       // 1=Motor On (Enabled/Strobed)
 
 Disk_t Disk[MAX_DSKS];              // Contains all the Disk sector data plus some metadata for DSK1, DSK2 and DSK3
 u8 Disk1_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
@@ -92,12 +93,17 @@ void disk_init(void)
     
     if (isDSiMode())
     {
-        Disk[DSK3].image = SharedMemBuffer; // For DSi we fully buffer 360K for DSK3. The DSi is otherwise not really using the SharedMemBuffer[]
+        Disk[DSK3].image = SharedMemBuffer; // For DSi we fully buffer 360K for DSK3. The DSi is otherwise not using the SharedMemBuffer[]
     }
     else
     {
         Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us valuable memory on the older handhelds.
     }
+    
+    bDiskDeviceInstalled  = 0;
+    diskSideSelected      = 0;
+    driveSelected         = DSK1;
+    motorOn               = 0;
 }
 
 // ------------------------------------------------------
@@ -108,14 +114,14 @@ u8 disk_cru_read(u16 address)
 {
     switch (address & 0x07)
     {
-        case 0:     return 0;
-        case 1:     return ((driveSelected == DSK1) ? 1:0);
-        case 2:     return ((driveSelected == DSK2) ? 1:0);
-        case 3:     return ((driveSelected == DSK3) ? 1:0);
-        case 4:     return 0;
-        case 5:     return 0;
-        case 6:     return 1;
-        case 7:     return (diskSideSelected ? 1:0);
+        case 0:     return 0;                                   // Is Head Load Requested
+        case 1:     return ((driveSelected == DSK1) ? 1:0);     // Is drive DSK1 selected
+        case 2:     return ((driveSelected == DSK2) ? 1:0);     // Is drive DSK2 selected
+        case 3:     return ((driveSelected == DSK3) ? 1:0);     // Is drive DSK3 selected
+        case 4:     return !motorOn;                            // Is Motor On/Enabled/Strobed (inverted)
+        case 5:     return 0;                                   // Always 0
+        case 6:     return 1;                                   // Always 1
+        case 7:     return (diskSideSelected ? 1:0);            // Disk Side Selected (1 or 0)
     }
     return 0;
 }
@@ -135,14 +141,18 @@ void disk_cru_write(u16 address, u8 data)
             {
                 // The Disk Controller DSR is visible
                 memcpy(&MemCPU[0x4000], DISK_DSR, 0x2000);
+                MemType[0x5ff0>>4] = MF_DISK;     // Disk Control registers ARE visible
             }
             else
             {
                 // The Disk Controller DSR is not visible
                 memset(&MemCPU[0x4000], 0xFF, 0x2000);
+                MemType[0x5ff0>>4] = MF_PERIF;     // Disk Control registers NOT visible
             }
             break;
-            
+        case 1:
+            motorOn = data;  // If enabled, strobe motor for 4.23 seconds... we just track motor on/off
+            break;
         case 4:     // select drive 1
         case 5:     // select drive 2
         case 6:     // select drive 3
@@ -294,15 +304,17 @@ void WriteTICCRegister(u16 address, u8 val)
 // This is where the magic happens.. this ruotine is called to handle a sector and is done cleverly by way of 
 // looking at when the PC counter is at >40E8 whcih is the TI disk controller DSR's entry to handle sector
 // reads and writes. In this way we can utilize the existing TI disk controller DSR and just handle the actual
-// sector read/write. This allows us up to the standard 1600 bits x 256 sectors or 400K of disk space. We limit
-// to 360K which is the sort of standard Double-Sided Double-Density drive. If we wanted to go beyond this limit
-// we would have to switch to a different disk controller DSR or create our own. This shouldn't be much of a
+// sector read/write. This DSR allows us up to the standard 1600 bits x 256 sectors or 400K of disk space. We
+// limit to 360K which is the sort of standard Double-Sided Double-Density drive. If we wanted to go beyond 
+// this limit we would switch to a different disk controller DSR or create our own. This shouldn't be much of a
 // problem as virtually anything that has come out on disk for the TI99 will run on a 360K or smaller floppy.
 // ----------------------------------------------------------------------------------------------------------------
  void HandleTICCSector(void)
 {
     bool success = true;
     extern u8 pVDPVidMem[];
+    
+    if (!bDiskDeviceInstalled) return; // We hit the correct PC counter but the DSR wasn't swapped in so ignore it...
     
     if (driveSelected != 1 && driveSelected != 2  && driveSelected != 3) // We only support DSK1, DSK2 or DSK3
     {

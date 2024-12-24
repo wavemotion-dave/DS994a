@@ -787,7 +787,6 @@ ITCM_CODE byte Loop9918(void)
   // Wave Direct - for games that need this (e.g. Dragon's Lair Demo, Ghostbusters), we sample audio every scanline
   if (myConfig.sounddriver == 2)
   {
-      void processDirectAudio(void);
       processDirectAudio();
   }
 

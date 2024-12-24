@@ -101,24 +101,24 @@ void TMS9901_Reset(void)
 // with 0-31 for the main CRU bits.
 //
 // The following is the typical TI-99/4a use of CRU address ranges:
-//      0000-07FE   Internal Use (the 32 main CRU bits are mapped here - mirrored)
-//      0800-0FFE   Reserved (CRU paging uses this... SuperSpace II and Databiotics carts)
-//      1000-10FE   Horizon RAMDisk or IDE Harddisk
-//      1100-11FE   Disk Controller
-//      1200-12FE   Reserved
-//      1300-13FE   RS-232 (Primary)
-//      1400-14FE   Unassigned 
-//      1500-15FE   RS-232 (Secondary)
-//      1600-16FE   Unassigned
-//      1700-17FE   HEX-BUS Interface
-//      1800-18FE   Thermal Printer
-//      1900-19FE   Reserved
-//      1A00-1AFE   Unassigned
-//      1B00-1BFE   Unassigned
-//      1C00-1CFE   Video Controller Card
-//      1D00-1DFE   IEEE 488 Bus Controller Card
-//      1E00-1EFE   Unassigned
-//      1F00-1FFE   P-Code Card
+//      >0000-07FE   Internal Use (the 32 main CRU bits are mapped here - mirrored)
+//      >0800-0FFE   Reserved (CRU paging uses this... SuperSpace II and some Databiotics carts)
+//      >1000-10FE   Horizon RAMDisk or IDE Harddisk
+//      >1100-11FE   Disk Controller
+//      >1200-12FE   Reserved
+//      >1300-13FE   RS-232 (Primary)
+//      >1400-14FE   Unassigned 
+//      >1500-15FE   RS-232 (Secondary)
+//      >1600-16FE   Unassigned
+//      >1700-17FE   HEX-BUS Interface
+//      >1800-18FE   Thermal Printer
+//      >1900-19FE   Reserved
+//      >1A00-1AFE   Unassigned
+//      >1B00-1BFE   Unassigned
+//      >1C00-1CFE   Video Controller Card
+//      >1D00-1DFE   IEEE 488 Bus Controller Card
+//      >1E00-1EFE   Unassigned
+//      >1F00-1FFE   P-Code Card
 // -----------------------------------------------------------------------------------------
 ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
 {
@@ -131,7 +131,7 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
         // --------------------------------------------------------------------------------------
         // Check to see if we're in the external peripheral area - this is for Disk DSR and SAMS
         // --------------------------------------------------------------------------------------
-        if (cruAddress & 0xFC00)
+        if (cruAddress & 0xFC00) // At or above CRU base >800?
         {
             if ((cruAddress & 0xF80) == (0x1100 >> 1))       // Disk support at CRU base >1100
             {

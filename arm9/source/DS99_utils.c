@@ -1246,6 +1246,10 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0xc705118e) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
     if (file_crc == 0xe0bc224d) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
     if (file_crc == 0x134144dc) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype   
+    
+    // If the filename of the chosen cart contains _cru just before the extension, we assume this is one of the Databiotics Paged CRU types
+    if (strstr(gpFic[ucGameChoice].szName, "_cru.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;    
+    if (strstr(gpFic[ucGameChoice].szName, "_CRU.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;    
 }
 
 // -------------------------------------------------------------------------

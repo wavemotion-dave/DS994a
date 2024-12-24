@@ -208,12 +208,14 @@ u8 TI99Init(char *szGame)
         }
         else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
         {
+            if (file_size > (512 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
+            
             infile = fopen(tmpBuf, "rb");
             int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
             fclose(infile);
             numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
             tms9900.bankMask = BankMasks[numCartBanks-1];
-
+            
             if (numCartBanks > 1)
             {
                 // If the image is inverted we need to swap 8K banks
@@ -456,7 +458,9 @@ ITCM_CODE void TI99UpdateScreen(void)
 // --------------------------------------------------------------------------
 void getfile_crc(const char *path)
 {
+    DS_Print(1,5,6, "COMPUTING CRC - PLEASE WAIT...");
     file_crc = getFileCrc(path);        // The CRC is used as a unique ID to save out High Scores and Configuration...
+    DS_Print(1,5,6, "                              ");
 }
 
 
