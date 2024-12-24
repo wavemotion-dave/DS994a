@@ -21,6 +21,7 @@ extern char tmpBuf[256];    // For simple printf-type output and other sundry us
 extern u8 fileBuf[0x2000];  // For DSK sector cache, general file I/O and file CRC generation use. Must be at least 8K
 extern u8 *SharedMemBuffer; // A bit of shared memory for the system to use allocated from the heap
 
+extern u32 file_size;
 
 #define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}
 
@@ -95,6 +96,8 @@ extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;
 extern u16 readSpeech;
+extern u32 speechData32;
+extern u8  alpha_lock;
 
 extern u16 nds_key;
 extern u8  kbd_key;
@@ -121,5 +124,6 @@ extern void ResetTI(void);
 extern void DiskSave(char *filename);
 extern void DrawCleanBackground(void);
 extern void WriteSpeechData(u8 data);
+extern void processDirectAudio(void);
 
 #endif

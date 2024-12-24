@@ -80,7 +80,7 @@ u16 nds_key          __attribute__((section(".dtcm"))) = 0;       // 0 if no key
 u8 alpha_lock       __attribute__((section(".dtcm"))) = 0;        // 0 if Alpha Lock is not pressed. 1 if pressed (CAPS)
 u8 meta_next_key    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
 u8 handling_meta    __attribute__((section(".dtcm"))) = 0;        // Used to handle special meta keys like FNCT and CTRL and SHIFT
-u16 vusCptVBL       __attribute__((section(".dtcm"))) = 0;        // We use this as a basic timer for the Mario sprite... could be removed if another timer can be utilized
+u16 vusCptVBL       __attribute__((section(".dtcm"))) = 0;        // We use this as a basic timer ticked every 1/60th of a second
 
 char tmpBuf[256];               // For simple printf-type output and other sundry uses.
 u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
@@ -208,7 +208,7 @@ s16 wave_mixbuf[16];
 // For direct sampling, this tells us for a given scanline how many samples
 // to process... this gets us to the magic sample_rate. Crude but effective.
 // -------------------------------------------------------------------------
-u8 wave_direct_sample_table[256] = 
+const u8 wave_direct_sample_table[256] = 
 {
   2,1,2,2,2,2,1,2,     2,2,1,2,2,2,2,2,
   2,2,1,2,2,2,1,2,     2,2,2,1,2,2,2,1,

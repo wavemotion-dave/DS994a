@@ -200,8 +200,9 @@ setFreq:
 	strbne r0,[r2,#ch0Reg]
 	ldrh r0,[r2,#ch0Reg]
 	movs r0,r0,lsl#2
-	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
-	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	
+	cmpne r0,#0x0180	        ;@ We set any value under 6 to 1 to fix aliasing ...
+	movmi r0,#0x0040			;@ ... Except value of zero which is special for the SN chip (freq=1024)
 	strh r0,[r2,#ch0Frq]
 
 	cmp r12,#2					;@ Ch2

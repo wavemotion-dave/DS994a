@@ -28,7 +28,7 @@
 #include "SAMS.h"
 #include "disk.h"
 
-#define TI_SAVE_VER   0x0007        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0008        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -87,10 +87,14 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
     if (uNbO) uNbO = fwrite(MemCPU+0x8000, 0x0400, 1, handle); 
     if (uNbO) uNbO = fwrite(MemCPU+0xA000, 0x6000, 1, handle); 
+    
+    // Save the Memory Types for each region of memory
+    if (uNbO) uNbO = fwrite(MemType, sizeof(MemType), 1, handle);     
       
-    // A few frame counters
+    // A few frame counters and sundry other useful bits of info
     if (uNbO) uNbO = fwrite(&emuActFrames, sizeof(emuActFrames), 1, handle); 
     if (uNbO) uNbO = fwrite(&timingFrames, sizeof(timingFrames), 1, handle); 
+    if (uNbO) uNbO = fwrite(&alpha_lock,   sizeof(alpha_lock),   1, handle);     
       
     // Save VDP stuff...
     if (uNbO) uNbO = fwrite(VDP,            sizeof(VDP),            1, handle); 
@@ -120,6 +124,8 @@ void TI99SaveState()
 
     // Write PSG sound chips...
     if (uNbO) uNbO = fwrite(&snti99, sizeof(snti99),1, handle); 
+    if (uNbO) uNbO = fwrite(&readSpeech, sizeof(readSpeech),1, handle);
+    if (uNbO) uNbO = fwrite(&speechData32, sizeof(speechData32),1, handle);    
 
     // Some high-level DISK stuff...
     if (uNbO) uNbO = fwrite(TICC_REG,  sizeof(TICC_REG),1, handle); 
@@ -127,9 +133,10 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&bDiskDeviceInstalled, sizeof(bDiskDeviceInstalled),1, handle); 
     if (uNbO) uNbO = fwrite(&diskSideSelected, sizeof(diskSideSelected),1, handle); 
     if (uNbO) uNbO = fwrite(&driveSelected, sizeof(driveSelected),1, handle); 
+    if (uNbO) uNbO = fwrite(&motorOn, sizeof(motorOn),1, handle); 
 
     // Some spare memory we can eat into...
-    if (uNbO) uNbO = fwrite(&spare, 500,1, handle); 
+    if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
     
     // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
     u32 i=0;
@@ -159,11 +166,17 @@ void TI99SaveState()
     
     if (myConfig.cartType == CART_TYPE_SUPERCART)
     {
-        extern u8 super_bank;
         if (uNbO) uNbO = fwrite(&super_bank,  sizeof(super_bank),  1, handle); 
+        if (uNbO) uNbO = fwrite(&cart_cru_shadow,  sizeof(cart_cru_shadow),  1, handle); 
         if (uNbO) uNbO = fwrite(&MemCART[MAX_CART_SIZE-0x8000], 0x8000, 1, handle); 
     }
       
+    if (myConfig.cartType == CART_TYPE_PAGEDCRU)
+    {
+        if (uNbO) uNbO = fwrite(&super_bank,  sizeof(super_bank),  1, handle); 
+        if (uNbO) uNbO = fwrite(&cart_cru_shadow,  sizeof(cart_cru_shadow),  1, handle); 
+    }
+
     fclose(handle);
       
     if (uNbO) 
@@ -236,10 +249,14 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
             if (uNbO) uNbO = fread(MemCPU+0x8000, 0x0400, 1, handle); 
             if (uNbO) uNbO = fread(MemCPU+0xA000, 0x6000, 1, handle); 
+
+            // Restore the Memory Types for each region of memory
+            if (uNbO) uNbO = fread(MemType, sizeof(MemType), 1, handle);     
             
-            // A few frame counters
+            // A few frame counters and other sundry bits of info
             if (uNbO) uNbO = fread(&emuActFrames, sizeof(emuActFrames), 1, handle); 
             if (uNbO) uNbO = fread(&timingFrames, sizeof(timingFrames), 1, handle); 
+            if (uNbO) uNbO = fread(&alpha_lock,   sizeof(alpha_lock),   1, handle);
             
             // Load VDP stuff...
             if (uNbO) uNbO = fread(VDP,             sizeof(VDP),            1, handle); 
@@ -270,7 +287,9 @@ void TI99LoadState()
             SprTab = pSvg + pVDPVidMem;
             
             // Load PSG Sound Stuff
-            if (uNbO) uNbO = fread(&snti99, sizeof(snti99),1, handle); 
+            if (uNbO) uNbO = fread(&snti99, sizeof(snti99),1, handle);
+            if (uNbO) uNbO = fread(&readSpeech, sizeof(readSpeech),1, handle);            
+            if (uNbO) uNbO = fread(&speechData32, sizeof(speechData32),1, handle);            
             
             // Load high-level DISK stuff...
             if (uNbO) uNbO = fread(TICC_REG,  sizeof(TICC_REG),1, handle); 
@@ -278,9 +297,16 @@ void TI99LoadState()
             if (uNbO) uNbO = fread(&bDiskDeviceInstalled, sizeof(bDiskDeviceInstalled),1, handle); 
             if (uNbO) uNbO = fread(&diskSideSelected, sizeof(diskSideSelected),1, handle); 
             if (uNbO) uNbO = fread(&driveSelected, sizeof(driveSelected),1, handle); 
+            if (uNbO) uNbO = fread(&motorOn, sizeof(motorOn),1, handle);
+            
+            // If the disk drive DSR was installed... put it back into the peripheral memory
+            if (bDiskDeviceInstalled)
+            {
+                memcpy(&MemCPU[0x4000], DISK_DSR, 0x2000);
+            }
             
             // Load spare memory for future use
-            if (uNbO) uNbO = fread(&spare, 500,1, handle); 
+            if (uNbO) uNbO = fread(&spare, 512,1, handle); 
             
             // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
             u32 i=0;
@@ -308,9 +334,15 @@ void TI99LoadState()
             
             if (myConfig.cartType == CART_TYPE_SUPERCART)
             {
-                extern u8 super_bank;
                 if (uNbO) uNbO = fread(&super_bank,  sizeof(super_bank),  1, handle); 
+                if (uNbO) uNbO = fread(&cart_cru_shadow,  sizeof(cart_cru_shadow),  1, handle); 
                 if (uNbO) uNbO = fread(&MemCART[MAX_CART_SIZE-0x8000], 0x8000, 1, handle); 
+            }
+            
+            if (myConfig.cartType == CART_TYPE_PAGEDCRU)
+            {
+                if (uNbO) uNbO = fread(&super_bank,  sizeof(super_bank),  1, handle); 
+                if (uNbO) uNbO = fread(&cart_cru_shadow,  sizeof(cart_cru_shadow),  1, handle); 
             }
             
             fclose(handle);            

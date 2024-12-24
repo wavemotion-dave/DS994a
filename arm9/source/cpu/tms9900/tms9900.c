@@ -34,19 +34,19 @@
 // ---------------------------------------------------------
 // Memory map for the TI-99/4a:
 // ---------------------------------------------------------
-// 0000 - 1FFF     Console ROM
-// 2000 - 3FFF     (8K, low memory expansion)
-// 4000 - 5FFF     Peripheral card ROM (whichever one swapped in)
-// 6000 - 7FFF     Cartridge ROM (module port), Sometimes SuperSpace RAM
-// 8000 - 83FF     Scratchpad RAM (256 bytes, mirrored)
-// 8400 - 87FF     TI Sound chip write
-// 8800 - 8BFF     VDP Read   (8800 read, 8802 status)
-// 8C00 - 8FFF     VDP Write  (8C00 data, 8C02 address)
-// 9000 - 93FF     Speech Synth read
-// 9400 - 97FF     Speech Synth write
-// 9800 - 9BFF     GROM Read  (9800 read, 9802 read addr+1)
-// 9C00 - 9FFF     GROM Write (9C00 data, 9C02 address)
-// A000 - FFFF     (24K, high memory expansion)
+// >0000 - 1FFF     Console ROM
+// >2000 - 3FFF     (8K, low memory expansion)
+// >4000 - 5FFF     Peripheral card ROM (whichever one swapped in)
+// >6000 - 7FFF     Cartridge ROM (module port), Sometimes SuperSpace RAM
+// >8000 - 83FF     Scratchpad RAM (256 bytes, mirrored)
+// >8400 - 87FF     TI Sound chip (write only)
+// >8800 - 8BFF     VDP Read   (8800 read, 8802 status)
+// >8C00 - 8FFF     VDP Write  (8C00 data, 8C02 address)
+// >9000 - 93FF     Speech Synth read
+// >9400 - 97FF     Speech Synth write
+// >9800 - 9BFF     GROM Read  (9800 read, 9802 read addr+1)
+// >9C00 - 9FFF     GROM Write (9C00 data, 9C02 address)
+// >A000 - FFFF     (24K, high memory expansion)
 
 // -------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
@@ -69,6 +69,7 @@ u16 MemoryRead16(u16 address);
 
 u16 readSpeech __attribute__((section(".dtcm"))) = SPEECH_SENTINAL_VAL;
 u8  super_bank __attribute__((section(".dtcm"))) = 0;
+u8 cart_cru_shadow[16] = {0};
 
 // A few externs from other modules...
 extern SN76496 snti99;
@@ -447,7 +448,6 @@ void TMS9900_Reset(void)
     {
         MemType[address>>4] = MF_PERIF;
     }
-    
 
     // ------------------------------------------------------------------------------
     // Now mark off the memory hotspots where we need to take special action on
@@ -486,11 +486,6 @@ void TMS9900_Reset(void)
     {
         MemType[(address+0)>>4] = MF_GROMW;   // GROM Write Data
         MemType[(address+2)>>4] = MF_GROMW;   // GROM Write Address
-    }
-
-    for (u16 address = 0x5ff0; address < 0x6000; address++)
-    {
-        MemType[address>>4] = MF_DISK;     // TI Disk Controller area
     }
 
     for (u16 address = 0x6000; address < 0x8000; address++)
@@ -542,9 +537,21 @@ void TMS9900_Reset(void)
             MemCPU[addr] = (rand() & 0xFF);
         }
     }
+    else // For the 32K RAM expansion, a 'clear' pattern is actually >FF00 due to the RAM chips used
+    {
+        for (u16 addr = 0x2000; addr < 0x4000; addr++)
+        {
+            MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
+        }
+        for (u32 addr = 0xA000; addr < 0x10000; addr++)
+        {
+            MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
+        }
+    }
     
     // Reset the super cart bank to bank 0
     super_bank = 0;
+    memset(cart_cru_shadow, 0x00, sizeof(cart_cru_shadow));
 
     // Reset the TMS9901 peripheral IO chip
     TMS9901_Reset();
@@ -720,7 +727,6 @@ inline __attribute__((always_inline)) void WriteBankMBX(u8 bank)
 //     6      '1' written to >81A  (>40D as we've already shifted down)
 //     7      '1' written to >81E  (>40F as we've already shifted down)
 // ------------------------------------------------------------------------------
-u8 cart_cru_shadow[16] = {0};
 void cart_cru_write(u16 cruAddress, u8 dataBit)  
 {
     if (myConfig.cartType == CART_TYPE_PAGEDCRU)
@@ -1046,8 +1052,8 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 else WrData9918(data>>8);
                 break;
             case MF_GROMW:
-                if (address & 2) { WriteGROMAddress(data&0x00ff); WriteGROMAddress((data&0xFF00)>>8); }
-                else { WriteGROM(data&0x00ff); WriteGROM((data&0xFF00)>>8); }
+                if (address & 2) { WriteGROMAddress(data&0x00FF); WriteGROMAddress((data&0xFF00)>>8); }
+                else { WriteGROM(data&0x00FF); WriteGROM((data&0xFF00)>>8); }
                 break;
             case MF_CART:
                 WriteBank(address);

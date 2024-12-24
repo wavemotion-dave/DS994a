@@ -67,7 +67,7 @@ Installation :
 * You will also need the emulator itself. You can get this from the GitHub page - the only file you need here is DS994a.nds (the .nds is a executable file). You can put this anywhere - most people put the .nds file into the root of the SD card.
 * If you want to play disk based games (Adventure, Tunnels of Doom, etc) you will need 994adisk.bin (often just named disk.bin but you need to rename it and put it into /roms/bios).
 * You will need games to play... right now the emulator supports C/D/G files plus '8' non-inverted files and '9' inverted files. Basically just try loading a file to see if it works... the ROMs should have a .bin extension. 
-* Recommend you put your game ROMs into /roms/ti99 as the emulator will default to that directory. That's where the cool kids keep them.
+* Recommend you put your game ROMs into /roms/ti99 as the emulator will default to that directory.
 * Recommend you put any disk files needed in a directory easily accessible (near) where you store your rom files so it's a faster navigation.
 
 BIOS Files :
@@ -85,8 +85,9 @@ Known Issues :
 -----------------------
 * TI Speech Module is not fully supported. Games that rely on the module will still play fine - and many of the classic games have speech samples built into the emulator and will play and sound just as you remember them (e.g. Alpiner, Parsec, Moonmine, etc)
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine: e.g. Bigfoot, Superfly, etc).
-* Dragon's Lair 8MB demo will load and run but the sound sampling is not fast enough on the handheld to render the direct sound output perfectly. Any imperfections in sound are on my emulator and not the fantastic work of Tursi.
-* Sound in Red Baron is not correct. Engine Idle is extremely high pitched.
+* Dragon's Lair 8MB demo will load and run but the sound sampling is not accurate enough on the handheld to render the sound output perfectly. Any imperfections in sound are on my emulator and not the fantastic work of Tursi.
+* Super Cart RAM (mapped in at >6000) works fine but is not persisted (i.e. it's not "battery backed"). However, if you Save/Restore state, that RAM will be preserved/restored.
+* Save/Restore state will not save the mounted state of the disk drives... so before you restore a game that uses disk access, be sure to mount any disks you need.
 
 File Types Supported :
 -----------------------
@@ -98,6 +99,7 @@ DS994a supports the following file types:
 * There is a limit of 512 ROM files per directory and 256 DSK images per directory. You can have as many directories as you wish.
 * Filenames are limited to 128 characters. Shorten your ROM filenames if you run into this.
 * As of version 2.0, the MAME/MESS .rpk (ROM PacK) format is also supported - these are single file archives that contain the ROMs and a layout.xml file that describes where the ROMs get loaded and how any banking might work.
+* As of version 2.4, any cartridge filename that ends in _cru just before the .bin extension will be considered a Paged CRU cart type (a handful of the original Databiotics carts used this scheme).
 
 If you wish to associate a .dsk file with your cart (e.g. Adventure or Tunnels of Doom, etc.) you can name the .dsk files with the same base name as the cart and replace the C/D/G/8 with 1, 2 or 3.
 
@@ -256,6 +258,17 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.4: 24-Dec-2024 by wavemotion-dave
+* New Alpha keyboard specifically designed to improve the experience of playing text adventures like the Scott Adam's Adventure series.
+* Fixed sound output in Red Baron (engine idle now sounds correct - not the high pitched squeal of previous versions).
+* New Wave Direct sound driver for games like Dragon's Lair Demo and Ghostbusters to render SN-chip "speech" properly.
+* Improved pagecru handling to mask the banking within the binary size (e.g. 4 banks for 32K carts).
+* Improved disk emulation to properly report motor enabled/strobed CRU bit.
+* A filename that ends in _cru just before the .bin extension will be considered a Paged CRU cart type (a handful of the original Databiotics carts used this scheme).
+* The 32K RAM expansion now initializes memory as >FF00 to more closely mimic how the typical RAM chips in use would power up cold (accuracy improvement borrowed from MAME)
+* Save/Restore State improvement to save a few more bits of information to ensure things come back up properly (old save states will not work - sorry!)
+* Other minor cleanup and improvements under the hood. Comments added to help future emulation developers.
+
 V2.3: 19-Dec-2024 by wavemotion-dave
 * Refactored memory allocation to buy back almost 400K of much needed DS RAM (mostly for new speech samples)
 * Added speech samples for: MASH, Sewermania, Buck Rogers and Borzork and added missing samples for Fathom and Microsurgeon.
