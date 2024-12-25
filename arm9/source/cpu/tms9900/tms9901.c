@@ -247,7 +247,7 @@ ITCM_CODE u16 TMS9901_ReadCRU(u16 cruAddress, u8 num)
                     case 0:     bitState = 1;                                                                               break;     // Bit 0 in timer mode always returns '1'
                     case 15:    bitState = ((tms9901.VDPIntteruptInProcess && tms9901.PinState[PIN_VDP_INT]) || 
                                             (tms9901.TimerIntteruptInProcess && tms9901.PinState[PIN_TIMER_INT]) ? 0:1);    break;     // Pin 15 is for either VDP or Timer interrupt... report if that's set
-                    default:    bitState = (tms9901.TimerCounter & (1<<(cruAddress-1))) ? 0:1;                              break;     // Otherwise get the timer bit and report it
+                    default:    bitState = (tms9901.TimerCounter & (1<<(cruAddress-1))) ? 1:0;                              break;     // Otherwise get the timer bit and report it
                 }
             }
             else    // This is IO mode - there are some aliased pins we need to be careful of...

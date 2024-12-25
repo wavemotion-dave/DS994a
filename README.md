@@ -267,6 +267,7 @@ V2.4: 24-Dec-2024 by wavemotion-dave
 * A filename that ends in _cru just before the .bin extension will be considered a Paged CRU cart type (a handful of the original Databiotics carts used this scheme).
 * The 32K RAM expansion now initializes memory as >FF00 to more closely mimic how the typical RAM chips in use would power up cold (accuracy improvement borrowed from MAME)
 * Save/Restore State improvement to save a few more bits of information to ensure things come back up properly (old save states will not work - sorry!)
+* Cleanup on 9901 Timer to improve accuracy.
 * Other minor cleanup and improvements under the hood. Comments added to help future emulation developers.
 
 V2.3: 19-Dec-2024 by wavemotion-dave
