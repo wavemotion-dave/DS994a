@@ -595,9 +595,9 @@ void TMS9900_SetAccurateEmulationFlag(u16 flag)
     tms9900.accurateEmuFlags |= flag;
 }
 
-// -----------------------------------------------------------------------------------------------
-// If we don't have to handle DISK or IDLE or similar, we run faster... most games don't need that
-// -----------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// If we don't have to handle IDLE or TIMERS or similar, we run faster... most games don't need that
+// -------------------------------------------------------------------------------------------------
 void TMS9900_ClearAccurateEmulationFlag(u16 flag)
 {
     tms9900.accurateEmuFlags &= ~flag;
@@ -780,12 +780,11 @@ inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
 // ----------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 {
-    address &= 0xFFFE;
     if (MemType[address>>4] == MF_SAMS8)
     {
         return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
     }
-    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address & 0xFFFE]));
 }
 
 // ----------------------------------------------------------------------------------------
@@ -984,12 +983,10 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return *((u8*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF)));
                 break;
             case MF_VDP_R:
-                if (address & 2) return (u8)RdCtrl9918();
-                else return (u8)RdData9918();
+                if (address & 2) return (u8)RdCtrl9918(); else return (u8)RdData9918();
                 break;
             case MF_GROMR:
-                if (address & 2) return ReadGROMAddress();
-                else return ReadGROM();
+                if (address & 2) return ReadGROMAddress(); else return ReadGROM();
                 break;
             case MF_CART:
                 return tms9900.cartBankPtr[(address&0x1FFF)];
@@ -1055,8 +1052,8 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 if (address & 2) WrCtrl9918(data>>8); else WrData9918(data>>8);
                 break;
             case MF_GROMW:
-                if (address & 2) { WriteGROMAddress(data&0x00FF); WriteGROMAddress((data&0xFF00)>>8); }
-                else { WriteGROM(data&0x00FF); WriteGROM((data&0xFF00)>>8); }
+                if (address & 2) { WriteGROMAddress(data&0xff); WriteGROMAddress(data>>8); }
+                else { WriteGROM(data&0xff); WriteGROM(data>>8); }
                 break;
             case MF_CART:
                 WriteBank(address);
@@ -1359,11 +1356,11 @@ void TMS9900_ContextSwitch(u16 address)
 }
 
 // ---------------------------------------------------------------------------------------
-// We are only supporting a single external interrupt souce - the VDP as it comes
-// from the TMS9901. There is also the timer but that's only used for Cassette routines
-// and possibly an odd demo program or two... so we aren't going to worry about it.
-// Users of DS99/4a are interested in playing Hunt the Wumpus and Tunnels of Doom and
-// so we won't overcomplicate things...
+// We are only supporting two interrupt sources - the VDP as it comes from the TMS9901
+// and the internal timer which is mainly used for cassette routines but is used by 
+// a few odd programs such as Scud Busters and the Sudoku demo from 2010. This emulation
+// isn't accurate but users of DS99/4a are interested in playing Hunt the Wumpus and 
+// Tunnels of Doom and so we won't over complicate things...
 // ---------------------------------------------------------------------------------------
 void TMS9900_HandlePendingInterrupts(void)
 {

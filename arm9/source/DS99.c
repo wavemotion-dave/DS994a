@@ -156,6 +156,7 @@ u8 keyCoresp[MAX_KEY_OPTIONS] __attribute__((section(".dtcm"))) = {
     KBD_FNCT_X,
 };
 
+u8 mem_debug = 0;
 
 // ------------------------------------------------------------
 // Utility function to show the background for the main menu
@@ -1030,6 +1031,11 @@ u8 CheckDebugerInput(u16 iTy, u16 iTx)
         else if ((iTx >= 199) && (iTx < 221))  return MiniMenu();
         else if ((iTx >= 221) && (iTx < 255))  {tms9901.Keyboard[TMS_KEY_ENTER]=1;  if (!bKeyClick) bKeyClick=1;}
     }
+    if ((iTy >= 20) && (iTy <= 155))       // Debugger Area
+    {
+        if (iTx > 128) {if (mem_debug < 16) mem_debug++;}
+        else {if (mem_debug > 0) mem_debug--;}
+    }
 
     return META_KEY_NONE;
 }
@@ -1377,7 +1383,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         DS_Print(0,idx++,6,tmpBuf);
         if ((vusCptVBL & 3) == 0) sams_highwater_bank = 0;  // Reset this periodically (every 4 seconds).
     }
-    else // Show 2nd page of debug info
+    else if (debug_screen == 1)   // Show 2nd page of debug info
     {
         extern u32 file_size;
         idx = 1;
@@ -1396,6 +1402,39 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         DS_Print(0,idx++,6,tmpBuf);
         sprintf(tmpBuf, "RPK SOCK:  %d", cart_layout.num_sockets);
         DS_Print(0,idx++,6,tmpBuf);
+    }
+    else if (debug_screen == 2) // Show VDP Memory 
+    {
+        idx = 1;
+        DS_Print(0,idx++,6, "VDP MEMORY DUMP");
+        idx++;
+        for (u16 i=0x0000+(0x80*mem_debug); i<0x0080+(0x80*(mem_debug)); i+=8)
+        {
+            sprintf(tmpBuf, "%04X: %02X %02X %02X %02X %02X %02X %02X %02X", i, pVDPVidMem[i+0], pVDPVidMem[i+1], pVDPVidMem[i+2], pVDPVidMem[i+3], pVDPVidMem[i+4], pVDPVidMem[i+5], pVDPVidMem[i+6], pVDPVidMem[i+7]);
+            DS_Print(0,idx++,6,tmpBuf);
+        }
+    }
+    else if (debug_screen == 3) // Show Main Memory 
+    {
+        idx = 1;
+        DS_Print(0,idx++,6, "CPU MEMORY DUMP");
+        idx++;
+        for (u16 i=0x8000+(0x80*mem_debug); i<0x8080+(0x80*(mem_debug)); i+=8)
+        {
+            sprintf(tmpBuf, "%04X: %02X %02X %02X %02X %02X %02X %02X %02X", i, MemCPU[i+0], MemCPU[i+1], MemCPU[i+2], MemCPU[i+3], MemCPU[i+4], MemCPU[i+5], MemCPU[i+6], MemCPU[i+7]);
+            DS_Print(0,idx++,6,tmpBuf);
+        }
+    }
+    else if (debug_screen == 4) // Show Extended Memory 
+    {
+        idx = 1;
+        DS_Print(0,idx++,6, "EXTENDED MEMORY DUMP");
+        idx++;
+        for (u16 i=0xA000+(0x80*mem_debug); i<0xA080+(0x80*(mem_debug)); i+=8)
+        {
+            sprintf(tmpBuf, "%04X: %02X %02X %02X %02X %02X %02X %02X %02X", i, MemCPU[i+0], MemCPU[i+1], MemCPU[i+2], MemCPU[i+3], MemCPU[i+4], MemCPU[i+5], MemCPU[i+6], MemCPU[i+7]);
+            DS_Print(0,idx++,6,tmpBuf);
+        }
     }
 }
 
@@ -1473,7 +1512,7 @@ u8 handle_touch_input(void)
             break;
 
         case META_KEY_DEBUG_NEXT:
-            debug_screen = (debug_screen+1) & 0x01; // We have two debug screens we can flip-flop between. Might expand someday.
+            debug_screen = (debug_screen+1) % 5; // We have several debug screens we can flip-flop between.
             ds99_clear_debugger();
             break;
 
