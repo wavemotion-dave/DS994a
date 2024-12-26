@@ -38,7 +38,7 @@ The TI9918A code came from Marat Fayzullin (ColEM) and retains Marat's original 
 statement. Do not use any of that code without trying to contact Marat.
 
 The TI9900 CPU core is mainly my own with some significant bits of scaffolding from 
-Mike Brent's Classic99 emulator - especially in the status bits handling and some 
+Tursi's Classic99 emulator - especially in the status bits handling and some 
 of the more tricky opcode algorithms so they run correctly. This is used with permission 
 and with great thanks!
 
@@ -54,7 +54,7 @@ Credits :
 * Thanks to Alekmaul who provided the original Coleco emulator framework of which this is based.
 * Thanks to Flubba for the SN76496 sound core (virtually the same as the TI9919 sound chip).
 * Thanks to Marat Fayzullin (ColEM) for the TI9918A video driver.
-* Thanks to Mike Brent for Classic99 and letting me use some of the disk and CPU core code plus some helpful consults.
+* Thanks to Tursi (harmlesslion) for Classic99 and letting me use some of the disk and CPU core code plus some helpful consults.
 * Thanks to Pete Eberlein for his help debugging and some great ideas and a bit of code from his upcoming BuLWiP emulator.
 * Thanks to ti99iuc over on AtariAge for the original DS99/4a logo and to StephenJ for the updated 2.0 logo.
 * Thanks to Darryl Hirschler for the TI99 Keyboard Graphics.
