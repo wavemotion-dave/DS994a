@@ -610,17 +610,17 @@ ITCM_CODE byte Write9918(u8 iReg, u8 value)
 
   /* There are 8 VDP registers - map down to these 8 and mask off irrelevant bits */
   iReg &= 0x07;
-  value &= VDP_RegisterMasks[iReg];
+  //value &= VDP_RegisterMasks[iReg];
 
   /* Enabling IRQs may cause an IRQ here */
-  bIRQ  = (iReg==1) && ((VDP[1]^value)&value&TMS9918_REG1_IRQ) && (VDPStatus&TMS9918_STAT_VBLANK);
+  bIRQ  = (iReg==1) && ((VDP[1]^value) & value&TMS9918_REG1_IRQ) && (VDPStatus&TMS9918_STAT_VBLANK);
 
-  /* The TI99 is always 16K */
-  VRAMMask = 0x3FFF;
+  /* The TI99 is normally 16K but it's possible to use the VDP chip in 4K mode */
+  VRAMMask = (iReg==1) && ((VDP[1]^value) & TMS9918_REG1_RAM16K) ? 0 : TMS9918_VRAMMask;  // Setting zero here forces re-computation of the VDP tables below
 
   /* Store value into the register */
   VDP[iReg]=value;
-
+  
   /* Depending on the register, do... */
   switch (iReg) {
     case 0: /* Mode register 0 */

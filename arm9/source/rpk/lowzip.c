@@ -186,7 +186,7 @@ static unsigned int lowzip_read1(lowzip_state *st, unsigned int offset) {
  * However, an error return value would need to be checked by a lot of call
  * sites, and a longjmp (or similar) is a portability concern.
  */
-ITCM_CODE static unsigned int lowzip_read_byte(lowzip_state *st) {
+static unsigned int lowzip_read_byte(lowzip_state *st) {
 	unsigned int x;
 
 	x = st->read_callback(st->udata, st->read_offset);
@@ -384,7 +384,7 @@ static void lowzip_prepare_huffman(lowzip_state *st,
 }
 
 /* Huffman decode a terminal value from the input. */
-ITCM_CODE static unsigned int lowzip_decode_huffman(lowzip_state *st, unsigned short *huff) {
+static unsigned int lowzip_decode_huffman(lowzip_state *st, unsigned short *huff) {
 	unsigned int code;
 	unsigned int code_start;
 	unsigned short *counts_ptr;

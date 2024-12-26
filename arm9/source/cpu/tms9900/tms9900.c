@@ -1,8 +1,8 @@
 // =====================================================================================
 // Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -56,7 +56,7 @@ u8      MemGROM[0x10000];           // 64K of GROM Space (the lower 24K will con
 u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
 
 u8     *MemCART  __attribute__((section(".dtcm")));     // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
-u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSI will bump this to 8MB)
+u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSi will bump this to 8MB)
 
 TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 set of registers and helper vars into fast .DTCM RAM on the DS
 
@@ -69,7 +69,8 @@ u16 MemoryRead16(u16 address);
 
 u16 readSpeech __attribute__((section(".dtcm"))) = SPEECH_SENTINAL_VAL;
 u8  super_bank __attribute__((section(".dtcm"))) = 0;
-u8 cart_cru_shadow[16] = {0};
+u8  cart_cru_shadow[16] = {0};
+u32 idle_counter = 0;
 
 // A few externs from other modules...
 extern SN76496 snti99;
@@ -435,7 +436,7 @@ void TMS9900_Reset(void)
     {
         MemType[address>>4] = MF_MEM16;
     }
-    
+
     for(u16 address = 0x8000; address < 0x8400; address++ )
     {
         MemType[address>>4] = MF_MEM16;
@@ -548,10 +549,12 @@ void TMS9900_Reset(void)
             MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
         }
     }
-    
+
     // Reset the super cart bank to bank 0
     super_bank = 0;
     memset(cart_cru_shadow, 0x00, sizeof(cart_cru_shadow));
+
+    idle_counter = 0;
 
     // Reset the TMS9901 peripheral IO chip
     TMS9901_Reset();
@@ -601,8 +604,8 @@ void TMS9900_ClearAccurateEmulationFlag(u16 flag)
 }
 
 //-----------------------------------------------------------------------------------------
-// The GROM increment takes into account that it's only really incrementing and wrapping 
-// at the 8K boundary. The auto-increment should not bump the upper 3 bits which would, 
+// The GROM increment takes into account that it's only really incrementing and wrapping
+// at the 8K boundary. The auto-increment should not bump the upper 3 bits which would,
 // effectively, select the next GROM in memory. This comes at a slight speed pentalty
 // but it's a minor enough hit and we want this to be bullet-accurate.
 //-----------------------------------------------------------------------------------------
@@ -613,12 +616,12 @@ static inline __attribute__((always_inline)) u8 ReadGROM(void)
     // Auto-increment - be careful not to bump the high bits as that's our GROM select
     tms9900.gromAddress = (tms9900.gromAddress & 0xE000) | ((tms9900.gromAddress+1) & 0x1FFF);
     return ret;
-    
+
 }
 
 // ---------------------------------------------------------------------------------
 // The GROM address is 16 bits but is always read/written 8-bits at a time
-// so we have to handle the high byte and low byte transfers... This code 
+// so we have to handle the high byte and low byte transfers... This code
 // is careful to preserve the upper 3 bits of the GROM address as an auto-increment
 // should not bump the GROM that is being accessed (i.e. if we are at the top
 // of the GROM address, an increment should wrap to address 0x0000 of the same GROM.
@@ -629,7 +632,7 @@ ITCM_CODE u8 ReadGROMAddress(void)
 
     AddCycleCount(GROM_READ_ADDR_CYCLES);
     tms9900.gromWriteLoHi = 0;
-    
+
     if (tms9900.gromReadLoHi) // Low byte
     {
         // Reads are always address + 1
@@ -679,14 +682,14 @@ void WriteGROM(u8 data)
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------------
-// TI carts bank with writes to the ROM area at >6000 and up (e.g. write to >6000 is bank 0, write to >6002 is bank 1, write to >6004 is 
+// TI carts bank with writes to the ROM area at >6000 and up (e.g. write to >6000 is bank 0, write to >6002 is bank 1, write to >6004 is
 // bank 3,etc). At one time I was using memcpy() to put the bank into the right spot into the MemCPU[] which is GREAT when you want to read
-// (simplifies the memory access) but sucks if there is a lot of bank switching going on... turns out carts like Donkey Kong and Dig Dug 
-// were doing a ton of bankswitches and the memory copy was too slow to render those games... so we have to do this using a cart offset 
+// (simplifies the memory access) but sucks if there is a lot of bank switching going on... turns out carts like Donkey Kong and Dig Dug
+// were doing a ton of bankswitches and the memory copy was too slow to render those games... so we have to do this using a cart offset
 // which is fast enough to render those games full-speed but does mean our memory reads and PC fetches are a little more complicated...
 //
 // Anyway... the maximum cart size that can be supported by this traditional banking scheme is (8192 / 2 = 4096 banks of 8K or 32MB!).
-// That's huge - larger than all of the available 16MB of RAM on a DSi and way bigger than the 4MB of RAM on a DS-Lite/Phat. We don't 
+// That's huge - larger than all of the available 16MB of RAM on a DSi and way bigger than the 4MB of RAM on a DS-Lite/Phat. We don't
 // support that large but it's okay - 99% of all carts are less than 512K.
 // -------------------------------------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) void WriteBank(u16 address)
@@ -727,7 +730,7 @@ inline __attribute__((always_inline)) void WriteBankMBX(u8 bank)
 //     6      '1' written to >81A  (>40D as we've already shifted down)
 //     7      '1' written to >81E  (>40F as we've already shifted down)
 // ------------------------------------------------------------------------------
-void cart_cru_write(u16 cruAddress, u8 dataBit)  
+void cart_cru_write(u16 cruAddress, u8 dataBit)
 {
     if (myConfig.cartType == CART_TYPE_PAGEDCRU)
     {
@@ -769,7 +772,7 @@ u8 cart_cru_read(u16 cruAddress)
 // ------------------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
 {
-    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
 }
 
 // ----------------------------------------------------------------------------------------------------------------
@@ -777,10 +780,11 @@ inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
 // ----------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 {
+    address &= 0xFFFE;
     if (MemType[address>>4] == MF_SAMS8)
     {
         return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
-    }        
+    }
     return __builtin_bswap16(*(u16*) (&MemCPU[address]));
 }
 
@@ -789,6 +793,7 @@ inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 // ----------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16(u16 address, u16 data)
 {
+    address &= 0xFFFE;
     if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
     {
         *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
@@ -807,12 +812,11 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
 // ----------------------------------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
+    address &= 0xFFFE;
     if (MemType[address>>4] == MF_SAMS8)
     {
-        u8 *ptr = theSAMS.memoryPtr[address>>12] + (address & 0xFFF);
-        *ptr++ = (data>>8);
-        *ptr = (data & 0xFF);
-    }        
+        *((u16*)(theSAMS.memoryPtr[address>>12] + (address & 0xFFF))) = (data << 8) | (data >> 8);
+    }
     else
     {
         if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
@@ -847,11 +851,11 @@ inline __attribute__((always_inline)) u16 ReadPC16(void)
             AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
             if (memType == MF_CART)
             {
-                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1ffe]));
             }
         }
     }
-    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
+    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xfffe])));
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------
@@ -870,15 +874,15 @@ ITCM_CODE u16 ReadPC16a(void)
             AddCycleCount(4); // Penalty for anything not internal ROM or Workspace RAM
             if (memType == MF_CART)
             {
-                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1fff]));
+                return __builtin_bswap16(*(u16*) (&tms9900.cartBankPtr[address&0x1ffe]));
             }
             else if (memType == MF_SAMS8)
             {
-                return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
+                return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0ffe))));
             }
         }
     }
-    return __builtin_bswap16(*((u16*)(&MemCPU[address])));
+    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xfffe])));
 }
 
 
@@ -900,7 +904,7 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 // as these are a bit complex and can slow down emulation.
 //
 // It's important to remember that a 16-bit word in the TMS9900 architecture is split into
-// the even byte (high byte) and odd byte (low byte). This is opposite of conventional 
+// the even byte (high byte) and odd byte (low byte). This is opposite of conventional
 // ARM architecture so you see us swapping these bytes fairly often by left/right shifts by 8.
 //
 // So a 16-bit Memory Word on an Even Address boundary looks like this:
@@ -909,7 +913,7 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 //  0  1  2  3  4  5  6  7   |   8  9  10  11  12  13  14  15
 //      == EVEN BYTE ==      |          == ODD BYTE ==
 //
-// Further, for anything on the 8-bit bus (on the other side of the multiplexer), the system 
+// Further, for anything on the 8-bit bus (on the other side of the multiplexer), the system
 // will always write the odd byte first, followed by the even byte.
 // --------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
@@ -962,8 +966,8 @@ ITCM_CODE u16 MemoryRead16(u16 address)
 }
 
 // --------------------------------------------------------------------------------------------------
-// The TI is a 16-bit system crammed into an 8-bit artchitecture (or, perhaps more acccurately, lots 
-// of 8-bit peripherals were jammed into a 16-bit architecture). But there are byte commands that 
+// The TI is a 16-bit system crammed into an 8-bit artchitecture (or, perhaps more acccurately, lots
+// of 8-bit peripherals were jammed into a 16-bit architecture). But there are byte commands that
 // will result in an 8-bit read of memory. We handle that here.
 // --------------------------------------------------------------------------------------------------
 ITCM_CODE u8 MemoryRead8(u16 address)
@@ -1048,8 +1052,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 sn76496W(data>>8, &snti99);
                 break;
             case MF_VDP_W:
-                if (address & 2) WrCtrl9918(data>>8);
-                else WrData9918(data>>8);
+                if (address & 2) WrCtrl9918(data>>8); else WrData9918(data>>8);
                 break;
             case MF_GROMW:
                 if (address & 2) { WriteGROMAddress(data&0x00FF); WriteGROMAddress((data&0xFF00)>>8); }
@@ -1066,22 +1069,20 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 // We purposely don't use an 'else' here as the banking 'register' at >6ffe is also in the RAM area if this cart is mapped as MBX with RAM
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) // If it's got RAM mapped here... we treat it like RAM8
                 {
-                    MemCPU[address] = (data>>8);
-                    MemCPU[address+1] = data & 0xFF;
+                    *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
                 }
                 break;
             case MF_SAMS8:
                 *((u16*)(theSAMS.memoryPtr[address>>12] + (address & 0xFFF))) = (data << 8) | (data >> 8);
                 break;
             case MF_RAM8:
-                MemCPU[address] = (data>>8);
-                MemCPU[address+1] = data & 0xFF;
+                *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
                 break;
             default:    // Nothing to write... ignore
                 break;
         }
     }
-    else    // This has to be workspace RAM which has to deal with mirrors...
+    else    // This has to be workspace RAM which deals with mirrors...
     {
         if (address & 0x8000)   // Make sure this is RAM and not an inadvertant write to Console ROM (also 16-bit)
         {
@@ -1114,12 +1115,10 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                  sn76496W(data, &snti99);
                 break;
             case MF_VDP_W:
-                if (address & 2) WrCtrl9918(data);
-                else WrData9918(data);
+                if (address & 2) WrCtrl9918(data); else WrData9918(data);
                 break;
             case MF_GROMW:
-                if (address & 2) WriteGROMAddress(data);
-                else WriteGROM(data);
+                if (address & 2) WriteGROMAddress(data); else WriteGROM(data);
                 break;
             case MF_CART:
                 WriteBank(address);
@@ -1147,7 +1146,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 break;
         }
     }
-    else    // This has to be workspace RAM which has to deal with mirrors...
+    else    // This has to be workspace RAM which deals with mirrors...
     {
         if (address & 0x8000)   // Make sure this is RAM and not an inadvertant write to Console ROM
         {
@@ -1173,10 +1172,10 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
 // [OPCODE ] [B]  [TD ]  [DEST ] [TS ] [SOURCE]
 // The [B] bit tells us if this is a byte addressing (0 implies word addressing)
 //
-// This is a heavily utilized function call and we force it as inline even though it really 
+// This is a heavily utilized function call and we force it as inline even though it really
 // balloons our use of ITCM code space in the CPU core.
 // ------------------------------------------------------------------------------------------------
-static inline __attribute__((always_inline)) void Ts(u16 bytes) 
+static inline __attribute__((always_inline)) void Ts(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1208,10 +1207,10 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
 }
 
 // -----------------------------------------------------------------------------------------
-// This version makes memory calls that take into account the SAMS banking. It's going to 
+// This version makes memory calls that take into account the SAMS banking. It's going to
 // be a little slower and so we only swap in this version for the 'Accurate' CPU core.
 // -----------------------------------------------------------------------------------------
-static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes) 
+static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
@@ -1280,7 +1279,7 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
 }
 
 // -----------------------------------------------------------------------------------------
-// This version makes memory calls that take into account the SAMS banking. It's going to 
+// This version makes memory calls that take into account the SAMS banking. It's going to
 // be a little slower and so we only swap in this version for the 'Accurate' CPU core.
 // -----------------------------------------------------------------------------------------
 static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
@@ -1399,18 +1398,18 @@ void ExecuteOneInstruction(u16 opcode)
     }
 }
 
-// ----------------------------------------------------------------------------------------------------------------------
-// A bit more CPU intensive - this runs somewhere between 10 and 15% slower on the DS but allows us to handle more 
-// complex emulation such as SAMS and the IDLE instruction. This only gets enabled when needed... most carts will
-// use TMS9900_Run() instead for much improved emulation speed (mostly needed for the older DS-Lite/Phat hardware)
-// ----------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------------------
+// A bit more CPU intensive - this runs somewhere between 10 and 15% slower on the DS but allows us to handle more
+// complex emulation such as TMS9901 Timer, SAMS memory and/or the IDLE instruction. This only gets enabled when needed...
+// most carts will use TMS9900_Run() instead for much improved emulation speed (mostly needed for the older DS-Lite/Phat hardware)
+// --------------------------------------------------------------------------------------------------------------------------------
 void TMS9900_RunAccurate(void)
 {
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
-    
+
     // ---------------------------------------------------------------------------------------------------
     // Timer support is quite preliminary - but it's only used by cassette tape load/timeout and a tiny
-    // number of other programs use it. We don't get it quite right here... we are only decrementing the 
+    // number of other programs use it. We don't get it quite right here... we are only decrementing the
     // timer by 3 ticks every scanline which approximates the 9901 timer (64 CPU clocks per tick).
     // Classic 99 does this more accurately and checks after every instruction for a possible decrement.
     // But this is good enough for DS use and produces a roughly 46.9KHz timer which isn't too far off.
@@ -1429,23 +1428,24 @@ void TMS9900_RunAccurate(void)
             }
         }
     }
-    
+
     do
     {
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
         if (tms9900.idleReq)
         {
             tms9900.cycles += 4;
+            idle_counter++;
         }
         else
         {
             u8 data8;
             u16 data16;
-            
+
             if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
             tms9900.currentOp = ReadPC16a();
             u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
-            
+
             switch (op8)
             {
 // We need to swap in the 'a' = accurate versions of the memory fetch handlers
@@ -1467,7 +1467,7 @@ void TMS9900_RunAccurate(void)
         }
     }
     while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
-    
+
     tms9900.cycleDelta = tms9900.cycles-myCounter;
 }
 
@@ -1482,24 +1482,25 @@ void TMS9900_RunAccurate(void)
 ITCM_CODE void TMS9900_Run(void)
 {
     // --------------------------------------------------------------------
-    // Accurate emulation is enabled if we see an IDLE instruction which
-    // needs special attention.  Most games don't need this handling
-    // and we save the precious DS CPU cycles as this is 10% slower.
+    // Accurate emulation is enabled if we see an IDLE instruction or
+    // TIMER enabled ... or SAMS use as all these need special attention.
+    // Most games don't need this handling and we save the precious DS CPU
+    // cycles as this is 10% slower.
     // --------------------------------------------------------------------
     if (tms9900.accurateEmuFlags) return TMS9900_RunAccurate();
-    
+
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
 
     do
     {
         u8 data8;
         u16 data16;
-        
+
         if (tms9900.cpuInt) TMS9900_HandlePendingInterrupts();
         if (tms9900.PC == 0x40e8) HandleTICCSector();  // Disk access is not common but trap it here...
         tms9900.currentOp = ReadPC16();
         u8 op8 = (u8)OpcodeLookup[tms9900.currentOp];
-        
+
         switch (op8)
         {
         #include "tms9900.inc"

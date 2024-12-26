@@ -208,7 +208,7 @@ s16 wave_mixbuf[16];
 // For direct sampling, this tells us for a given scanline how many samples
 // to process... this gets us to the magic sample_rate. Crude but effective.
 // -------------------------------------------------------------------------
-const u8 wave_direct_sample_table[256] = 
+const u8 wave_direct_sample_table[256] =
 {
   2,1,2,2,2,2,1,2,     2,2,1,2,2,2,2,2,
   2,2,1,2,2,2,1,2,     2,2,2,1,2,2,2,1,
@@ -455,7 +455,7 @@ void setupStream(void)
 void dsInstallSoundEmuFIFO(void)
 {
   SoundPause();
-  
+
   //  ------------------------------------------------------------------
   //  The SN sound chip is for normal TI99 sound handling
   //  ------------------------------------------------------------------
@@ -504,7 +504,7 @@ void ResetTI(void)
   sn76496W(0x90 | 0x0F  ,&snti99);       //  Write new Volume for Channel A (off)
   sn76496W(0xB0 | 0x0F  ,&snti99);       //  Write new Volume for Channel B (off)
   sn76496W(0xD0 | 0x0F  ,&snti99);       //  Write new Volume for Channel C (off)
-  
+
   // For the direct sound driver...
   memset(wave_mixer,   0x00, sizeof(wave_mixer));
   wave_mixer_read=0;
@@ -1311,12 +1311,20 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
 
     if (debug_screen == 0) // Show first page of debug info
     {
-        for (idx=0; idx<16; idx++)
+        for (idx=0; idx < (tms9900.accurateEmuFlags ? 12:16); idx++)
         {
             sprintf(tmpBuf, "%-7u %04X", debug[idx], debug[idx]&0x0000FFFF);
             DS_Print(20,1+idx,6,tmpBuf);
         }
         idx++;
+        if (tms9900.accurateEmuFlags)
+        {
+            extern u32 idle_counter;
+            sprintf(tmpBuf, "TimerSt %04X", tms9901.TimerStart);    DS_Print(20,idx++,6,tmpBuf);
+            sprintf(tmpBuf, "TimerCo %04X", tms9901.TimerCounter);  DS_Print(20,idx++,6,tmpBuf);
+            sprintf(tmpBuf, "IdleCo  %04X", idle_counter & 0xFFFF); DS_Print(20,idx++,6,tmpBuf);
+            idx++;
+        }
         sprintf(tmpBuf, "ILOP: %c %04X", (tms9900.illegalOPs ? 'Y':'N'), tms9900.lastIllegalOP);
         DS_Print(20,idx++,6,tmpBuf);
         if (tms9900.illegalOPs)
@@ -1340,7 +1348,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         // Video Chip (VDP) debug
         sprintf(tmpBuf, "VDP %02X %02X %02X %02X %2s", VDP[0], VDP[1], VDP[2], VDP[3], VDP_Mode_Str[TMS9918_Mode]);
         DS_Print(0,idx++,6,tmpBuf);
-        sprintf(tmpBuf, "VDP %02X %02X %02X %02X", VDP[4], VDP[5], VDP[6], VDP[7]);
+        sprintf(tmpBuf, "VDP %02X %02X %02X %02X %-3s", VDP[4], VDP[5], VDP[6], VDP[7], (TMS9918_VRAMMask == 0xFFF) ? "4K":"16K");
         DS_Print(0,idx++,6,tmpBuf);
         sprintf(tmpBuf, "VDP AD=%04X  ST=%02X", VAddr, VDPStatus);
         DS_Print(0,idx++,6,tmpBuf);
@@ -2198,7 +2206,7 @@ int main(int argc, char **argv)
 // hit one of these signatures - but that's a problem for another day.
 //
 // The delay below can be used to ensure no other speech sample (including the one that will
-// be played) is interrupted by another speech sample. A real TI-09/4a Speech Synth will 
+// be played) is interrupted by another speech sample. A real TI-09/4a Speech Synth will
 // queue them up but that's not how it works with MaxMod and the SFX sound effect handling.
 // -------------------------------------------------------------------------------------------
 u32 speechData32 __attribute__((section(".dtcm"))) = 0;
