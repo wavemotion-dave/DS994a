@@ -282,6 +282,7 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
       strcpy(szName,gpFic[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
       if (gpFic[ucGame].uType == TI99DIR) {
+        szName[26]='\0'; // Needs to be a bit shorter for directory entries
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
@@ -320,6 +321,7 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
       strcpy(szName,gpDsk[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
       if (gpDsk[ucGame].uType == TI99DIR) {
+        szName[26]='\0'; // Needs to be a bit shorter for directory entries
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
@@ -394,7 +396,6 @@ void TI99FindFiles(void)
         if (strcasecmp(szFile, "sav") == 0) continue;
           
         strcpy(gpFic[uNbFile].szName,szFile);
-        gpFic[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
         gpFic[uNbFile].uType = TI99DIR;
         uNbFile++;
         countTI++;
@@ -469,7 +470,6 @@ void TI99FindDskFiles(void)
         if (strcasecmp(szFile, "sav") == 0) continue;
           
         strcpy(gpDsk[uNbFile].szName,szFile);
-        gpDsk[uNbFile].szName[26] = 0;  // No more than 26 chars can be shown in DIR listings
         gpDsk[uNbFile].uType = TI99DIR;
         uNbFile++;
         countDSK++;
