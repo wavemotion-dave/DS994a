@@ -470,8 +470,16 @@ void getfile_crc(const char *path)
 // --------------------------------------------------------------------------------
 ITCM_CODE u32 LoopTMS9900()
 {
-    // Run one scanline worth of CPU instructions
-    TMS9900_Run();
+    // -----------------------------------------------------------------
+    // Run one scanline worth of CPU instructions.
+    //
+    // Accurate emulation is enabled if we see an IDLE instruction or
+    // TIMER enabled or SAMS use as all these need special attention.
+    // Most games don't need this handling and we save the precious DS
+    // CPU cycles as this is 10-15% slower.
+    // -----------------------------------------------------------------
+    if (tms9900.accurateEmuFlags) TMS9900_RunAccurate();
+    else TMS9900_Run();
 
     // Refresh VDP for this scanline
     if(Loop9918())

@@ -242,6 +242,7 @@ enum _MEM_TYPE
 
 extern void TMS9900_Reset(void);
 extern void TMS9900_Run(void);
+extern void TMS9900_RunAccurate(void);
 extern void TMS9900_Kickoff(void);
 extern void TMS9900_RaiseInterrupt(u16 iMask);
 extern void TMS9900_ClearInterrupt(u16 iMask);

@@ -29,8 +29,8 @@ typedef struct {
 	unsigned int  input_chunk_end;
 } read_state;
 
+read_state read_st; // A bit too large to put into fast memory... but it's fast enough as normal memory
 lowzip_state st         __attribute__((section(".dtcm")));
-read_state read_st      __attribute__((section(".dtcm")));
 yxml_t xml              __attribute__((section(".dtcm")));
 char xml_value[64]      __attribute__((section(".dtcm")));
 Layout_t cart_layout    __attribute__((section(".dtcm")));

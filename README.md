@@ -258,6 +258,14 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.5: ??-Dec-2024 by wavemotion-dave
+* Optimization pass to improve the emulation speed by a couple frames per second. Useful if you are running on the older DS hardware.
+* Properly mask off the low bit on WP writes to avoid problems in programs like SYSSCAN (which sets an odd-address for the WP).
+* Properly mask off the low bit on PC writes to more closely mimic real hardware.
+* More TMS9901 timer accuracy improvements to more closely mimic the timing on real hardware.
+* Fixed switching into a directory whose name is longer than 26 chars (should now support the full 128 char limit).
+* General cleanups and a bit of spit-and-polish across the board.
+
 V2.4: 24-Dec-2024 by wavemotion-dave
 * New Alpha keyboard specifically designed to improve the experience of playing text adventures like the Scott Adam's Adventure series.
 * Fixed sound output in Red Baron (engine idle now sounds correct - not the high pitched squeal of previous versions).

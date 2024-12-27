@@ -53,7 +53,9 @@
 // -------------------------------------------------------------------
 u8      MemCPU[0x10000];            // 64K of CPU Space  (the lower 8K will contain the system console ROM)
 u8      MemGROM[0x10000];           // 64K of GROM Space (the lower 24K will contain system GROMs)
-u8      MemType[0x10000>>4];        // Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
+
+// Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
+u8      MemType[0x10000>>4] __attribute__((section(".dtcm"))); // Accessed often enough to put into fast memory
 
 u8     *MemCART  __attribute__((section(".dtcm")));     // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
 u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSi will bump this to 8MB)
@@ -700,8 +702,7 @@ inline __attribute__((always_inline)) void WriteBank(u16 address)
         u16 bank = (address >> 1);                              // Divide by 2 as we are always looking at bit 1 (not bit 0)
         bank &= tms9900.bankMask;                               // Support up to the maximum bank size using mask (based on file size as read in)
         tms9900.bankOffset = (0x2000 * bank);                   // Memory Reads will now use this offset into the Cart space...
-        if (bank == 0) tms9900.cartBankPtr = &MemCPU[0x6000];   // Bank 0 can just point back into the main memory which always has bank 0 ROM
-        else tms9900.cartBankPtr = MemCART+tms9900.bankOffset;  // And point to the right place in memory for cart fetches
+        tms9900.cartBankPtr = MemCART+tms9900.bankOffset;       // And point to the right place in memory for cart fetches
     }
 }
 
@@ -775,14 +776,19 @@ inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
     return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
 }
 
-// ----------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
-// ----------------------------------------------------------------------------------------------------------------
+// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access. 
+// --------------------------------------------------------------------------------------------------------------------
 inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 {
-    if (MemType[address>>4] == MF_SAMS8)
+    if (MemType[address>>4])
     {
-        return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFE))));
+        AddCycleCount(4);
+        if (MemType[address>>4] == MF_SAMS8)
+        {
+            return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFE))));
+        }
     }
     return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
 }
@@ -807,18 +813,23 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
     }
 }
 
-// ----------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
 // This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
-// ----------------------------------------------------------------------------------------------------------------
+// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access. 
+// --------------------------------------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
-    if (MemType[address>>4] == MF_SAMS8)
+    u8 memType = MemType[address>>4];
+    
+    if (memType) AddCycleCount(4);  // Anything not intrinsic 16-bit memory incurs the penalty
+    
+    if (memType == MF_SAMS8)
     {
         *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0xFFE))) = (data << 8) | (data >> 8);
     }
     else
     {
-        if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
+        if (!memType && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
         {
             address &= 0x00FE;
             *((u16*)(MemCPU+(0x8000 | address))) = (data << 8) | (data >> 8);
@@ -1178,18 +1189,18 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
-    switch ((tms9900.currentOp >> 4) & 0x03)
+    switch (tms9900.currentOp & 0x0030) // We could shift this down, but we're looking for maximum optimization
     {
-        case 0: // Rx  2c
+        case 0x0000: // Rx  2c
             tms9900.srcAddress = WP_REG(rData);
             break;
 
-        case 1: // *Rx  6c
+        case 0x0010: // *Rx  6c
             tms9900.srcAddress = ReadRAM16(WP_REG(rData));
             AddCycleCount(4);
             break;
 
-        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+        case 0x0020: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.srcAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
             if (rData) tms9900.srcAddress += ReadRAM16(WP_REG(rData));
             AddCycleCount(8);
@@ -1213,18 +1224,18 @@ static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes)
 {
     u16 rData = REG_GET_FROM_OPCODE();
 
-    switch ((tms9900.currentOp >> 4) & 0x03)
+    switch (tms9900.currentOp & 0x0030)
     {
-        case 0: // Rx  2c
+        case 0x0000: // Rx  2c
             tms9900.srcAddress = WP_REG(rData);
             break;
 
-        case 1: // *Rx  6c
+        case 0x0010: // *Rx  6c
             tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
             AddCycleCount(4);
             break;
 
-        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+        case 0x0020: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.srcAddress = ReadPC16a();
             if (rData) tms9900.srcAddress += ReadRAM16a(WP_REG(rData));
             AddCycleCount(8);
@@ -1250,18 +1261,18 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
-    switch ((tms9900.currentOp >> 10) & 0x03)
+    switch (tms9900.currentOp & 0x0C00) // We could shift this down, but we're looking for maximum optimization
     {
-        case 0: // Rx  2c
+        case 0x0000: // Rx  2c
             tms9900.dstAddress = WP_REG(rData);
             break;
 
-        case 1: // *Rx  6c
+        case 0x0400: // *Rx  6c
             tms9900.dstAddress = ReadRAM16(WP_REG(rData));
             AddCycleCount(4);
             break;
 
-        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+        case 0x0800: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.dstAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
             if (rData) tms9900.dstAddress += ReadRAM16(WP_REG(rData));
             AddCycleCount(8);
@@ -1285,18 +1296,18 @@ static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
 {
     u16 rData = (tms9900.currentOp>>6) & 0x0F;
 
-    switch ((tms9900.currentOp >> 10) & 0x03)
+    switch (tms9900.currentOp & 0x0C00)
     {
-        case 0: // Rx  2c
+        case 0x0000: // Rx  2c
             tms9900.dstAddress = WP_REG(rData);
             break;
 
-        case 1: // *Rx  6c
+        case 0x0400: // *Rx  6c
             tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
             AddCycleCount(4);
             break;
 
-        case 2: // @yyyy(Rx) or @yyyy if Rx=0  10c
+        case 0x0800: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.dstAddress = ReadPC16a();
             if (rData) tms9900.dstAddress += ReadRAM16a(WP_REG(rData));
             AddCycleCount(8);
@@ -1475,19 +1486,11 @@ void TMS9900_RunAccurate(void)
 // from one scanline to the next and we compensate the next scanline by the appopriate delta to keep things
 // running at the right speed. In practice this has been good enough to render all the TI games properly.
 //
-// This is chewing up a big chunk of the ITCM memory. Right now the entire opcode handling is almost 20K of
+// This is chewing up a big chunk of the ITCM memory. Right now the entire opcode handling is roughly 20K of
 // fast instruction memory... but it buys us at least 10% speed by keeping those instructions in the cache.
 // --------------------------------------------------------------------------------------------------------------
 ITCM_CODE void TMS9900_Run(void)
 {
-    // --------------------------------------------------------------------
-    // Accurate emulation is enabled if we see an IDLE instruction or
-    // TIMER enabled ... or SAMS use as all these need special attention.
-    // Most games don't need this handling and we save the precious DS CPU
-    // cycles as this is 10% slower.
-    // --------------------------------------------------------------------
-    if (tms9900.accurateEmuFlags) return TMS9900_RunAccurate();
-
     u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
 
     do
