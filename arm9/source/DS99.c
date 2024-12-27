@@ -237,7 +237,7 @@ const u8 wave_direct_sample_table[256] =
 // with the scanline processing. This is not as smooth as the normal sound driver and takes more
 // CPU power but will help render sound those few games that utilize digitize speech techniques.
 // -------------------------------------------------------------------------------------------------
-void processDirectAudio(void)
+ITCM_CODE void processDirectAudio(void)
 {
     int len = wave_direct_sample_table[wave_direct_skip++];
 
@@ -1147,9 +1147,9 @@ u8 CheckKeyboardInput_alpha(u16 iTy, u16 iTx)
         {
             if      ((iTx >= 1)   && (iTx < 53))   {KeyPush(TMS_KEY_T);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_K);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 53)  && (iTx < 103))  {KeyPush(TMS_KEY_D);KeyPush(TMS_KEY_R);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 103) && (iTx < 153))  {KeyPush(TMS_KEY_L);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_K); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 103) && (iTx < 153))  {KeyPush(TMS_KEY_L);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_K); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
             else if ((iTx >= 153) && (iTx < 203))  {KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_X);KeyPush(TMS_KEY_A);KeyPush(TMS_KEY_M); KeyPush(TMS_KEY_I);KeyPush(TMS_KEY_N);KeyPush(TMS_KEY_E); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
-            else if ((iTx >= 203) && (iTx < 254))  {KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P);KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_N);  KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
+            else if ((iTx >= 203) && (iTx < 254))  {KeyPush(TMS_KEY_O);KeyPush(TMS_KEY_P);KeyPush(TMS_KEY_E);KeyPush(TMS_KEY_N); KeyPush(TMS_KEY_SPACE); if (!bKeyClick) bKeyClick=1;}
             WAITVBL;
         }
     }
@@ -1584,6 +1584,29 @@ u8 handle_touch_input(void)
     return 0;
 }
 
+// --------------------------------------------------------------------------------
+// If there are any keys in the key buffer, we process them here one at a time...
+// This is used if we are pasting a disk filename or the Adventure macros. It 
+// does not need to be bullet-fast so it can stay outside our fast-memory core.
+// --------------------------------------------------------------------------------
+void ProcessKeyBuffer(void)
+{
+    // Shift is always followed by the key it is modifying...
+    if ((u8)key_push[key_push_read] == TMS_KEY_SHIFT)
+    {
+      tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
+      key_push_read = (key_push_read+1) & 0x1F;
+    }
+    if ((u8)key_push[key_push_read] == TMS_KEY_FUNCTION)
+    {
+      tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
+      key_push_read = (key_push_read+1) & 0x1F;
+    }
+    tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
+    key_push_read = (key_push_read+1) & 0x1F;
+
+}
+
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the TMS9900, VDP and
 // run the sound engine. This is placed in fast ITCM_CODE even though it
@@ -1679,19 +1702,7 @@ ITCM_CODE void ds99_main(void)
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
           {
-              // Shift is always followed by the key it is modifying...
-              if ((u8)key_push[key_push_read] == TMS_KEY_SHIFT)
-              {
-                  tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
-                  key_push_read = (key_push_read+1) & 0x1F;
-              }
-              if ((u8)key_push[key_push_read] == TMS_KEY_FUNCTION)
-              {
-                  tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
-                  key_push_read = (key_push_read+1) & 0x1F;
-              }
-              tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
-              key_push_read = (key_push_read+1) & 0x1F;
+              ProcessKeyBuffer();
           }
       }
 
