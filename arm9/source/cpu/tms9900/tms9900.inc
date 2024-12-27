@@ -199,7 +199,7 @@
 
     case op_lwpi:
         AddCycleCount(10);
-        tms9900.WP = ReadPC16();
+        tms9900.WP = ReadPC16() & 0xFFFE;
         break;
 
     case op_limi:
@@ -272,6 +272,7 @@
         tms9900.ST = ReadRAM16(WP_REG(15));  // Restore Status
         tms9900.PC = ReadRAM16(WP_REG(14));  // Restore Program Counter
         tms9900.WP = ReadRAM16(WP_REG(13));  // Restore Working Pointer - must me done last or the register accesses above will be wrong
+        tms9900.WP &= 0xFFFE;                // Ensure WP is word-aligned
         break;
 
     case op_blwp:

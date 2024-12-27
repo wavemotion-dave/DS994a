@@ -782,9 +782,9 @@ inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 {
     if (MemType[address>>4] == MF_SAMS8)
     {
-        return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFF))));
+        return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFE))));
     }
-    return __builtin_bswap16(*(u16*) (&MemCPU[address & 0xFFFE]));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
 }
 
 // ----------------------------------------------------------------------------------------
@@ -792,16 +792,17 @@ inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
 // ----------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16(u16 address, u16 data)
 {
-    address &= 0xFFFE;
     if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
     {
-        *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
-        *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
-        *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
-        *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+        address &= 0x00FE;
+        *((u16*)(MemCPU+(0x8000 | address))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8100 | address))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8200 | address))) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+(0x8300 | address))) = (data << 8) | (data >> 8);
     }
     else
     {
+        address &= 0xFFFE;
         *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
     }
 }
@@ -811,22 +812,23 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
 // ----------------------------------------------------------------------------------------------------------------
 ITCM_CODE void WriteRAM16a(u16 address, u16 data)
 {
-    address &= 0xFFFE;
     if (MemType[address>>4] == MF_SAMS8)
     {
-        *((u16*)(theSAMS.memoryPtr[address>>12] + (address & 0xFFF))) = (data << 8) | (data >> 8);
+        *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0xFFE))) = (data << 8) | (data >> 8);
     }
     else
     {
         if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
         {
-            *((u16*)(MemCPU+(0x8000 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8100 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8200 | (address&0xff)))) = (data << 8) | (data >> 8);
-            *((u16*)(MemCPU+(0x8300 | (address&0xff)))) = (data << 8) | (data >> 8);
+            address &= 0x00FE;
+            *((u16*)(MemCPU+(0x8000 | address))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8100 | address))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8200 | address))) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+(0x8300 | address))) = (data << 8) | (data >> 8);
         }
         else
         {
+            address &= 0xFFFE;
             *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
         }
     }
@@ -854,7 +856,7 @@ inline __attribute__((always_inline)) u16 ReadPC16(void)
             }
         }
     }
-    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xfffe])));
+    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xFFFE])));
 }
 
 // -------------------------------------------------------------------------------------------------------------------------------------
@@ -881,7 +883,7 @@ ITCM_CODE u16 ReadPC16a(void)
             }
         }
     }
-    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xfffe])));
+    return __builtin_bswap16(*((u16*)(&MemCPU[address&0xFFFE])));
 }
 
 
@@ -955,13 +957,13 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return (retVal << 8) | retVal;      // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
                 break;
             default:
-                return __builtin_bswap16(*((u16*)(MemCPU+address)));
+                return __builtin_bswap16(*(u16*) (&MemCPU[address]));
                 break;
         }
     }
 
     // This is either console ROM or workspace RAM
-    return __builtin_bswap16(*((u16*)(MemCPU+address)));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address]));
 }
 
 // --------------------------------------------------------------------------------------------------
@@ -1342,13 +1344,13 @@ static inline __attribute__((always_inline)) void TsTd_Accurate(void)
 
 // --------------------------------------------------------------------------------------
 // The context switch saves the WP, PC and Status and sets up for the new workspace.
-// Classic99 checks for a return address of zero but we don't handle that in DS99/4a.
 // --------------------------------------------------------------------------------------
 void TMS9900_ContextSwitch(u16 address)
 {
     // Do it the Classic99 way...
     u16 old_wp = tms9900.WP;                    // Save old WP
     tms9900.WP = MemoryRead16(address+0);       // Set the new Workspace
+    tms9900.WP &= 0xFFFE;                       // Ensure WP is word-aligned
     MemoryWrite16(WP_REG(13), old_wp);          // Set the old Workspace Pointer
     MemoryWrite16(WP_REG(14), tms9900.PC);      // Set the old PC
     MemoryWrite16(WP_REG(15), tms9900.ST);      // Set the old Status
