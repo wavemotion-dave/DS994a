@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -101,7 +101,7 @@ struct old_highscore_t
 };
 
 // Version 0006 was out there for a long time... the new streamlined version 0007 gives us
-// about 32K more free space but we want to be kind to long-time users of DS99/4a so we 
+// about 32K more free space but we want to be kind to long-time users of DS99/4a so we
 // will do a one-time upgrade from 0006 to 0007.
 void convert_version_0006_to_0007(void)
 {

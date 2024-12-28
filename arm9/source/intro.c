@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without

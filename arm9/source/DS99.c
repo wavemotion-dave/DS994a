@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2004 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -100,8 +100,8 @@ char dsk_filename[16];          // Short filename to show on DISK Menu
 u16 NTSC_Timing[] __attribute__((section(".dtcm"))) = {546, 496, 454, 422, 387, 360, 610, 695};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 u16 PAL_Timing[]  __attribute__((section(".dtcm"))) = {656, 596, 546, 504, 470, 435, 728, 795};    // 100%, 110%, 120%, 130%, 140%, 150% and then the slower 90% and 80%
 
-u8 disk_menu_items = 0;     // Start with the top menu item
-u8 disk_drive_select = 0;   // Start with DSK1
+u8 disk_menu_items = 0;        // Start with the top menu item
+u8 disk_drive_select = DSK1;   // Start with DSK1
 
 // The DS/DSi has 12 keys that can be mapped to virtually any TI key (joystick or keyboard)
 u16 NDS_keyMap[12] __attribute__((section(".dtcm"))) = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_A, KEY_B, KEY_X, KEY_Y, KEY_L, KEY_R, KEY_START, KEY_SELECT};
@@ -196,6 +196,7 @@ mm_stream       myStream __attribute__((section(".dtcm")));
 // -----------------------------------------------------------------------------------
 // For Wave Direct sampling, we sample every scanline and place into a buffer so that
 // when the system calls OurSoundMixer(), we have samples we can load up and play...
+// Don't make WAVE DIRECT size too small (choppy audio) or too large (laggy audio).
 // -----------------------------------------------------------------------------------
 #define WAVE_DIRECT_BUF_SIZE 0x7FF
 u16 wave_mixer_read=0;
@@ -304,6 +305,9 @@ void setupStream(void)
   //---------------------------------------------------------------------
   mmInitDefaultMem((mm_addr)soundbank_bin);
 
+  // --------------------------------------------------------------------------------------
+  // And load up all our WAV sound effects... most of these are for various speech modules
+  // --------------------------------------------------------------------------------------
   mmLoadEffect(SFX_KEYCLICK);
   mmLoadEffect(SFX_MUS_INTRO);
   mmLoadEffect(SFX_PRESS_FIRE);
@@ -489,7 +493,7 @@ void dsInstallSoundEmuFIFO(void)
 // --------------------------------------------------------------
 void ResetStatusFlags(void)
 {
-    last_pal_mode = 99;
+    last_pal_mode = 99; // Just force the re-display
 }
 
 
@@ -546,8 +550,11 @@ void ResetTI(void)
   // Make sure the disk systems is up and running
   // ---------------------------------------------
   disk_init();
-  disk_drive_select = 0; // Start with DSK1
+  disk_drive_select = DSK1; // Start with DSK1
 
+  // ---------------------------------------------------
+  // And reset our debugger registers on every new load
+  // ---------------------------------------------------
   memset(debug, 0x00, sizeof(debug));
 }
 
@@ -643,6 +650,10 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             }
         }
 
+        // -------------------------------------------------------------
+        // For the caps lock, we show a small dot symbol on our virtual
+        // keyboard so the user knows that the caps lock is enabled.
+        // -------------------------------------------------------------
         if(tms9901.CapsLock)
         {
             DS_Print((myConfig.overlay == 2) ? 23:2,23,6, "@");
@@ -669,6 +680,11 @@ void KeyPush(u8 key)
     key_push_write = (key_push_write+1) & 0x1F;
 }
 
+// ------------------------------------------------------------------
+// Handles most of the characters that could be in a TI filename...
+// it's not exhaustive but good enough for our use. The vast majority
+// have letters/numbers and the occasional dash or underscore.
+// ------------------------------------------------------------------
 void KeyPushFilename(char *filename)
 {
     for (int i=0; i<strlen(filename); i++)
@@ -821,9 +837,10 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     DS_Print(2,22,0, "A TO SELECT, X SWITCH DRIVES");
 }
 
-// ------------------------------------------------------------------------
-// Handle Disk mini-menu interface...
-// ------------------------------------------------------------------------
+// -------------------------------------------------------------------------
+// Handle Disk mini-menu interface... This is the menu that pops up when
+// the user presses the small TI-Logo in the corner of the virtual keyboard.
+// -------------------------------------------------------------------------
 void DiskMenu(void)
 {
   u8 menuSelection = 0;
@@ -1015,6 +1032,11 @@ u8 MiniMenu(void)
 
 // -------------------------------------------------------------------------------------------
 // A minimal debugger with just a few keys at the bottom... Enough to let us run most stuff.
+// The debugger has a few different 'pages' that we can display - including some basic memory
+// dumps that will show contents of various memory ranges. We don't show everything - this
+// isn't meant to be a full-fledged debugger... it's mostly used when some cart/program isn't
+// running right for the emulator and it can help shed light on why that might be... If you 
+// want a full-featured debugger, try Classic99 which has some great features for developers.
 // -------------------------------------------------------------------------------------------
 u8 CheckDebugerInput(u16 iTy, u16 iTx)
 {
@@ -1035,6 +1057,8 @@ u8 CheckDebugerInput(u16 iTy, u16 iTx)
     {
         if (iTx > 128) {if (mem_debug < 16) mem_debug++;}
         else {if (mem_debug > 0) mem_debug--;}
+        mmEffect(SFX_KEYCLICK);
+        WAITVBL;WAITVBL;
     }
 
     return META_KEY_NONE;
@@ -1133,7 +1157,9 @@ u8 CheckKeyboardInput(u16 iTy, u16 iTx)
     return META_KEY_NONE;
 }
 
+// -------------------------------------------------------------------------------------------------------------
 // The Alpha-Numeric Keyboard has a slightly different layout with some Text-Adventure macros across the top...
+// -------------------------------------------------------------------------------------------------------------
 u8 CheckKeyboardInput_alpha(u16 iTy, u16 iTx)
 {
     if (bShowDebug) return CheckDebugerInput(iTy, iTx);
@@ -1275,6 +1301,10 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
 // Our mini-debugger shows various VDP, CPU and SN sound chip values
 // as well as some of the more relevant bits of under-the-hood
 // values. This is useful when trying to find bugs in emulation.
+// There is also the ability to dump memory into a sort of grid
+// to allow inspection of VDP and core memories... The user can
+// pull up the internal debugger if they load any cartridge using
+// the X button instead of the normal A button.
 // -------------------------------------------------------------------
 char *VDP_Mode_Str[] = {"G1","G2","MC","BT","TX","--","HB","--"};
 
@@ -1287,20 +1317,12 @@ void ds99_clear_debugger(void)
     WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
 }
 
-extern u8 *fake_heap_end;   // current heap start
+extern u8 *fake_heap_end;     // current heap start
 extern u8 *fake_heap_start;   // current heap end
 
-u8* getHeapStart() {
-   return fake_heap_start;
-}
-
-u8* getHeapEnd() {
-   return (u8*)sbrk(0);
-}
-
-u8* getHeapLimit() {
-   return fake_heap_end;
-}
+u8* getHeapStart() {return fake_heap_start;}
+u8* getHeapEnd()   {return (u8*)sbrk(0);}
+u8* getHeapLimit() {return fake_heap_end;}
 
 int getMemUsed() { // returns the amount of used memory in bytes
    struct mallinfo mi = mallinfo();
@@ -1403,7 +1425,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
         sprintf(tmpBuf, "RPK SOCK:  %d", cart_layout.num_sockets);
         DS_Print(0,idx++,6,tmpBuf);
     }
-    else if (debug_screen == 2) // Show VDP Memory 
+    else if (debug_screen == 2) // Show VDP Memory
     {
         idx = 1;
         DS_Print(0,idx++,6, "VDP MEMORY DUMP");
@@ -1414,7 +1436,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
             DS_Print(0,idx++,6,tmpBuf);
         }
     }
-    else if (debug_screen == 3) // Show Main Memory 
+    else if (debug_screen == 3) // Show Main Memory
     {
         idx = 1;
         DS_Print(0,idx++,6, "CPU MEMORY DUMP");
@@ -1425,7 +1447,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
             DS_Print(0,idx++,6,tmpBuf);
         }
     }
-    else if (debug_screen == 4) // Show Extended Memory 
+    else if (debug_screen == 4) // Show Extended Memory
     {
         idx = 1;
         DS_Print(0,idx++,6, "EXTENDED MEMORY DUMP");
@@ -1513,6 +1535,8 @@ u8 handle_touch_input(void)
 
         case META_KEY_DEBUG_NEXT:
             debug_screen = (debug_screen+1) % 5; // We have several debug screens we can flip-flop between.
+            mmEffect(SFX_KEYCLICK);
+            WAITVBL;
             ds99_clear_debugger();
             break;
 
@@ -1586,7 +1610,7 @@ u8 handle_touch_input(void)
 
 // --------------------------------------------------------------------------------
 // If there are any keys in the key buffer, we process them here one at a time...
-// This is used if we are pasting a disk filename or the Adventure macros. It 
+// This is used if we are pasting a disk filename or the Adventure macros. It
 // does not need to be bullet-fast so it can stay outside our fast-memory core.
 // --------------------------------------------------------------------------------
 void ProcessKeyBuffer(void)
@@ -1698,6 +1722,11 @@ ITCM_CODE void ds99_main(void)
           }
       }
 
+      // -----------------------------------------------------------------------
+      // We don't want to inject keypresses into the system too fast (nor 
+      // too slow) so we dampen down the key buffer processing here... 
+      // Arbitrary but this seems to work for any programs I've tried so far...
+      // -----------------------------------------------------------------------
       if (!(++dampen & 3))
       {
           if (key_push_read != key_push_write) // There are keys to process in the Push buffer
@@ -1706,6 +1735,7 @@ ITCM_CODE void ds99_main(void)
           }
       }
 
+      // Check if the DS touch-screen has been pressed...
       if (keysCurrent() & KEY_TOUCH)
       {
           if (handle_touch_input()) return;
@@ -1739,19 +1769,18 @@ ITCM_CODE void ds99_main(void)
       // ------------------------------------------------------------------------
       nds_key  = keysCurrent();
 
-      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X))
+      if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X)) // Check for the LCD swap key sequence
       {
             lcdSwap();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
       }
-      else
+      else // Check for the screen snapshot key sequence...
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y))
       {
             DS_Print(10,0,0,"SNAPSHOT");
             screenshot();
             WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
             DS_Print(10,0,0,"        ");
-            TMS9901_RaiseVDPInterrupt();
       }
       else
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y))
@@ -2066,9 +2095,15 @@ void LoadBIOSFiles(void)
 
 // --------------------------------------------------------------------
 // We call this function once at startup to allocate and setup memory.
+// This is done only once when the emulator is launched (not on every
+// cart load) which ensures that we do not have to contend with any 
+// sort of memory leaking or garbage collection. 
 // --------------------------------------------------------------------
 static void StartupMemoryAllocation(void)
 {
+    SharedMemBuffer = malloc(768*1024);   // This is mostly used by the older DS machines for CART and SAMS storage but we steal a bit for DSK3 on the DSi
+    memset(SharedMemBuffer, 0x00, 768*1024);
+    
     if (isDSiMode())
     {
         theSAMS.numBanks = 256;                         // 256 * 4K = 1024K for DSi
@@ -2100,9 +2135,6 @@ static void StartupMemoryAllocation(void)
 // ------------------------------------------------------
 int main(int argc, char **argv)
 {
-  SharedMemBuffer = malloc(768*1024);   // This is mostly used by the older DS machines for CART and SAMS storage but we steal a bit for DSK3 on the DSi
-  memset(SharedMemBuffer, 0x00, 768*1024);
-
   //  Init sound
   consoleDemoInit();
 
@@ -2111,7 +2143,7 @@ int main(int argc, char **argv)
      return -1;
   }
 
-  // Allocate some memory for the SAMS and Cart Buffers - done one time
+  // Allocate some memory for the SAMS and Cart Buffers - done one time only at startup
   StartupMemoryAllocation();
 
   // Need to load in config file if only for the global options at this point...

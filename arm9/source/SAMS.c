@@ -1,8 +1,8 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -39,36 +39,36 @@ void SAMS_Initialize(void)
 {
     // Start with everything cleared out...
     memset(&theSAMS, 0x00, sizeof(theSAMS));
-    
+
     // --------------------------------------------------------------
     // For SAMS memory, ensure everything points to the right banks
     // and default the system to pass-thru mode...
     // --------------------------------------------------------------
     theSAMS.cruSAMS[0] = 0;
     theSAMS.cruSAMS[1] = 0;
-    
+
     // ------------------------------------------------------------------------
-    // SAMS memory is bigger for the DSi where we have more room... See a bit 
-    // further below since with the DS-Lite/Phat we need to reduce the size 
+    // SAMS memory is bigger for the DSi where we have more room... See a bit
+    // further below since with the DS-Lite/Phat we need to reduce the size
     // of the max cart buffer in order to support the 512K SAMS memory.
     // ------------------------------------------------------------------------
     theSAMS.numBanks = (isDSiMode() ? 256 : 128);  // 256 * 4K = 1024K,  128 * 4K = 512K
-    
-    // For each bank... set the default memory banking pointers 
+
+    // For each bank... set the default memory banking pointers
     for (u8 i=0; i<16; i++)
     {
         theSAMS.bankMapSAMS[i] = i;
         theSAMS.memoryPtr[i] = MemSAMS + (i * 0x1000);
     }
-    
+
     // --------------------------------------------------------------------------
     // We don't map the MemType[] here.. only when CRU bit is written but we do
     // clear out the SAMS memory to all zeros (helps with savestate compression)
     // --------------------------------------------------------------------------
     memset(MemSAMS, 0x00, ((theSAMS.numBanks) * 0x1000));
-    
+
     // -----------------------------------------------------------------
-    // If we are configured for SAMS operation... set the accuracy flag 
+    // If we are configured for SAMS operation... set the accuracy flag
     // to map in slower (but more accurate) mapping.
     // -----------------------------------------------------------------
     if (myConfig.machineType == MACH_TYPE_SAMS)
@@ -76,14 +76,14 @@ void SAMS_Initialize(void)
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
         SAMS_cru_write(0,0);    // Swap out the "DSR" (the SAMS memory mapped registers are not visible)
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode which is basically like having a 32K expansion)
-        
+
         if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
     }
     else
     {
         if (!isDSiMode()) MAX_CART_SIZE = (512 * 1024);  // If we are DS-Lite/Phat, we can support a larger cart size when SAMS is disabled
     }
-    
+
     sams_highwater_bank = 0x00;
 }
 
@@ -97,7 +97,7 @@ inline void SAMS_SwapBank(u8 memory_region, u8 bank)
 {
     // For smaller than 1MB SAMS, it's acceptable to mirror the memory (so 512K ends up visible in both halves of the banking)
     bank &= (theSAMS.numBanks - 1);
-    
+
     if (bank < theSAMS.numBanks)
     {
         if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
@@ -128,7 +128,7 @@ void SAMS_WriteBank(u16 address, u8 data)
 }
 
 // ----------------------------------------------------------
-// Return the current bank mapped at a particular address. 
+// Return the current bank mapped at a particular address.
 // ----------------------------------------------------------
 u8 SAMS_ReadBank(u16 address)
 {
@@ -197,7 +197,7 @@ u8 SAMS_cru_read(u16 cruAddress)
 // ------------------------------------------------------------------
 // Map the SAMS DSR in/out at address 0>4000 which is shared
 // with the Disk Controller (and other periprhals in the future)
-// Note: SAMS does not have a traditional DSR rom - so this CRU 
+// Note: SAMS does not have a traditional DSR rom - so this CRU
 // bit is really more like a SAMS enable/disable as we are just
 // enabling the memory mapped registers here (no ROM is swapped).
 // ------------------------------------------------------------------
@@ -220,7 +220,7 @@ void SAMS_MapDSR(u8 dataBit)
 }
 
 // --------------------------------------------------------------------------------------------------
-// These 32-bit read/write functions are used only for the Load/Save state handlers in savegame.c 
+// These 32-bit read/write functions are used only for the Load/Save state handlers in savegame.c
 // and are mainly needed so we can do simple Run-Length-Encoding (RLE) on the big SAMS memory area.
 // --------------------------------------------------------------------------------------------------
 u32 SAMS_Read32(u32 address)

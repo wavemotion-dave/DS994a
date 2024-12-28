@@ -1,8 +1,8 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
-// Copying and distribution of this emulator, its source code and associated 
-// readme files, with or without modification, are permitted in any medium without 
+// Copying and distribution of this emulator, its source code and associated
+// readme files, with or without modification, are permitted in any medium without
 // royalty provided this copyright notice is used and wavemotion-dave is thanked profusely.
 //
 // The DS994a emulator is offered as-is, without any warranty.
@@ -18,7 +18,7 @@
 #ifndef TMS9900_H_
 #define TMS9900_H_
 
-extern u32   debug[];   // For debugging on the DS... 
+extern u32   debug[];   // For debugging on the DS...
 
 // -----------------------------------------------------------------------------------------------------------------
 // The TMS9900 Opcodes... there are 69 of these plus we reserve the first one for 'bad' and the last one for 'max'
@@ -48,11 +48,11 @@ enum _OPCODES
     op_lrex,
     op_blwp,
     op_b,
-    op_x,   
+    op_x,
     op_clr,
-    op_neg, 
-    op_inv, 
-    op_inc, 
+    op_neg,
+    op_inv,
+    op_inc,
     op_inct,
     op_dec,
     op_dect,
@@ -77,22 +77,22 @@ enum _OPCODES
     op_sbz,
     op_tb,
     op_coc,
-    op_czc, 
-    op_xor, 
-    op_xop, 
+    op_czc,
+    op_xor,
+    op_xop,
     op_ldcr,
     op_stcr,
     op_mpy,
-    op_div, 
+    op_div,
     op_szc,
     op_szcb,
     op_s,
-    op_sb,  
-    op_c,  
+    op_sb,
+    op_c,
     op_cb,
-    op_a,  
-    op_ab,  
-    op_mov, 
+    op_a,
+    op_ab,
+    op_mov,
     op_movb,
     op_soc,
     op_socb,
@@ -146,13 +146,17 @@ extern TMS9900 tms9900;
 #define GROM_WRITE_ADDR_LO_CYCLES   15
 #define GROM_WRITE_ADDR_HI_CYCLES   21
 
+// ---------------------------------------------------------
+// When decoding source/destination, we can do so with BYTE
+// addressing or WORD addressing according to the opcode.
+// ---------------------------------------------------------
 #define SOURCE_BYTE                 1
 #define SOURCE_WORD                 2
 
 // --------------------------------------------------------------------------------------------
 // We track the flags but don't worry about the Interrupt mask at the bottom of the word
 // so that we can more quickly mask/AND/OR these bits to produce the fastest possible speeds.
-// We only handle one interrupt source - the VDP and that's good enough for the majority of 
+// We only handle one interrupt source - the VDP and that's good enough for the majority of
 // the TI library...
 // --------------------------------------------------------------------------------------------
 enum _STATUS_FLAGS
@@ -164,7 +168,7 @@ enum _STATUS_FLAGS
 	ST_OV         = 0x0800,   // Overflow
 	ST_OP         = 0x0400,   // Odd parity
 	ST_X          = 0x0200,   // Extended operation (not supported)
-    ST_INTMASK    = 0x000F    // The Interrupt Mask 
+    ST_INTMASK    = 0x000F    // The Interrupt Mask
 };
 
 // ------------------------------------------------------------
@@ -173,7 +177,7 @@ enum _STATUS_FLAGS
 #define REG_GET_FROM_OPCODE() (tms9900.currentOp & 0xf)
 
 // ---------------------------------------------------------------------------------------------------------
-// Flag handling is a mix of table lookup using the Classic99 StatusLookup16[] and StatusLookup8[] tables 
+// Flag handling is a mix of table lookup using the Classic99 StatusLookup16[] and StatusLookup8[] tables
 // plus some handling for when we add values, subtract values or compare values...
 // ---------------------------------------------------------------------------------------------------------
 #define STATUS_CLEAR_LAE        (tms9900.ST & ~(ST_LGT | ST_AGT | ST_EQ))
@@ -207,11 +211,11 @@ enum _STATUS_FLAGS
 // as a zero value which helps with fast determination of timing penalties during run-time.
 //
 // Any memory access to a non-zero value here will incur a timing pentalty. This pentalty is also
-// incurred by the VDP which is technically on the 16-bit bus but is wired to the high byte (which 
+// incurred by the VDP which is technically on the 16-bit bus but is wired to the high byte (which
 // I guess incurs the pentaly... though I'm unsure why... we follow Classic99 timing here...)
 //
 // Be careful if you change this table as we save out the MemTypes[] as part of the Save State
-// in case we have mapped in/out some DSR specific registers... the reserved spots can be 
+// in case we have mapped in/out some DSR specific registers... the reserved spots can be
 // repurposed in the future to add more memory types / register access for other peripherals.
 // -------------------------------------------------------------------------------------------------
 enum _MEM_TYPE

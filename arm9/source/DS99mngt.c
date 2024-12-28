@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -34,7 +34,7 @@ u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global fil
 // ---------------------------------------------------------------------------
 // Setup the main DS video modes. As usual, the top screen is primary and
 // where we map the main emulation of the TI99/4a. The bottom screen is for
-// the keyboard and various status texts. We need all of VRAM_A and VRAM_C 
+// the keyboard and various status texts. We need all of VRAM_A and VRAM_C
 // but we can utilize the other VRAM banks as extra 16-bit CPU mapped memory.
 // ---------------------------------------------------------------------------
 void DS_SetVideoModes(void)
@@ -61,7 +61,7 @@ void DS_SetVideoModes(void)
 
     // ---------------------------------------------------------------------------------
     // Init the page flipping buffer... The uBCL/12 below produces a stripped pattern
-    // which shows briefly while the emulation loads. You can change this to 0x0000 
+    // which shows briefly while the emulation loads. You can change this to 0x0000
     // instead which will just show a black background. I debated between the two...
     // ---------------------------------------------------------------------------------
     for (uBcl=0;uBcl<192;uBcl++)
@@ -128,7 +128,7 @@ u8 TI99Init(char *szGame)
     // Grab the system console GROM and place into our MemGROM[]
     // ------------------------------------------------------------------
     memcpy(&MemGROM[0], MAIN_GROM, 0x6000);
-    
+
     // --------------------------------------------------------------------------
     // Note: DSRs are not mapped in by default (such as the TI Disk Controller).
     //       Those will get 'turned on' by CRU writes as needed by the system.
@@ -209,13 +209,13 @@ u8 TI99Init(char *szGame)
         else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
         {
             if (file_size > (512 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
-            
+
             infile = fopen(tmpBuf, "rb");
             int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
             fclose(infile);
             numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
             tms9900.bankMask = BankMasks[numCartBanks-1];
-            
+
             if (numCartBanks > 1)
             {
                 // If the image is inverted we need to swap 8K banks

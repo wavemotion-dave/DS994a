@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -357,7 +357,7 @@ int TI99Filescmp (const void *c1, const void *c2)
       return -1;
   if ((p2->uType == TI99DIR) && !(p1->uType == TI99DIR))
       return 1;
-      
+
   // We want to do a simple string compare at this point but we want to force '0' files to sort lower
   char saveCh1 = p1->szName[strlen(p1->szName)-5];
   char saveCh2 = p2->szName[strlen(p2->szName)-5];
@@ -366,7 +366,7 @@ int TI99Filescmp (const void *c1, const void *c2)
   int retVal = strcasecmp (p1->szName, p2->szName);
   if (saveCh1 == '0') p1->szName[strlen(p1->szName)-5] = '0';
   if (saveCh2 == '0') p2->szName[strlen(p2->szName)-5] = '0';
-  
+
   return retVal;
 }
 
@@ -394,7 +394,7 @@ void TI99FindFiles(void)
         // Filter out the emulator directories from the list
         if (strcasecmp(szFile, "SAV") == 0) continue;
         if (strcasecmp(szFile, "sav") == 0) continue;
-          
+
         strcpy(gpFic[uNbFile].szName,szFile);
         gpFic[uNbFile].uType = TI99DIR;
         uNbFile++;
@@ -468,7 +468,7 @@ void TI99FindDskFiles(void)
         // Filter out the emulator directories from the list
         if (strcasecmp(szFile, "SAV") == 0) continue;
         if (strcasecmp(szFile, "sav") == 0) continue;
-          
+
         strcpy(gpDsk[uNbFile].szName,szFile);
         gpDsk[uNbFile].uType = TI99DIR;
         uNbFile++;
@@ -726,7 +726,7 @@ void TILoadDiskFile(void)
   {
       // Remember the directory for the rom
       getcwd(currentDirDSKs, MAX_PATH);
-      
+
       // These need to be stashed away for the caller...
       strcpy(myDskFile, gpDsk[chosenDSK].szName);
       strcpy(myDskPath, currentDirDSKs);
@@ -1189,67 +1189,67 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x4152e0e9) MapESDX();      // Tunnels of Doom uses ESDX for movement
     if (file_crc == 0x163caf9b) MapESDX();      // Tunnels of Doom uses ESDX for movement
     if (file_crc == 0x128818e2) MapESDX();      // Tunnels of Doom uses ESDX for movement
-    if (file_crc == 0xc4cd53ad) MapESDX();      // Tunnels of Doom uses ESDX for movement    
-    
+    if (file_crc == 0xc4cd53ad) MapESDX();      // Tunnels of Doom uses ESDX for movement
+
     if (file_crc == 0xc25be90f) MapESDX();      // Restless II uses ESDX for movement
-    
+
     if (file_crc == 0x55d49b68) MapESDX();      // Zero Zap uses ESDX for movement
-    
+
     if (file_crc == 0x742f88ce) MapSTSOS();     // Star Trek SOS maps keys uniquely
-    
+
     if (file_crc == 0x51b2a37f) MapMicroSur();  // Microsurgeon maps keys uniquely
-    
+
     if (file_crc == 0xc51b0a8b) MapSpaceEnter();// Defender maps keys uniquely (Space and Enter are important)
-    
+
     if (file_crc == 0x5a238af2) MapSpaceSpace();// Moon Mine makes heavy use of SPACE
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
-    
+
     if (file_crc == 0x2807a67f) Map123();
-    if (file_crc == 0x06da3412) Map123();    
+    if (file_crc == 0x06da3412) Map123();
 
     if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
     if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
     if (file_crc == 0x3c124691) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
-    
+
     if (file_crc == 0x2715313f) myConfig.spriteCheck = 2;   // The megademo ROM needs it this fast at least
     if (file_crc == 0xe92f15ff) myConfig.spriteCheck = 2;   // The megademo DSK needs it this fast at least
-    
+
     if (file_crc == 0xf93533e9) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (32K Ver)
     if (file_crc == 0xbc95d21f) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (512K Ver)
     if (file_crc == 0xb9cd2072) myConfig.sounddriver = 1;   // Nuts V1.1 (AKA Fox&Goat) (2023)(TMOP) will not run with our fake Speech module
-    
+
     if (file_crc == 0x0e34d709) myConfig.sounddriver = 2;   // Dragon's Lair Demo needs the new Direct Wave handling for speech
 
     if (file_crc == 0x478d9835) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
     if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
-    
+
     if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.4.0 uses SAMS
-    if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.5.0 uses SAMS    
+    if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.5.0 uses SAMS
 
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
-    if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM    
+    if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xd872e83e) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM
-    if (file_crc == 0xc883dde6) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM    
+    if (file_crc == 0xc883dde6) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM
     if (file_crc == 0x2807a67f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM
-    if (file_crc == 0x06da3412) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM    
+    if (file_crc == 0x06da3412) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // SuperFly requires MBX 1K of RAM
     if (file_crc == 0x60e66ab1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM
-    if (file_crc == 0xc7f74062) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM    
+    if (file_crc == 0xc7f74062) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Space Bandits requires MBX 1K of RAM
     if (file_crc == 0xbc245f56) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Honey Hunt requires MBX 1K of RAM
     if (file_crc == 0x2e071ff6) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Honey Hunt requires MBX 1K of RAM
     if (file_crc == 0x4bb77ca1) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM
-    if (file_crc == 0xd35f2c0d) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM    
+    if (file_crc == 0xd35f2c0d) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM
     if (file_crc == 0x962aca6f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
     if (file_crc == 0xb33dabfe) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
 
     if (file_crc == 0xc705118e) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
     if (file_crc == 0xe0bc224d) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
-    if (file_crc == 0x134144dc) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype   
-    
+    if (file_crc == 0x134144dc) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
+
     // If the filename of the chosen cart contains _cru just before the extension, we assume this is one of the Databiotics Paged CRU types
-    if (strstr(gpFic[ucGameChoice].szName, "_cru.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;    
-    if (strstr(gpFic[ucGameChoice].szName, "_CRU.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;    
+    if (strstr(gpFic[ucGameChoice].szName, "_cru.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;
+    if (strstr(gpFic[ucGameChoice].szName, "_CRU.") != NULL) myConfig.cartType = CART_TYPE_PAGEDCRU;
 }
 
 // -------------------------------------------------------------------------
@@ -1272,7 +1272,7 @@ void FindAndLoadConfig(void)
         fread(&globalConfig, sizeof(globalConfig), 1, fp);
         fread(&AllConfigs, sizeof(AllConfigs), 1, fp);
         fclose(fp);
-        
+
         if (globalConfig.config_ver == 0x0007) // Previous config - upgrade the global database
         {
             globalConfig.frameSkip = (isDSiMode() ? 0:1);    // For DSi we don't need FrameSkip, but for older DS-LITE we turn on light frameskip
@@ -1347,7 +1347,7 @@ const struct options_t Option_Table[2][20] =
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},
         {"RAM WIPE",       {"CLEAR", "RANDOM",},                                                                                             &myConfig.memWipe,      2},
         {"SPRITE CHECK",   {"NORMAL (32/64)", "4 SCANLINES", "8 SCANLINES", "16 SCANLINES", "32 SCANLINES", "64 SCANLINES", "END OF FRAME"}, &myConfig.spriteCheck,  7},
-        {"SOUND DRIVER",   {"NORMAL", "NO SPEECH", "WAVE DIRECT"},                                                                           &myConfig.sounddriver,  3},        
+        {"SOUND DRIVER",   {"NORMAL", "NO SPEECH", "WAVE DIRECT"},                                                                           &myConfig.sounddriver,  3},
         {"NDS DPAD",       {"NORMAL", "DIAGONALS",},                                                                                         &myConfig.dpadDiagonal, 2},
         {NULL,             {"",      ""},                                                                                                    NULL,                   1},
     },

@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -35,7 +35,7 @@
 // Memory map for the TI-99/4a:
 // ---------------------------------------------------------
 // >0000 - 1FFF     Console ROM
-// >2000 - 3FFF     (8K, low memory expansion)
+// >2000 - 3FFF     Expanded RAM (8K, low memory expansion)
 // >4000 - 5FFF     Peripheral card ROM (whichever one swapped in)
 // >6000 - 7FFF     Cartridge ROM (module port), Sometimes SuperSpace RAM
 // >8000 - 83FF     Scratchpad RAM (256 bytes, mirrored)
@@ -46,16 +46,25 @@
 // >9400 - 97FF     Speech Synth write
 // >9800 - 9BFF     GROM Read  (9800 read, 9802 read addr+1)
 // >9C00 - 9FFF     GROM Write (9C00 data, 9C02 address)
-// >A000 - FFFF     (24K, high memory expansion)
+// >A000 - FFFF     Expanded RAM (24K, high memory expansion)
 
-// -------------------------------------------------------------------
+// ------------------------------------------------------------------
 // These are all too big to fit into DTCM fast memory on the DS...
-// -------------------------------------------------------------------
+// These are the core 64K of memory for the system - there are
+// actually two independent 64K memory areas - one for normal CPU
+// access and one for GROM access. Come to think of it, there is
+// also a separate 16K of VDP memory and 4096 bits of CRU memory...
+// heck, this system has more memories than a Harry Potter Pensieve.
+// ------------------------------------------------------------------
 u8      MemCPU[0x10000];            // 64K of CPU Space  (the lower 8K will contain the system console ROM)
 u8      MemGROM[0x10000];           // 64K of GROM Space (the lower 24K will contain system GROMs)
 
-// Memory type for each address. We divide by 16 which allows for higher density memory lookups. This is fine for all but MBX which has special handling.
-u8      MemType[0x10000>>4] __attribute__((section(".dtcm"))); // Accessed often enough to put into fast memory
+// ----------------------------------------------------------------------------------------------
+// Memory type for each address. We divide by 16 which allows for higher density memory lookups.
+// This is fine for all but MBX which has special handling. Since this is accessed very often,
+// we place it in fast memory though it does chew up a solid 4K of that memory...
+// ----------------------------------------------------------------------------------------------
+u8      MemType[0x10000>>4] __attribute__((section(".dtcm")));
 
 u8     *MemCART  __attribute__((section(".dtcm")));     // Cart C/D/8/9 memory up to 8MB/512K (DSi vs DS) banked at >6000
 u32     MAX_CART_SIZE = (512*1024);                     // Allow carts up to 512K in size (DSi will bump this to 8MB)
@@ -69,10 +78,18 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 
 u16 MemoryRead16(u16 address);
 
+// --------------------------------------------------------------------------------------------------------------------------------
+// This emulator does not handle the full TMS5220 speech synth... but we do ensure that the system responds as if it had one and
+// we also can render many of the classic games with full speech by using built-in sound effects. This is a bit of a cheat but
+// is simple enough and takes very little emulated CPU time (since WAV output on the DS is largely handled by the ARM7 processor)
+// --------------------------------------------------------------------------------------------------------------------------------
 u16 readSpeech __attribute__((section(".dtcm"))) = SPEECH_SENTINAL_VAL;
+
+// Some carts use CRU banking... such as the Super Cart (or Super Space II) and some Databiotics carts
 u8  super_bank __attribute__((section(".dtcm"))) = 0;
 u8  cart_cru_shadow[16] = {0};
-u32 idle_counter = 0;
+
+u32 idle_counter = 0;   // Only used for debug purposes... so it doesn't need to be in fast memory
 
 // A few externs from other modules...
 extern SN76496 snti99;
@@ -568,9 +585,9 @@ void TMS9900_Reset(void)
 void TMS9900_Kickoff(void)
 {
     // And away we go!
-    tms9900.WP = MemoryRead16(0);       // Initial WP is from the first word address in memory
-    tms9900.PC = MemoryRead16(2);       // Initial PC is from the second word address in memory
-    tms9900.ST = 0x3cf0;                // bulWIP uses this - probably doesn't matter... but smart guys know stuff...
+    tms9900.WP = MemoryRead16(0) & 0xFFFE;  // Initial WP is from the first word address in memory
+    tms9900.PC = MemoryRead16(2) & 0xFFFE;  // Initial PC is from the second word address in memory
+    tms9900.ST = 0x3cf0;                    // bulWIP uses this - probably doesn't matter... but smart guys know stuff...
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -768,19 +785,19 @@ u8 cart_cru_read(u16 cruAddress)
 
 // ------------------------------------------------------------------------------------------------------------------------
 // When we know we're reading RAM from the use of the Workspace Pointer (WP) and register access, we can just do this
-// quickly. In theory the WP can point to 8-bit expanded RAM with a pentalty but it's so uncommon that we will not
+// quickly. In theory the WP can point to 8-bit expanded RAM with a penalty but it's uncommon enough that we will not
 // incur the pentaly. This means the emulation will not be cycle accurate but it's good enough to play classic TI games...
 // ------------------------------------------------------------------------------------------------------------------------
-inline __attribute__((always_inline)) u16 ReadRAM16(u16 address)
+inline __attribute__((always_inline)) u16 ReadWP_RAM16(u16 address)
 {
-    return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address])); // Don't need the 0xFFFE mask here as this is always WP aligned 16-bit access
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
-// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access. 
+// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access.
 // --------------------------------------------------------------------------------------------------------------------
-inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
+inline __attribute__((always_inline)) u16 ReadWP_RAM16a(u16 address)
 {
     if (MemType[address>>4])
     {
@@ -790,13 +807,13 @@ inline __attribute__((always_inline)) u16 ReadRAM16a(u16 address)
             return __builtin_bswap16(*((u16*)(theSAMS.memoryPtr[address>>12] + (address&0x0FFE))));
         }
     }
-    return __builtin_bswap16(*(u16*) (&MemCPU[address&0xFFFE]));
+    return __builtin_bswap16(*(u16*) (&MemCPU[address])); // Don't need the 0xFFFE mask here as this is always WP aligned 16-bit access
 }
 
 // ----------------------------------------------------------------------------------------
-// See comment above for ReadRAM16() - not cycle accurate but good enough for WP use...
+// See comment above for ReadWP_RAM16() - not cycle accurate but good enough for WP use...
 // ----------------------------------------------------------------------------------------
-ITCM_CODE void WriteRAM16(u16 address, u16 data)
+ITCM_CODE void WriteWP_RAM16(u16 address, u16 data)
 {
     if (!MemType[address>>4] && myConfig.RAMMirrors) // If RAM mirrors enabled, handle them by writing to all 4 locations - makes the readback faster
     {
@@ -808,21 +825,20 @@ ITCM_CODE void WriteRAM16(u16 address, u16 data)
     }
     else
     {
-        address &= 0xFFFE;
-        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+        *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);  // Don't need the 0xFFFE mask here as this is always WP aligned 16-bit access
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 // This is the accurate version of the above which handles SAMS banking - this chews up more emulation CPU time.
-// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access. 
+// Since this is going to be slower anyway, we take the time to add in the proper cycle penalty for non-16-bit access.
 // --------------------------------------------------------------------------------------------------------------------
-ITCM_CODE void WriteRAM16a(u16 address, u16 data)
+ITCM_CODE void WriteWP_RAM16a(u16 address, u16 data)
 {
     u8 memType = MemType[address>>4];
-    
+
     if (memType) AddCycleCount(4);  // Anything not intrinsic 16-bit memory incurs the penalty
-    
+
     if (memType == MF_SAMS8)
     {
         *((u16*)(theSAMS.memoryPtr[address>>12] + (address&0xFFE))) = (data << 8) | (data >> 8);
@@ -839,8 +855,7 @@ ITCM_CODE void WriteRAM16a(u16 address, u16 data)
         }
         else
         {
-            address &= 0xFFFE;
-            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);
+            *((u16*)(MemCPU+address)) = (data << 8) | (data >> 8);  // Don't need the 0xFFFE mask here as this is always WP aligned 16-bit access
         }
     }
 }
@@ -899,25 +914,28 @@ ITCM_CODE u16 ReadPC16a(void)
 
 
 
-// -----------------------------------------------------------------------------------------
-// We don't perform the actual read - nothing in the TI world should trigger or count on
-// this phantom read... we only take into account any possible cycle penalty.
-// -----------------------------------------------------------------------------------------
-inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
+// ------------------------------------------------------------------------------------
+// For some instructions (mov, movb mainly), there is a sort of intermediate read that
+// places data on the bus while we wait for the write instruction to finish. We don't
+// perform the actual read - nothing  in the TI world should trigger or count on this
+// phantom read... we only take into account any possible cycle penalty.
+// ------------------------------------------------------------------------------------
+inline __attribute__((always_inline)) void PhantomMemoryRead(u16 address)
 {
-    if (MemType[address>>4]) AddCycleCount(4); // Any bit set is a penalty... this includes the VDP which is, technically, on the 16-bit bus
+    if (MemType[address>>4]) AddCycleCount(4); // Any bit set is a penalty... this means it's not console ROM or the scratchpad RAM
 }
 
 // --------------------------------------------------------------------------------------------
-// Technically everything in the system is a 16-bit read with an 8-bit multiplexer... but
-// we can be a little smarter and not waste the same time that an actual TI-99/4a does.
-// The routines below are general purpose and work for both the accurate and fast versions
-// of our CPU driver. We try to call into one of the above memory handlers whenever possible
-// as these are a bit complex and can slow down emulation.
+// Technically everything in the system other than console ROM or scratchpad RAM is a 16-bit
+// read with an 8-bit multiplexer... but we can be a little smarter and not waste the same
+// time that an actual TI-99/4a does. The routines below are general purpose and work for
+// both the accurate and fast versions of our CPU driver. We try to call into one of the above
+// memory handlers whenever possible as these are a bit complex and can slow down emulation.
 //
 // It's important to remember that a 16-bit word in the TMS9900 architecture is split into
 // the even byte (high byte) and odd byte (low byte). This is opposite of conventional
-// ARM architecture so you see us swapping these bytes fairly often by left/right shifts by 8.
+// ARM architecture so you see us swapping these bytes fairly often by left/right shifts by 8
+// or by using the ARM-specific __builtin_bswap16() to accomplish this faster.
 //
 // So a 16-bit Memory Word on an Even Address boundary looks like this:
 //
@@ -926,7 +944,8 @@ inline __attribute__((always_inline)) void MemoryReadHidden(u16 address)
 //      == EVEN BYTE ==      |          == ODD BYTE ==
 //
 // Further, for anything on the 8-bit bus (on the other side of the multiplexer), the system
-// will always write the odd byte first, followed by the even byte.
+// will always write the odd byte first, followed by the even byte. Most times this doesn't
+// really matter and we'll do it however it's fastest for the emulation.
 // --------------------------------------------------------------------------------------------
 ITCM_CODE u16 MemoryRead16(u16 address)
 {
@@ -960,7 +979,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return (retVal << 8) | retVal;
                 break;
             case MF_DISK:
-                retVal = ReadTICCRegister(address);
+                retVal = ReadTICCRegister(address); // Disk controller registers are mapped into this region...
                 return (retVal << 8) | retVal;
                 break;
             case MF_SAMS:
@@ -1022,7 +1041,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 }
                 break;
             case MF_DISK:
-                return ReadTICCRegister(address);
+                return ReadTICCRegister(address); // Disk controller registers are mapped into this region...
                 break;
             case MF_SAMS:
                 return SAMS_ReadBank(address);
@@ -1196,19 +1215,19 @@ static inline __attribute__((always_inline)) void Ts(u16 bytes)
             break;
 
         case 0x0010: // *Rx  6c
-            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
+            tms9900.srcAddress = ReadWP_RAM16(WP_REG(rData));
             AddCycleCount(4);
             break;
 
         case 0x0020: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.srcAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
-            if (rData) tms9900.srcAddress += ReadRAM16(WP_REG(rData));
+            if (rData) tms9900.srcAddress += ReadWP_RAM16(WP_REG(rData));
             AddCycleCount(8);
             break;
 
         default: // *Rx+   10c
-            tms9900.srcAddress = ReadRAM16(WP_REG(rData));
-            WriteRAM16(WP_REG(rData), (tms9900.srcAddress + bytes));
+            tms9900.srcAddress = ReadWP_RAM16(WP_REG(rData));
+            WriteWP_RAM16(WP_REG(rData), (tms9900.srcAddress + bytes));
             AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
@@ -1231,19 +1250,19 @@ static inline __attribute__((always_inline)) void Ts_Accurate(u16 bytes)
             break;
 
         case 0x0010: // *Rx  6c
-            tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
+            tms9900.srcAddress = ReadWP_RAM16a(WP_REG(rData));
             AddCycleCount(4);
             break;
 
         case 0x0020: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.srcAddress = ReadPC16a();
-            if (rData) tms9900.srcAddress += ReadRAM16a(WP_REG(rData));
+            if (rData) tms9900.srcAddress += ReadWP_RAM16a(WP_REG(rData));
             AddCycleCount(8);
             break;
 
         default: // *Rx+   10c
-            tms9900.srcAddress = ReadRAM16a(WP_REG(rData));
-            WriteRAM16a(WP_REG(rData), (tms9900.srcAddress + bytes));
+            tms9900.srcAddress = ReadWP_RAM16a(WP_REG(rData));
+            WriteWP_RAM16a(WP_REG(rData), (tms9900.srcAddress + bytes));
             AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
@@ -1268,19 +1287,19 @@ static inline __attribute__((always_inline)) void Td(u16 bytes)
             break;
 
         case 0x0400: // *Rx  6c
-            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
+            tms9900.dstAddress = ReadWP_RAM16(WP_REG(rData));
             AddCycleCount(4);
             break;
 
         case 0x0800: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.dstAddress = ReadPC16a();   // We use the 'a' version here not so much for accuracy but to prevent the inline which blows our ITCM fast memory
-            if (rData) tms9900.dstAddress += ReadRAM16(WP_REG(rData));
+            if (rData) tms9900.dstAddress += ReadWP_RAM16(WP_REG(rData));
             AddCycleCount(8);
             break;
 
         default: // *Rx+   10c
-            tms9900.dstAddress = ReadRAM16(WP_REG(rData));
-            WriteRAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
+            tms9900.dstAddress = ReadWP_RAM16(WP_REG(rData));
+            WriteWP_RAM16(WP_REG(rData), (tms9900.dstAddress + bytes));
             AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
@@ -1303,19 +1322,19 @@ static inline __attribute__((always_inline)) void Td_Accurate(u16 bytes)
             break;
 
         case 0x0400: // *Rx  6c
-            tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
+            tms9900.dstAddress = ReadWP_RAM16a(WP_REG(rData));
             AddCycleCount(4);
             break;
 
         case 0x0800: // @yyyy(Rx) or @yyyy if Rx=0  10c
             tms9900.dstAddress = ReadPC16a();
-            if (rData) tms9900.dstAddress += ReadRAM16a(WP_REG(rData));
+            if (rData) tms9900.dstAddress += ReadWP_RAM16a(WP_REG(rData));
             AddCycleCount(8);
             break;
 
         default: // *Rx+   10c
-            tms9900.dstAddress = ReadRAM16a(WP_REG(rData));
-            WriteRAM16a(WP_REG(rData), (tms9900.dstAddress + bytes));
+            tms9900.dstAddress = ReadWP_RAM16a(WP_REG(rData));
+            WriteWP_RAM16a(WP_REG(rData), (tms9900.dstAddress + bytes));
             AddCycleCount(((bytes&1) ? 6:8)); // Add 6 cycles for byte address... 8 for word address
             break;
     }
@@ -1366,13 +1385,14 @@ void TMS9900_ContextSwitch(u16 address)
     MemoryWrite16(WP_REG(14), tms9900.PC);      // Set the old PC
     MemoryWrite16(WP_REG(15), tms9900.ST);      // Set the old Status
     tms9900.PC = MemoryRead16(address+2);       // Set the new PC based on original workspace
+    tms9900.PC &= 0xFFFE;                       // Ensure PC is word-aligned
 }
 
 // ---------------------------------------------------------------------------------------
 // We are only supporting two interrupt sources - the VDP as it comes from the TMS9901
-// and the internal timer which is mainly used for cassette routines but is used by 
+// and the internal timer which is mainly used for cassette routines but is used by
 // a few odd programs such as Scud Busters and the Sudoku demo from 2010. This emulation
-// isn't accurate but users of DS99/4a are interested in playing Hunt the Wumpus and 
+// isn't accurate but users of DS99/4a are interested in playing Hunt the Wumpus and
 // Tunnels of Doom and so we won't over complicate things...
 // ---------------------------------------------------------------------------------------
 void TMS9900_HandlePendingInterrupts(void)
@@ -1460,15 +1480,15 @@ void TMS9900_RunAccurate(void)
             {
 // We need to swap in the 'a' = accurate versions of the memory fetch handlers
 // These handlers are a bit slower but necessary to allow for SAMS banked memory access.
-#define ReadRAM16   ReadRAM16a
-#define WriteRAM16  WriteRAM16a
-#define ReadPC16    ReadPC16a
-#define Ts          Ts_Accurate
-#define Td          Td_Accurate
-#define TsTd        TsTd_Accurate
+#define ReadWP_RAM16    ReadWP_RAM16a
+#define WriteWP_RAM16   WriteWP_RAM16a
+#define ReadPC16        ReadPC16a
+#define Ts              Ts_Accurate
+#define Td              Td_Accurate
+#define TsTd            TsTd_Accurate
             #include "tms9900.inc"
-#undef ReadRAM16
-#undef WriteRAM16
+#undef ReadWP_RAM16
+#undef WriteWP_RAM16
 #undef ReadPC16
 #undef Ts
 #undef Td

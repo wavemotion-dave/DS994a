@@ -46,12 +46,12 @@ bool screenshotbmp(const char* filename) {
     // This is 100K off the back end of the shared memory pool.
     // The DSi doesn't use this pool otherwise so it's fine and
     // for the DS-Lite/Phat, the only possibility is if they are
-    // using a SAMS enabled game and they require the memory 
+    // using a SAMS enabled game and they require the memory
     // in the last 100K area... in which case this will not end well.
     // ---------------------------------------------------------------
     extern u8 SharedMemBuffer[];
-    u8 *temp = (u8*)(SharedMemBuffer + (668*1024)); 
-    
+    u8 *temp = (u8*)(SharedMemBuffer + (668*1024));
+
     if(!temp) {
         fclose(file);
         return false;
@@ -93,22 +93,22 @@ bool screenshotbmp(const char* filename) {
     DC_FlushAll();
     fwrite(temp, 1, 256 * 192 * 2 + sizeof(INFOHEADER) + sizeof(HEADER), file);
     fclose(file);
-    
+
     // Since we over-wrote the VRAM_D[] which has our opcode table, we have to rebuild it...
     extern void TMS9900_buildopcodes(void);
     TMS9900_buildopcodes();
     return true;
 }
 
-    
+
 char snapPath[64];
-bool screenshot(void) 
+bool screenshot(void)
 {
-    time_t unixTime = time(NULL);    
+    time_t unixTime = time(NULL);
     struct tm* timeStruct = gmtime((const time_t *)&unixTime);
 
     sprintf(snapPath, "SNAP-%02d-%02d-%04d-%02d-%02d-%02d.bmp", timeStruct->tm_mday, timeStruct->tm_mon+1, timeStruct->tm_year+1900, timeStruct->tm_hour, timeStruct->tm_min, timeStruct->tm_sec);
-    
+
     // Take top screenshot
     if(!screenshotbmp(snapPath))
         return false;

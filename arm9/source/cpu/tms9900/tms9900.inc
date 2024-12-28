@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2024 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -39,12 +39,12 @@
             if (!numBits) // Special handling per TMS9900 data manual - we now use the least significant 4 bits of R0 as the shift count...
             {
                 AddCycleCount(8);                                       // Pentalty for redirect fetch of shift bits from R0
-                numBits = ReadRAM16(WP_REG(0)) & 0x0F;                  // It's possible THIS can also be zero in which case the shift count is 16
+                numBits = ReadWP_RAM16(WP_REG(0)) & 0x0F;               // It's possible THIS can also be zero in which case the shift count is 16
                 if (!numBits) numBits = 16;                             // Maximum shift count...
             }          
 
             AddCycleCount(2*numBits);                                   // Each bit shifted costs 2 CPU cycles
-            data16 = ReadRAM16(WP_REG(rData));                          // Read data that will be shifted
+            data16 = ReadWP_RAM16(WP_REG(rData));                       // Read data that will be shifted
             tms9900.ST = STATUS_CLEAR_LAEC;                             // Clear the 4 status bits for the shift operation - we'll set the bits below
             
             // ---------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@
             if (x3) tms9900.ST |= ST_C;
             tms9900.ST |= CompareZeroLookup16[data16];                  // And set the zero-compare bits
             
-            MemoryWrite16(WP_REG(rData), data16);                       // Write the data back to the proper memory location    
+            WriteWP_RAM16(WP_REG(rData), data16);                       // Write the data back to the proper memory location    
         }
         break;
 
@@ -75,12 +75,12 @@
             if (!numBits) // Special handling per TMS9900 data manual - we now use the least significant 4 bits of R0 as the shift count...
             {
                 AddCycleCount(8);                                       // Pentalty for redirect fetch of shift bits from R0
-                numBits = ReadRAM16(WP_REG(0)) & 0x0F;                  // It's possible THIS can also be zero in which case the shift count is 16
+                numBits = ReadWP_RAM16(WP_REG(0)) & 0x0F;               // It's possible THIS can also be zero in which case the shift count is 16
                 if (!numBits) numBits = 16;                             // Maximum shift count...
             }          
 
             AddCycleCount(2*numBits);                                   // Each bit shifted costs 2 CPU cycles
-            data16 = ReadRAM16(WP_REG(rData));                          // Read data that will be shifted
+            data16 = ReadWP_RAM16(WP_REG(rData));                       // Read data that will be shifted
             tms9900.ST = STATUS_CLEAR_LAEC;                             // Clear the 4 status bits for the shift operation - we'll set the bits below
             
             // ---------------------------------------------------------------------------------------------
@@ -95,7 +95,7 @@
             if (x3) tms9900.ST |= ST_C;
             tms9900.ST |= CompareZeroLookup16[data16];                  // And set the zero-compare bits
             
-            MemoryWrite16(WP_REG(rData), data16);                       // Write the data back to the proper memory location           
+            WriteWP_RAM16(WP_REG(rData), data16);                       // Write the data back to the proper memory location           
         }
         break;
 
@@ -108,12 +108,12 @@
             if (!numBits) // Special handling per TMS9900 data manual - we now use the least significant 4 bits of R0 as the shift count...
             {
                 AddCycleCount(8);                                       // Pentalty for redirect fetch of shift bits from R0
-                numBits = ReadRAM16(WP_REG(0)) & 0x0F;                  // It's possible THIS can also be zero in which case the shift count is 16
+                numBits = ReadWP_RAM16(WP_REG(0)) & 0x0F;               // It's possible THIS can also be zero in which case the shift count is 16
                 if (!numBits) numBits = 16;                             // Maximum shift count...
             }          
 
             AddCycleCount(2*numBits);                                   // Each bit shifted costs 2 CPU cycles
-            data16 = ReadRAM16(WP_REG(rData));                          // Read data that will be shifted
+            data16 = ReadWP_RAM16(WP_REG(rData));                       // Read data that will be shifted
             tms9900.ST = STATUS_CLEAR_LAEC;                             // Clear the 4 status bits for the shift operation - we'll set the bits below
             
             // ---------------------------------------------------------------------------------------------
@@ -132,7 +132,7 @@
             if (x4) tms9900.ST |= ST_C;                                 // If we ever saw a low-bit shift out, the Carry will be set
             tms9900.ST |= CompareZeroLookup16[data16];                  // And set the zero-compare bits
             
-            MemoryWrite16(WP_REG(rData), data16);                       // Write the data back to the proper memory location           
+            WriteWP_RAM16(WP_REG(rData), data16);                       // Write the data back to the proper memory location           
         }
         break;
 
@@ -145,12 +145,12 @@
             if (!numBits) // Special handling per TMS9900 data manual - we now use the least significant 4 bits of R0 as the shift count...
             {
                 AddCycleCount(8);                                       // Pentalty for redirect fetch of shift bits from R0
-                numBits = ReadRAM16(WP_REG(0)) & 0x0F;                  // It's possible THIS can also be zero in which case the shift count is 16
+                numBits = ReadWP_RAM16(WP_REG(0)) & 0x0F;               // It's possible THIS can also be zero in which case the shift count is 16
                 if (!numBits) numBits = 16;                             // Maximum shift count...
             }          
             
             AddCycleCount(2*numBits);                                   // Each bit shifted costs 2 CPU cycles
-            data16 = ReadRAM16(WP_REG(rData));                          // Read data that will be shifted
+            data16 = ReadWP_RAM16(WP_REG(rData));                       // Read data that will be shifted
             tms9900.ST = STATUS_CLEAR_LAECO;                            // Clear the 5 status bits for the shift operation - we'll set the bits below
             
             // ---------------------------------------------------------------------------------------------
@@ -167,7 +167,7 @@
             if (x3) tms9900.ST |= ST_C;                                 // If we ever saw a high-bit shift out, the Carry will be set
             tms9900.ST |= CompareZeroLookup16[data16];                  // And set the zero-compare bits
             
-            MemoryWrite16(WP_REG(rData), data16);                       // Write the data back to the proper memory location            
+            WriteWP_RAM16(WP_REG(rData), data16);                       // Write the data back to the proper memory location            
         }
         break;
 
@@ -176,7 +176,7 @@
             AddCycleCount(12);
             u16 rData = REG_GET_FROM_OPCODE();
             data16 = ReadPC16();
-            WriteRAM16(WP_REG(rData), data16);                          // Load immediate will pull the next word from memory and store it into the desired register.
+            WriteWP_RAM16(WP_REG(rData), data16);                          // Load immediate will pull the next word from memory and store it into the desired register.
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         }
         break;
@@ -185,7 +185,7 @@
         {
             AddCycleCount(8);
             u16 rData = REG_GET_FROM_OPCODE();
-            WriteRAM16(WP_REG(rData), tms9900.WP);
+            WriteWP_RAM16(WP_REG(rData), tms9900.WP);
         }
         break;
 
@@ -193,7 +193,7 @@
         {
             AddCycleCount(8);
             u16 rData = REG_GET_FROM_OPCODE();
-            WriteRAM16(WP_REG(rData), tms9900.ST);
+            WriteWP_RAM16(WP_REG(rData), tms9900.ST);
         }
         break;
 
@@ -212,10 +212,10 @@
         {
             AddCycleCount(14);
             u16 rData = REG_GET_FROM_OPCODE();
-            u16 sData = ReadRAM16(WP_REG(rData));
+            u16 sData = ReadWP_RAM16(WP_REG(rData));
             u16 dData = ReadPC16();
             data16 = (sData & dData);
-            WriteRAM16(WP_REG(rData), data16);
+            WriteWP_RAM16(WP_REG(rData), data16);
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         }
         break;
@@ -224,10 +224,10 @@
         {
             AddCycleCount(14);
             u16 rData = REG_GET_FROM_OPCODE();
-            u16 sData = ReadRAM16(WP_REG(rData));
+            u16 sData = ReadWP_RAM16(WP_REG(rData));
             u16 dData = ReadPC16();
             data16 = (sData | dData);
-            WriteRAM16(WP_REG(rData), data16);
+            WriteWP_RAM16(WP_REG(rData), data16);
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         }
         break;
@@ -236,10 +236,10 @@
         {
             AddCycleCount(14);
             u16 rData = REG_GET_FROM_OPCODE();
-            u16 sData = ReadRAM16(WP_REG(rData));
+            u16 sData = ReadWP_RAM16(WP_REG(rData));
             u16 dData = ReadPC16();
             data16 = sData + dData;
-            WriteRAM16(WP_REG(rData), data16);
+            WriteWP_RAM16(WP_REG(rData), data16);
             
             // Set the status flags the Classic99 way...
             tms9900.ST = STATUS_CLEAR_LAECO | CompareZeroLookup16[data16];
@@ -252,8 +252,8 @@
         {
             AddCycleCount(14);
             u16 rData = REG_GET_FROM_OPCODE();
-            u16 dData = ReadRAM16(WP_REG(rData));   // The destination word to compare
-            u16 sData = ReadPC16();                 // For the compare immediate we need the next PC word as the source
+            u16 dData = ReadWP_RAM16(WP_REG(rData));   // The destination word to compare
+            u16 sData = ReadPC16();                    // For the compare immediate we need the next PC word as the source
             
             // Set the status flags the Classic99 way...
             tms9900.ST = STATUS_CLEAR_LAE;
@@ -269,10 +269,11 @@
 
     case op_rtwp:
         AddCycleCount(14);
-        tms9900.ST = ReadRAM16(WP_REG(15));  // Restore Status
-        tms9900.PC = ReadRAM16(WP_REG(14));  // Restore Program Counter
-        tms9900.WP = ReadRAM16(WP_REG(13));  // Restore Working Pointer - must me done last or the register accesses above will be wrong
-        tms9900.WP &= 0xFFFE;                // Ensure WP is word-aligned
+        tms9900.ST = ReadWP_RAM16(WP_REG(15));  // Restore Status
+        tms9900.PC = ReadWP_RAM16(WP_REG(14));  // Restore Program Counter
+        tms9900.WP = ReadWP_RAM16(WP_REG(13));  // Restore Working Pointer - must me done last or the register accesses above will be wrong
+        tms9900.PC &= 0xFFFE;                   // Ensure PC is word-aligned
+        tms9900.WP &= 0xFFFE;                   // Ensure WP is word-aligned
         break;
 
     case op_blwp:
@@ -284,7 +285,7 @@
     case op_clr:
         AddCycleCount(10);
         Ts(SOURCE_WORD);
-        MemoryReadHidden(tms9900.srcAddress);
+        PhantomMemoryRead(tms9900.srcAddress);
         MemoryWrite16(tms9900.srcAddress, 0x0000);
         break;
 
@@ -383,7 +384,7 @@
         {
             AddCycleCount(12);
             Ts(SOURCE_WORD);
-            WriteRAM16(WP_REG(11), tms9900.PC);
+            WriteWP_RAM16(WP_REG(11), tms9900.PC);
             tms9900.PC = tms9900.srcAddress;
         }
         break;
@@ -401,7 +402,7 @@
         {
             AddCycleCount(10);
             Ts(SOURCE_WORD);
-            MemoryReadHidden(tms9900.srcAddress);
+            PhantomMemoryRead(tms9900.srcAddress);
             MemoryWrite16(tms9900.srcAddress, 0xFFFF);
         }
         break;
@@ -431,7 +432,7 @@
     case op_sbo:
         {
             AddCycleCount(12);
-            u16 cruAddress = ReadRAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
+            u16 cruAddress = ReadWP_RAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
             cruAddress = (cruAddress>>1) + (s8)(tms9900.currentOp & 0xFF);  // Displacement is 8-bit signed
             TMS9901_WriteCRU(cruAddress, 1, 1);
         }
@@ -440,7 +441,7 @@
     case op_sbz:
         {
             AddCycleCount(12);
-            u16 cruAddress = ReadRAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
+            u16 cruAddress = ReadWP_RAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
             cruAddress = (cruAddress>>1) + (s8)(tms9900.currentOp & 0xFF);  // Displacement is 8-bit signed
             TMS9901_WriteCRU(cruAddress, 0, 1);
         }
@@ -449,7 +450,7 @@
     case op_tb:
         {
             AddCycleCount(12);
-            u16 cruAddress = ReadRAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
+            u16 cruAddress = ReadWP_RAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
             cruAddress = (cruAddress>>1) + (s8)(tms9900.currentOp & 0xFF);  // Displacement is 8-bit signed
             if (TMS9901_ReadCRU(cruAddress, 1) & 1) tms9900.ST |= ST_EQ;
             else tms9900.ST &= ~ST_EQ;
@@ -483,16 +484,16 @@
             AddCycleCount(14);            
             u16 rData = (tms9900.currentOp >> 6) & 0x0F;
             Ts(SOURCE_WORD);  // Forces 16-bit source address mode
-            data16 = ReadRAM16(WP_REG(rData)) ^ MemoryRead16(tms9900.srcAddress);
+            data16 = ReadWP_RAM16(WP_REG(rData)) ^ MemoryRead16(tms9900.srcAddress);
             tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];            
-            WriteRAM16(WP_REG(rData), data16);
+            WriteWP_RAM16(WP_REG(rData), data16);
         }
         break;
 
     case op_ldcr:
         {
-            u16 cruAddress = ReadRAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
-            u8 numBits = (tms9900.currentOp >> 6) & 0x0F;     // And this is the number of bits to transfer
+            u16 cruAddress = ReadWP_RAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
+            u8 numBits = (tms9900.currentOp >> 6) & 0x0F;        // And this is the number of bits to transfer
             if (!numBits) numBits = 16; // Zero bits means transfer a full WORD complement of 16 bits
             
             AddCycleCount(20 + (numBits*2));    // Base cycles is 20 plus 2 for every bit transferred... not sure why STCR isn't the same            
@@ -518,8 +519,8 @@
         {
             AddCycleCount(42);  // base value
             
-            u16 cruAddress = ReadRAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
-            u8 numBits = (tms9900.currentOp >> 6) & 0x0F;     // And this is the number of bits to transfer
+            u16 cruAddress = ReadWP_RAM16(WP_REG(12)) & 0x1FFE;  // R12 is the CRU Base register using bits 3 to 14
+            u8 numBits = (tms9900.currentOp >> 6) & 0x0F;        // And this is the number of bits to transfer
             if (!numBits) numBits = 16; // Zero bits means transfer a full WORD complement of 16 bits
 
             Ts((numBits > 8) ? 2:1);  // Forces either 8-bit or 16-bit addressing depending on number of bits...
@@ -529,7 +530,7 @@
                 AddCycleCount(16);
                 data16 = TMS9901_ReadCRU(cruAddress>>1, numBits);       // The CRU is expecting the bits to already be divided by 2 so it's easier for CRU handling
                 tms9900.ST = STATUS_CLEAR_LAEOP | CompareZeroLookup16[data16];
-                MemoryReadHidden(tms9900.srcAddress);
+                PhantomMemoryRead(tms9900.srcAddress);
                 MemoryWrite16(tms9900.srcAddress, data16);
             }
             else    // Is byte access
@@ -537,7 +538,7 @@
                 AddCycleCount(2);
                 data8 = (u8)TMS9901_ReadCRU(cruAddress>>1, numBits);   // The CRU is expecting the bits to already be divided by 2 so it's easier for CRU handling
                 tms9900.ST = STATUS_CLEAR_LAEOP | CompareZeroLookup8[(u8)data8];
-                MemoryReadHidden(tms9900.srcAddress);
+                PhantomMemoryRead(tms9900.srcAddress);
                 MemoryWrite8(tms9900.srcAddress, data8);
             }
         }
@@ -729,7 +730,7 @@
         data16 = MemoryRead16(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAE | CompareZeroLookup16[data16];
         Td(SOURCE_WORD);
-        MemoryReadHidden(tms9900.dstAddress);
+        PhantomMemoryRead(tms9900.dstAddress);
         MemoryWrite16(tms9900.dstAddress, data16);
         break;
 
@@ -739,7 +740,7 @@
         data8 = MemoryRead8(tms9900.srcAddress);
         tms9900.ST = STATUS_CLEAR_LAEP | CompareZeroLookup8[data8];
         Td(SOURCE_BYTE);
-        MemoryReadHidden(tms9900.dstAddress);
+        PhantomMemoryRead(tms9900.dstAddress);
         MemoryWrite8(tms9900.dstAddress, data8);
         break;
 
@@ -867,12 +868,13 @@
 
     case op_idle:
         tms9900.idleReq = true;
-        // --------------------------------------------------------
-        // If we haven't set the IDLE flag, we turn it on
-        // and advance 228 clocks. Not accurate but will
-        // break us out of the main loop and the next time
-        // we loop on the TMS9900 we will be in 'Accurate' mode
-        // --------------------------------------------------------
+        // --------------------------------------------------------------------------------------------------
+        // If we haven't set the IDLE flag, we turn it on and advance 228 clocks. Not accurate but will break
+        // us out of the main loop and the next time we loop on the TMS9900 we will be in 'Accurate' mode.
+        // The bumping of the cycle count here is not emulation accurate - it's mainly to get us out of the
+        // current run-loop we are in and the next time around it will start to use the 'Accurate' version 
+        // which handles things like IDLE. Good enough for the tiny handful of games that use this.
+        // --------------------------------------------------------------------------------------------------
         if (!(tms9900.accurateEmuFlags & ACCURATE_EMU_IDLE))
         {
             tms9900.accurateEmuFlags |= ACCURATE_EMU_IDLE;
@@ -890,7 +892,7 @@
         Ts(SOURCE_WORD);  // Forces 16-bit source address mode
         data16 = ((tms9900.currentOp & 0x03c0) >> 6);
         TMS9900_ContextSwitch(data16);
-        MemoryWrite16(WP_REG(11), tms9900.srcAddress);
+        WriteWP_RAM16(WP_REG(11), tms9900.srcAddress);
         tms9900.ST |= ST_X;
         break;
     
