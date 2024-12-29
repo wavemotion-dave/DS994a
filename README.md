@@ -266,6 +266,7 @@ V2.5: 29-Dec-2024 by wavemotion-dave
 * Improved speech module emulation so that XB CALL SAY commands no longer freeze the emulator.
 * Fixed switching into a directory whose name is longer than 26 chars (should now support the full 128 char limit).
 * Full pass commenting to improve code readability for future generations.
+* Improved debugger to allow for display of various key memory regions (VDP, CPU and some External Memory).
 * General cleanups and a bit of spit-and-polish across the board.
 
 V2.4: 24-Dec-2024 by wavemotion-dave
