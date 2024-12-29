@@ -29,7 +29,7 @@
 #include "disk.h"
 #include "speech.h"
 
-#define TI_SAVE_VER   0x0008        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x0009        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -125,8 +125,9 @@ void TI99SaveState()
 
     // Write PSG sound chips...
     if (uNbO) uNbO = fwrite(&snti99, sizeof(snti99),1, handle); 
-    if (uNbO) uNbO = fwrite(&readSpeech, sizeof(readSpeech),1, handle);
-    if (uNbO) uNbO = fwrite(&speechData32, sizeof(speechData32),1, handle);    
+    
+    // Write Speech Synth state...
+    if (uNbO) uNbO = fwrite(&Speech, sizeof(Speech),1, handle);
 
     // Some high-level DISK stuff...
     if (uNbO) uNbO = fwrite(TICC_REG,  sizeof(TICC_REG),1, handle); 
@@ -289,8 +290,9 @@ void TI99LoadState()
             
             // Load PSG Sound Stuff
             if (uNbO) uNbO = fread(&snti99, sizeof(snti99),1, handle);
-            if (uNbO) uNbO = fread(&readSpeech, sizeof(readSpeech),1, handle);            
-            if (uNbO) uNbO = fread(&speechData32, sizeof(speechData32),1, handle);            
+
+            // Load Speech Synth state...
+            if (uNbO) uNbO = fread(&Speech, sizeof(Speech),1, handle);
             
             // Load high-level DISK stuff...
             if (uNbO) uNbO = fread(TICC_REG,  sizeof(TICC_REG),1, handle); 

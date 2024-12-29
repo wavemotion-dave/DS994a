@@ -12,14 +12,25 @@
 #ifndef _SPEECH_H_
 #define _SPEECH_H_
 
-// ---------------------------------------------------------------------
-// A sentinel value that we can use for fake-rendering speech samples
-// ---------------------------------------------------------------------
-#define SPEECH_SENTINEL_VAL     0x994a
+enum SPEECH_STATE
+{
+    SS_IDLE,
+    SS_READDATA,
+};
 
-extern u8  speech_dampen;
-extern u16 readSpeech;
-extern u32 speechData32;
+typedef struct
+{
+    u8  speechState;
+    u8  speechData;
+    u8  speechStatus;
+    u8  speechDampen;
+    u16 speechAddress;
+    
+    u32 speechData32;
+    u32 prevData32;
+} Speech_t;
+
+extern Speech_t Speech;
 
 extern void SpeechDataWrite(u8 data);
 extern u8   SpeechDataRead(void);

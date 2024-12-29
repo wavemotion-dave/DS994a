@@ -46,12 +46,10 @@
 // be played) is interrupted by another speech sample. A real TI-99/4a Speech Synth will
 // queue them up but that's not how it works with MaxMod and the SFX sound effect handling.
 // -------------------------------------------------------------------------------------------
-u32 speechData32        __attribute__((section(".dtcm"))) = 0;
-u8  speech_dampen       __attribute__((section(".dtcm"))) = 0;
-u16 readSpeech          __attribute__((section(".dtcm"))) = SPEECH_SENTINEL_VAL;
-u32 prev_speechData32   __attribute__((section(".dtcm"))) = 0x00000000;
 
-static const u8 DummySpeechROM[5080];
+Speech_t Speech __attribute__((section(".dtcm")));
+
+static u8 DummySpeechROM[(5*1024)+40];
 
 static const SpeechTable_t SpeechTable[] =
 {
@@ -196,7 +194,7 @@ static const SpeechTable_t SpeechTable[] =
 // x101xxxx     Speak 
 // x110xxxx     Speak-External (accepts an unlimited number of data bytes) 
 // x001xxxx     Read-Byte 
-// x011xxxx     Read-and-Branch 
+// x011xxxx     Read-and-Branch (not yet supported - treated like nop currently)
 //
 // For Load Address:
 //  Bit   :     0  1  2  3  4   5   6   7
@@ -208,6 +206,9 @@ static const SpeechTable_t SpeechTable[] =
 //------------------------------------------------------------------------
 void SpeechDataWrite(u8 data)
 {
+    static u8 LoadAddressIdx = 0;
+    static u8 LoadAddressByte[5];
+    
     if (myConfig.sounddriver == 1) return; // Check if the Speech Module is disabled...
 
     // ------------------------------------------------------------------------------
@@ -220,13 +221,47 @@ void SpeechDataWrite(u8 data)
     // the starting 'AA' byte in the speech roms. Good enough for DS use until we
     // decide to put in more complete TMS5220 speech handling.
     // ------------------------------------------------------------------------------
-    if ((speechData32 == 0x40404040) && (data == 0x10))
+    if ((Speech.speechState == SS_IDLE) || (Speech.speechState == SS_READDATA))
     {
-        readSpeech = DummySpeechROM[0];         // The first byte of the actual speech ROM is 0xAA and this will be enough to fool many games into thinking a Speech Synth module is attached.
-    } else readSpeech = SPEECH_SENTINEL_VAL;    // This indicates just normal status read...
-
-    speechData32 = (speechData32 << 8) | data;
-
+        if ((data & 0x70) == 0x70) // Reset
+        {
+            Speech.speechState = SS_IDLE;
+            Speech.speechAddress = 0x0000;
+            Speech.speechData = DummySpeechROM[Speech.speechAddress];
+            LoadAddressIdx = 0;
+        }
+        else if ((data & 0x70) == 0x10) // Read Data
+        {
+            Speech.speechState = SS_READDATA;
+            Speech.speechData = DummySpeechROM[Speech.speechAddress++];
+            if (Speech.speechAddress >= sizeof(DummySpeechROM)) Speech.speechAddress = sizeof(DummySpeechROM)-1; // Limit address to our dummy ROM
+            LoadAddressIdx = 0;
+        }
+        else if ((data & 0x70) == 0x40) // Load Address
+        {
+            LoadAddressByte[LoadAddressIdx++] = data;
+            if (LoadAddressIdx == 5)
+            {
+                // Assemble the address from the 5 bytes written...
+                Speech.speechAddress = ((LoadAddressByte[0]&0xF) << 10) | ((LoadAddressByte[1]&0xF) << 6) | ((LoadAddressByte[2]&0xF) << 2) | ((LoadAddressByte[3]&0x3) << 0);
+                if (Speech.speechAddress >= sizeof(DummySpeechROM)) Speech.speechAddress = sizeof(DummySpeechROM)-1; // Limit address to our dummy ROM
+                LoadAddressIdx = 0;
+            }
+        }
+        else if ((data & 0x70) == 0x50) // Speak
+        {
+            // Not handled... yet.
+        }
+        else if ((data & 0x70) == 0x60) // Speak External
+        {
+            // Not handled here... we cheat below to produce sound samples via WAV output
+        }
+        else if ((data & 0x70) == 0x30) // Read-and-Branch
+        {
+            // Not yet supported.
+        }
+    }
+    
     // --------------------------------------------------------------------------------------------
     // And here is the 'big cheat' for speech... we look for sequences of bytes that games use
     // to produce external speech and when we see the correct 'digital signature' we will 
@@ -235,9 +270,10 @@ void SpeechDataWrite(u8 data)
     // to do more work than is needed to get berated by the woman in Alpiner. Someday we may
     // replace this with a more capable and complete TMS5220 synth - but that day is not today.
     // --------------------------------------------------------------------------------------------
-    if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
+    Speech.speechData32 = (Speech.speechData32 << 8) | data;
+    if ((Speech.speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
-        if (speech_dampen) return;  // We are in a delay period... do not speak anything
+        if (Speech.speechDampen) return;  // We are in a delay period... do not speak anything
 
         u16 idx=0;
         // ----------------------------------------------------------------------------------------
@@ -245,25 +281,25 @@ void SpeechDataWrite(u8 data)
         // ----------------------------------------------------------------------------------------
         while (SpeechTable[idx].signature != 0x00000000)
         {
-            if (SpeechTable[idx].signature == speechData32)
+            if (SpeechTable[idx].signature == Speech.speechData32)
             {
-                if ((SpeechTable[idx].prev_signature == 0x00000000) || (SpeechTable[idx].prev_signature == prev_speechData32))
+                if ((SpeechTable[idx].prev_signature == 0x00000000) || (SpeechTable[idx].prev_signature == Speech.prevData32))
                 {
-                    mmEffect(SpeechTable[idx].sfx);                 // Play the speech (.wav) sound effect now. If another happens to be playing, both will be heard (I think we have 5 channels)
-                    speech_dampen = SpeechTable[idx].delay_after;   // The delay for "no more speech until" is in 1/60th of a second units ticked by the DS irqVBlank() handler.
+                    mmEffect(SpeechTable[idx].sfx);                          // Play the speech (.wav) sound effect now. If another happens to be playing, both will be heard (I think we have 5 channels)
+                    Speech.speechDampen = SpeechTable[idx].delay_after; // The delay for "no more speech until" is in 1/60th of a second units ticked by the DS irqVBlank() handler.
                     break;
                 }
             }
             idx++;
         }
-        prev_speechData32 = speechData32;
+        Speech.prevData32 = Speech.speechData32;
 
 #if 0 // Enable this to debug speech and add additional sound effects by signature
         // Output the digital signature into a file... we can use this to try and pick out other phrases for other games
         sprintf(tmpBuf, "%5d", vusCptVBL);
         DS_Print(0,0,6, tmpBuf);
         FILE *fp = fopen("994a_speech.txt", "a+");
-        fprintf(fp, "%5d: 0x%08X  [%3d]\n", vusCptVBL, (unsigned int)speechData32, SpeechTable[idx].sfx);
+        fprintf(fp, "%5d: 0x%08X  [%3d]\n", vusCptVBL, (unsigned int)Speech.speechData32, SpeechTable[idx].sfx);
         fclose(fp);
 #endif
     }
@@ -281,15 +317,12 @@ u8 SpeechDataRead(void)
     if (myConfig.sounddriver == 1) return 0xFF;
     
     // ----------------------------------------------------------------------------------------------------------
-    // We use a sentinal value to mean that we will return status. If the readSpeech value is not 0x994a, then
-    // we return that value to the caller - this is often used to read the first byte of Speech ROM to make
-    // sure that it's an 0xAA value and thus produce TI Speech (as a way to detect if the module is attached).
+    // If the program has issued a 'READ DATA' command, we return data... otherwise we return a status byte...
     // ----------------------------------------------------------------------------------------------------------
-    if (readSpeech != SPEECH_SENTINEL_VAL)
+    if (Speech.speechState == SS_READDATA)
     {
-        u8 data = readSpeech;
-        readSpeech = SPEECH_SENTINEL_VAL;
-        return data;
+        Speech.speechState = SS_IDLE;
+        return Speech.speechData;
     }
     else
     {
@@ -297,7 +330,7 @@ u8 SpeechDataRead(void)
         // Status Bit  D0 D1 D2 D3 D4 D5 D6 D7
         // Status Bit: TS BL BE -- -- -- -- --
         // ----------------------------------------
-        return (0x40 | 0x20);   // Satisfies the games that look for the module: Talk Status=0 (not talking), Buffer Low, Buffer Empty
+        return Speech.speechStatus;
     }
 }
 
@@ -306,16 +339,22 @@ u8 SpeechDataRead(void)
 // -------------------------------------------------------------------------------------------------------------
 void SpeechInit(void)
 {
-    readSpeech = SPEECH_SENTINEL_VAL;
-    speechData32 = 0x00000000;
-    prev_speechData32 = 0x00000000;
-    speech_dampen = 0;
+    Speech.speechData32    = 0x00000000;       // Nothing seen yet
+    Speech.prevData32      = 0x00000000;       // Nothing seen yet
+    Speech.speechAddress   = 0x0000;           // Start at the beginning of the dummy speech ROM
+    Speech.speechDampen    = 0;                // No dampen to start
+    Speech.speechStatus    = (0x40 | 0x20);    // Talk Status=0 (not talking), Buffer Low, Buffer Empty
+    Speech.speechState     = SS_IDLE;          // Idle state machine
+    Speech.speechData      = 0x00;             // No data yet until address loaded
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Dummy Speech ROM - just enough to satisfy programs that want to read out the vocabulary list... mainly for CALL SAY()
+// This is only the vocabulary list which some programs want to fetch out of the speech ROM via use of LoadAddress
+// and ReadData commands to the speech module. 
 // ---------------------------------------------------------------------------------------------------------------------
-static const u8 DummySpeechROM[5080] = {
+static u8 DummySpeechROM[(5*1024)+40] =
+{
   0xAA, 0x04, 0x4D, 0x4F, 0x52, 0x45, 0x04, 0xB6, 0x0E, 0xB5, 0x00, 0x46, 0x42, 0x51, 0x01, 0x2D, 0x09, 0xA8, 0x00, 0x18, 0x00, 0x48, 0xDC, 0x7D, 0x01, 0x2E, 0x00, 0x00, 0x00, 0x22, 0x00, 0x50, 0xEC, 0x5C, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x13, 0xC3, 0x46, 0x01, 0x31, 0x00, 0x0E, 0x00, 0x4A, 0x00, 0x14, 0x09, 0x53, 0x01, 0x32, 0x00, 0x00, 0x00, 0x40, 0x00, 0x14, 0x5C, 0x3E, 0x01, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x9A, 0x4D, 0x01, 0x34, 0x00, 0x36, 0x00, 0x54,
   0x00, 0x14, 0xE7, 0x4A, 0x01, 0x35, 0x00, 0x00, 0x00, 0x5E, 0x00, 0x15, 0x31, 0x77, 0x01, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15, 0xA8, 0x40, 0x01, 0x37, 0x00, 0x2C, 0x00, 0xA9, 0x00, 0x15, 0xE8, 0x4F, 0x01, 0x38, 0x00, 0x00, 0x00, 0x7C,
@@ -442,9 +481,10 @@ static const u8 DummySpeechROM[5080] = {
   0xBC, 0x7C, 0x05, 0x57, 0x52, 0x49, 0x54, 0x45, 0x00, 0x00, 0x13, 0x48, 0x00, 0x7C, 0x38, 0x55, 0x01, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7C, 0x8D, 0x25, 0x01, 0x59, 0x13, 0x3A, 0x13, 0x5C, 0x00, 0x7C, 0xB2, 0x46, 0x06, 0x59, 0x45, 0x4C,
   0x4C, 0x4F, 0x57, 0x00, 0x00, 0x13, 0x6B, 0x00, 0x7C, 0xF8, 0x60, 0x03, 0x59, 0x45, 0x53, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7D, 0x58, 0x41, 0x03, 0x59, 0x45, 0x54, 0x13, 0x52, 0x13, 0x9F, 0x00, 0x7D, 0x99, 0x42, 0x03, 0x59, 0x4F, 0x55, 0x00,
   0x00, 0x13, 0x8F, 0x00, 0x71, 0xBE, 0x36, 0x07, 0x59, 0x4F, 0x55, 0x20, 0x57, 0x49, 0x4E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7D, 0xDB, 0x72, 0x04, 0x59, 0x4F, 0x55, 0x52, 0x13, 0x83, 0x13, 0xAC, 0x00, 0x7E, 0x4D, 0x4C, 0x01, 0x5A, 0x00, 0x00,
-  0x13, 0xB6, 0x00, 0x7E, 0x99, 0x3B, 0x04, 0x5A, 0x45, 0x52, 0x4F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0xC3, 0x46, 0xB5, 0x9A, 0x5C, 0x13, 0x18, 0xBF, 0x79, 0x45, 0x99, 0x2C, 0xC4, 0x97, 0xEE, 0x4D, 0x07, 0xBB, 0x23, 0x55, 0xB3, 0x92, 0x3A
+  0x13, 0xB6, 0x00, 0x7E, 0x99, 0x3B, 0x04, 0x5A, 0x45, 0x52, 0x4F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0xC3, 0x46, 0xB5, 0x9A, 0x5C, 0x13, 0x18, 0xBF, 0x79, 0x45, 0x99, 0x2C, 0xC4, 0x97, 0xEE, 0x4D, 0x07, 0xBB, 0x23, 0x55, 0xB3, 0x92, 0x3A,
+  0x6C, 0xCD, 0x35, 0x6C, 0xD4, 0x8D, 0xA2, 0x4B, 0xCC, 0x4E, 0xF7, 0x36, 0x2A, 0x65, 0xCE, 0x9E, 0x92, 0x7B, 0xAB, 0x1B, 0x54, 0x97, 0x95, 0x7B, 0xE6, 0xF7, 0x60, 0x99, 0xDD, 0x25, 0xB4, 0xAE, 0x98, 0x2A, 0x2D, 0xF4, 0x8B, 0x2D, 0x9E, 0x0F,
+
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 // End of file
-
-

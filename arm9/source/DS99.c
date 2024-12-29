@@ -1996,7 +1996,7 @@ void irqVBlank(void)
 {
  // Manage time
   vusCptVBL++;
-  if (speech_dampen) speech_dampen--;
+  if (Speech.speechDampen) Speech.speechDampen--;
 }
 
 // -------------------------------------------------------------------------------------------

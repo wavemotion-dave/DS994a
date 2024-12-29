@@ -991,7 +991,7 @@ void SaveConfig(bool bShow)
     FILE *fp;
     s16 slot = 0;
 
-    if (bShow) DS_Print(6,2,0, (char*)"SAVING CONFIGURATION");
+    if (bShow) DS_Print(6,3,0, (char*)"SAVING CONFIGURATION");
 
     // Set the global configuration version number...
     globalConfig.config_ver = CONFIG_VER;
@@ -1042,7 +1042,7 @@ void SaveConfig(bool bShow)
     if (bShow)
     {
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-        DS_Print(4,2,0, (char*)"                        ");
+        DS_Print(4,3,0, (char*)"                        ");
     }
 }
 
@@ -1214,11 +1214,6 @@ void SetDefaultGameConfig(void)
 
     if (file_crc == 0x2715313f) myConfig.spriteCheck = 2;   // The megademo ROM needs it this fast at least
     if (file_crc == 0xe92f15ff) myConfig.spriteCheck = 2;   // The megademo DSK needs it this fast at least
-
-    if (file_crc == 0xf93533e9) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (32K Ver)
-    if (file_crc == 0xbc95d21f) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (512K Ver)
-    if (file_crc == 0xe2fbbd53) myConfig.sounddriver = 1;   // Deluxe Butt Plug Simulator will not run with our fake Speech module (32K Ver)
-    if (file_crc == 0xb9cd2072) myConfig.sounddriver = 1;   // Nuts V1.1 (AKA Fox&Goat) (2023)(TMOP) will not run with our fake Speech module
 
     if (file_crc == 0x0e34d709) myConfig.sounddriver = 2;   // Dragon's Lair Demo needs the new Direct Wave handling for speech
 
