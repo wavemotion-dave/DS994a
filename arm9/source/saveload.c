@@ -27,6 +27,7 @@
 #include "DS99_utils.h"
 #include "SAMS.h"
 #include "disk.h"
+#include "speech.h"
 
 #define TI_SAVE_VER   0x0008        // Change this if the basic format of the .SAV file changes. Invalidates older .sav files.
 

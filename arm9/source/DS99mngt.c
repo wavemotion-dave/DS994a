@@ -28,6 +28,7 @@
 #include "DS99_utils.h"
 #include "disk.h"
 #include "SAMS.h"
+#include "speech.h"
 
 u32 file_crc __attribute__((section(".dtcm")))  = 0x00000000;  // Our global file CRC32 to uniquiely identify this game. For split files (C/D/G) it will be the CRC of the main file (C or G if no C)
 
@@ -91,7 +92,7 @@ u8 TI99Init(char *szGame)
     // ----------------------------------------------------
     // Ensure we are reading status byte for speech carts
     // ----------------------------------------------------
-    readSpeech = SPEECH_SENTINAL_VAL;
+    SpeechInit();
 
     // --------------------------------------------------
     // SAMS support... up to 512K for DS and 1MB for DSi

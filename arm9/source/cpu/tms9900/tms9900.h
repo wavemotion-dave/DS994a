@@ -201,11 +201,6 @@ enum _STATUS_FLAGS
 #define INT_VDP                 2
 #define INT_TIMER               1
 
-// ---------------------------------------------------------------------
-// A sentinal value that we can use for fake-rendering speech samples
-// ---------------------------------------------------------------------
-#define SPEECH_SENTINAL_VAL     0x994a
-
 // -------------------------------------------------------------------------------------------------
 // The memory type tell us what's in a particular memory location. Be careful to keep MF_MEM16
 // as a zero value which helps with fast determination of timing penalties during run-time.

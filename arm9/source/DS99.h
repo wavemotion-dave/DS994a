@@ -95,8 +95,6 @@ typedef struct
 extern u16 emuFps;
 extern u16 emuActFrames;
 extern u16 timingFrames;
-extern u16 readSpeech;
-extern u32 speechData32;
 extern u8  alpha_lock;
 
 extern u16 nds_key;

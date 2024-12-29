@@ -1217,6 +1217,7 @@ void SetDefaultGameConfig(void)
 
     if (file_crc == 0xf93533e9) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (32K Ver)
     if (file_crc == 0xbc95d21f) myConfig.sounddriver = 1;   // Robots of Death II will not run with our fake Speech module (512K Ver)
+    if (file_crc == 0xe2fbbd53) myConfig.sounddriver = 1;   // Deluxe Butt Plug Simulator will not run with our fake Speech module (32K Ver)
     if (file_crc == 0xb9cd2072) myConfig.sounddriver = 1;   // Nuts V1.1 (AKA Fox&Goat) (2023)(TMOP) will not run with our fake Speech module
 
     if (file_crc == 0x0e34d709) myConfig.sounddriver = 2;   // Dragon's Lair Demo needs the new Direct Wave handling for speech

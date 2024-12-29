@@ -27,6 +27,7 @@
 #include "../../DS99.h"
 #include "../../SAMS.h"
 #include "../../disk.h"
+#include "../../speech.h"
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
 #include "../sn76496/SN76496.h"
@@ -77,13 +78,6 @@ TMS9900 tms9900  __attribute__((section(".dtcm")));  // Put the entire TMS9900 s
 #define AddCycleCount(x) (tms9900.cycles += (x))     // Our main way of bumping up the cycle counts during execution - each opcode handles their own timing increments
 
 u16 MemoryRead16(u16 address);
-
-// --------------------------------------------------------------------------------------------------------------------------------
-// This emulator does not handle the full TMS5220 speech synth... but we do ensure that the system responds as if it had one and
-// we also can render many of the classic games with full speech by using built-in sound effects. This is a bit of a cheat but
-// is simple enough and takes very little emulated CPU time (since WAV output on the DS is largely handled by the ARM7 processor)
-// --------------------------------------------------------------------------------------------------------------------------------
-u16 readSpeech __attribute__((section(".dtcm"))) = SPEECH_SENTINAL_VAL;
 
 // Some carts use CRU banking... such as the Super Cart (or Super Space II) and some Databiotics carts
 u8  super_bank __attribute__((section(".dtcm"))) = 0;
@@ -975,7 +969,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return retVal;
                 break;
             case MF_SPEECH:
-                retVal = (0x40 | 0x20);             // Satisfies the games that look for the module... Bits are empty and buffer low
+                retVal = SpeechDataRead();
                 return (retVal << 8) | retVal;
                 break;
             case MF_DISK:
@@ -1024,21 +1018,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return tms9900.cartBankPtr[(address&0x1FFF)];
                 break;
             case MF_SPEECH:
-                // ----------------------------------------------------------------------------------------------------------
-                // We use a sentinal value to mean that we will return status. If the readSpeech value is not 0x994a, then
-                // we return that value to the caller - this is often used to read the first byte of Speech ROM to make
-                // sure that it's an 0xAA value and thus produce TI Speech (as a way to detect if the module is attached).
-                // ----------------------------------------------------------------------------------------------------------
-                if (readSpeech != SPEECH_SENTINAL_VAL)
-                {
-                    u8 data = readSpeech;
-                    readSpeech = SPEECH_SENTINAL_VAL;
-                    return data;
-                }
-                else
-                {
-                    return (0x40 | 0x20);   // Satisfies the games that look for the module... Bits are empty and buffer low
-                }
+                return SpeechDataRead();
                 break;
             case MF_DISK:
                 return ReadTICCRegister(address); // Disk controller registers are mapped into this region...
@@ -1089,6 +1069,9 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 break;
             case MF_CART:
                 WriteBank(address);
+                break;
+            case MF_SPEECH:
+                SpeechDataWrite(data>>8);
                 break;
             case MF_SAMS:
                 SAMS_WriteBank(address, data>>8);
@@ -1153,7 +1136,7 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
                 WriteBank(address);
                 break;
             case MF_SPEECH:
-                WriteSpeechData(data);
+                SpeechDataWrite(data);
                 break;
             case MF_SAMS:
                 SAMS_WriteBank(address, data);
