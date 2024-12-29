@@ -29,7 +29,7 @@
 #include "soundbank_bin.h"
 
 // -------------------------------------------------------------------------------------------
-// We use this routine as a bit of a cheat for handling TI99 speech. Most of the games that
+// We use these routines as a bit of a cheat for handling TI99 speech. Most of the games that
 // use speech use the 0x60 'Speak External' command to handle speech. We look for this byte
 // and the three bytes after it as a sort of digital signature (a fingerprint if you will)
 // to determine what phrase is trying to be spoken. Rather than real emulation, we simply
@@ -43,7 +43,7 @@
 // hit one of these signatures - but that's a problem for another day.
 //
 // The delay below can be used to ensure no other speech sample (including the one that will
-// be played) is interrupted by another speech sample. A real TI-09/4a Speech Synth will
+// be played) is interrupted by another speech sample. A real TI-99/4a Speech Synth will
 // queue them up but that's not how it works with MaxMod and the SFX sound effect handling.
 // -------------------------------------------------------------------------------------------
 u32 speechData32        __attribute__((section(".dtcm"))) = 0;
@@ -227,6 +227,14 @@ void SpeechDataWrite(u8 data)
 
     speechData32 = (speechData32 << 8) | data;
 
+    // --------------------------------------------------------------------------------------------
+    // And here is the 'big cheat' for speech... we look for sequences of bytes that games use
+    // to produce external speech and when we see the correct 'digital signature' we will 
+    // simply load up the sound effect WAV file and play it. This is quite efficient as the
+    // DS generally offloads most of this to the ARM7 co-processor and it saves  us from having 
+    // to do more work than is needed to get berated by the woman in Alpiner. Someday we may
+    // replace this with a more capable and complete TMS5220 synth - but that day is not today.
+    // --------------------------------------------------------------------------------------------
     if ((speechData32 & 0xFF000000) == 0x60000000) // Speak External
     {
         if (speech_dampen) return;  // We are in a delay period... do not speak anything
