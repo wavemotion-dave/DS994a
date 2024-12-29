@@ -1204,9 +1204,10 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x5a238af2) MapSpaceSpace();// Moon Mine makes heavy use of SPACE
 
     if (file_crc == 0xb2d6a6f1) MapPlayer2();   // Frogger wants to use Controller for P2
+    if (file_crc == 0x15c15968) MapPlayer2();   // Macroman wants to use Controller for P2
 
-    if (file_crc == 0x2807a67f) Map123();
-    if (file_crc == 0x06da3412) Map123();
+    if (file_crc == 0x2807a67f) Map123();       // Superfly makes use of keys 1,2,3
+    if (file_crc == 0x06da3412) Map123();       // Superfly makes use of keys 1,2,3
 
     if (file_crc == 0x0c0d3375) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions
     if (file_crc == 0xcf6c8d64) myConfig.dpadDiagonal = 1;  // Topper wants to use diagonal directions

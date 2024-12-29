@@ -25,6 +25,7 @@ typedef struct
     u8  speechStatus;
     u8  speechDampen;
     u16 speechAddress;
+    u16 reserved;
     
     u32 speechData32;
     u32 prevData32;
