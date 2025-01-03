@@ -36,7 +36,7 @@ extern void SAMS_WriteBank(u16 address, u8 data);
 extern u8   SAMS_ReadBank(u16 address);
 extern u8   SAMS_cru_read(u16 cruAddress);
 extern void SAMS_cru_write(u16 cruAddress, u8 dataBit);
-extern void SAMS_MapDSR(u8 dataBit);
+extern void SAMS_EnableDisable(u8 dataBit);
 extern u32  SAMS_Read32(u32 address);
 extern void SAMS_Write32(u32 address, u32 data);
     

@@ -26,11 +26,37 @@
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
 
-u8 *MemSAMS     __attribute__((section(".dtcm"))) = 0;     // Allocated to support 512K for DS-Lite and 1MB for DSi and above
+u8 *MemSAMS             __attribute__((section(".dtcm"))) = 0;  // Allocated to support 512K for DS-Lite and 1MB for DSi and above
+SAMS theSAMS            __attribute__((section(".dtcm")));      // The entire state of the SAMS memory map handler
+u8 sams_highwater_bank  __attribute__((section(".dtcm"))) = 0;  // To track how far into SAMS memory we used
 
-SAMS theSAMS    __attribute__((section(".dtcm")));         // The entire state of the SAMS memory map handler
-
-u8 sams_highwater_bank __attribute__((section(".dtcm"))) = 0; // To track how far into SAMS memory we used
+// ---------------------------------------------------------------------------------------
+// SAMS is handled via the CRU and has registers mapped into the DSR space but it does
+// not have a proper DSR. The two CRU bits used are:
+//
+// CRU >1E00  - Enable or Disable the visibility of the SAMS registers
+// CRU >1E02  - Enable SAMS memory mapping or 'Pass-Thru' mode (acting like a traditional 32K expansion)
+//
+// If the SAMS registers are mapped in, there are 16 word-registers (covering 32 bytes) but
+// only a subset are actually used to map in 4K memory banks into the TI-99 system:
+//
+// > 4000 - Banking for TI-99/4a Memory Range 0000-0FFF (not mappable)
+// > 4002 - Banking for TI-99/4a Memory Range 1000-1FFF (not mappable)
+// > 4004 - Banking for TI-99/4a Memory Range 2000-2FFF (mappable)
+// > 4006 - Banking for TI-99/4a Memory Range 3000-3FFF (mappable)
+// > 4008 - Banking for TI-99/4a Memory Range 4000-4FFF (not mappable)
+// > 400A - Banking for TI-99/4a Memory Range 5000-5FFF (not mappable)
+// > 400C - Banking for TI-99/4a Memory Range 6000-6FFF (not mappable)
+// > 400E - Banking for TI-99/4a Memory Range 7000-7FFF (not mappable)
+// > 4010 - Banking for TI-99/4a Memory Range 8000-8FFF (not mappable)
+// > 4012 - Banking for TI-99/4a Memory Range 9000-9FFF (not mappable)
+// > 4014 - Banking for TI-99/4a Memory Range A000-AFFF (mappable)
+// > 4016 - Banking for TI-99/4a Memory Range B000-BFFF (mappable)
+// > 4018 - Banking for TI-99/4a Memory Range C000-CFFF (mappable)
+// > 401A - Banking for TI-99/4a Memory Range D000-DFFF (mappable)
+// > 401C - Banking for TI-99/4a Memory Range E000-EFFF (mappable)
+// > 401E - Banking for TI-99/4a Memory Range F000-FFFF (mappable)
+// ---------------------------------------------------------------------------------------
 
 // ---------------------------------------------------------
 // Setup for SAMS 512K (DS) or 1MB (DSi)
@@ -74,7 +100,7 @@ void SAMS_Initialize(void)
     if (myConfig.machineType == MACH_TYPE_SAMS)
     {
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
-        SAMS_cru_write(0,0);    // Swap out the "DSR" (the SAMS memory mapped registers are not visible)
+        SAMS_cru_write(0,0);    // Swap out the visibility of the SAMS memory mapped registers (so they are not visible)
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode which is basically like having a 32K expansion)
 
         if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
@@ -89,7 +115,10 @@ void SAMS_Initialize(void)
 
 
 // --------------------------------------------------------------------------------------
-// SAMS memory bank swapping will point into the 4K region of the large SAMS memory pool
+// SAMS memory bank swapping will point into the 4K region of the large SAMS memory pool.
+// We only allow mapping of SAMS 4K memory banks into the TI-99/4a memory map that would
+// hold expansion RAM ... that is: >2000 and >A000 areas. We cannot map RAM into areas
+// that hold console the console ROMS, cart ROM or other peripherals.
 // --------------------------------------------------------------------------------------
 const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
 
@@ -137,9 +166,9 @@ u8 SAMS_ReadBank(u16 address)
 
 // ---------------------------------------------------------------------
 // The SAMS CRU is at CRU base >1E00 and has only 2 bits.. the first
-// turns on the DSR at >4000 and the second enables the mapping vs
-// "pass-thru" of the memory. In "pass-thru" we end up looking just
-// like a normal 32K expanded memory system.
+// turns on the visibility of the SAMS register map at >4000 and the
+// second enables mapping vs "pass-thru" of the memory. In "pass-thru"
+// we end up looking just like a normal 32K expanded memory system.
 // ---------------------------------------------------------------------
 void SAMS_cru_write(u16 cruAddress, u8 dataBit)
 {
@@ -174,14 +203,17 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
                 SAMS_SwapBank(0x0F, 0xF);
             }
         }
-        else // We are dealing with the "DSR" enabled bit (there is no DSR for the SAMS, but it's more a card enable so that registers can be written to)
+        else // We are dealing with the enabled bit (there is no DSR for the SAMS, but it's more a card enable so that registers are visible and can be written to)
         {
-            SAMS_MapDSR(dataBit);
+            SAMS_EnableDisable(dataBit);
         }
     }
 }
 
-
+// -----------------------------------------------------------
+// It's unclear if SAMS hardware allows the readback of the
+// CRU bits... but it doesn't hurt to provide the capability.
+// -----------------------------------------------------------
 u8 SAMS_cru_read(u16 cruAddress)
 {
     // -----------------------------------------------------------
@@ -195,13 +227,13 @@ u8 SAMS_cru_read(u16 cruAddress)
 }
 
 // ------------------------------------------------------------------
-// Map the SAMS DSR in/out at address 0>4000 which is shared
+// Map the SAMS registers in/out at address 0>4000 which is shared
 // with the Disk Controller (and other periprhals in the future)
 // Note: SAMS does not have a traditional DSR rom - so this CRU
 // bit is really more like a SAMS enable/disable as we are just
 // enabling the memory mapped registers here (no ROM is swapped).
 // ------------------------------------------------------------------
-void SAMS_MapDSR(u8 dataBit)
+void SAMS_EnableDisable(u8 dataBit)
 {
     if (dataBit == 1) // Mapping SAMS card in
     {
@@ -237,4 +269,3 @@ void SAMS_Write32(u32 address, u32 data)
 
 
 // End of file
-

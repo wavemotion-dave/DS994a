@@ -117,7 +117,7 @@ void TMS9901_Reset(void)
 //      >1B00-1BFE   Unassigned
 //      >1C00-1CFE   Video Controller Card
 //      >1D00-1DFE   IEEE 488 Bus Controller Card
-//      >1E00-1EFE   Unassigned
+//      >1E00-1EFE   AMS/SAMS
 //      >1F00-1FFE   P-Code Card
 // -----------------------------------------------------------------------------------------
 ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
