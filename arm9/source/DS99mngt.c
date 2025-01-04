@@ -27,6 +27,7 @@
 #include "DS99mngt.h"
 #include "DS99_utils.h"
 #include "disk.h"
+#include "pcode.h"
 #include "SAMS.h"
 #include "speech.h"
 
@@ -76,7 +77,7 @@ void DS_SetVideoModes(void)
 // Init TI99 Engine for that game. The filename of the game is passed in to
 // this function and we will read the binary ROM(s) into memory.
 // -----------------------------------------------------------------------------
-u8 TI99Init(char *szGame)
+u8 TI99Init(char *szGame, u8 bInitDisks)
 {
     // ------------------------------------------------------------------
     // Set the DS video modes and initialize the page-flipping buffer...
@@ -89,20 +90,11 @@ u8 TI99Init(char *szGame)
     // ------------------------------------------------------------
     TMS9900_Reset();
 
-    // ----------------------------------------------------
-    // Ensure we are reading status byte for speech carts
-    // ----------------------------------------------------
-    SpeechInit();
-
-    // --------------------------------------------------
-    // SAMS support... up to 512K for DS and 1MB for DSi
-    // --------------------------------------------------
-    SAMS_Initialize();   // Map in SAMS if enabled
-
     // ---------------------------------------------------------------------
     // Perform a standard system RESET - this will also clear disk buffers
+    // if the bInitDisks parameter is set TRUE (otherwise, soft reset)
     // ---------------------------------------------------------------------
-    ResetTI();
+    ResetTI(bInitDisks);
 
     // ------------------------------------------------------------------------------------------------
     // We're now ready to load the actual binary files and place them into memory.
@@ -119,6 +111,7 @@ u8 TI99Init(char *szGame)
     // ------------------------------------------------------------------------------------------------
     FILE *infile;           // We use this to read the various files in our system
     u16 numCartBanks = 1;   // Number of CART banks (8K each)
+    pCodeEmulation = 0;     // Default to no p-code card emulation
 
     // ------------------------------------------------------------------
     // Grab the main 16-bit console ROM and place into our MemCPU[]
@@ -157,160 +150,187 @@ u8 TI99Init(char *szGame)
         // We're going to be manipulating the filename a bit so copy it into a buffer
         // -----------------------------------------------------------------------------
         strcpy(tmpBuf, szGame);
-
-        u8 fileType = toupper(tmpBuf[strlen(tmpBuf)-5]);
-
-        // Look for the classic C/D/G "mixed mode" files...
-        if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
+        
+        // --------------------------------------------------
+        // First check if this is the special 'p-code' card?
+        // This card has a DSR that essentially takes over 
+        // the whole system - it must be handled uniquely.
+        // --------------------------------------------------
+        if ((strstr(szGame, "pcode_c.bin") != 0) || (strstr(szGame, "PCODE_C.BIN") != 0))
         {
-            tms9900.bankMask = 0x003F;
-            tmpBuf[strlen(tmpBuf)-5] = 'C';   // Try to find a 'C' file
+            tmpBuf[strlen(tmpBuf)-5] = 'C';   // Load the 'c' file 
             infile = fopen(tmpBuf, "rb");
             if (infile != NULL)
             {
-                int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);     // Whole cart C memory as needed...
+                fread(MemCART, 1, MAX_CART_SIZE, infile);     // Read the P-Code ROM into the cart space (it's actually a DSR but we'll keep it here for now)
                 fclose(infile);
-                if (numRead <= 0x2000)   // If 8K... repeat
+
+                tmpBuf[strlen(tmpBuf)-5] = 'G';   // Load the 'g' file
+                infile = fopen(tmpBuf, "rb");
+                if (infile != NULL)
                 {
-                    memcpy(MemCART+0x2000, MemCART, 0x2000);
-                    memcpy(MemCART+0x4000, MemCART, 0x2000);
-                    memcpy(MemCART+0x6000, MemCART, 0x2000);
-                    memcpy(MemCART+0x8000, MemCART, 0x2000);
-                    memcpy(MemCART+0xA000, MemCART, 0x2000);
-                    memcpy(MemCART+0xC000, MemCART, 0x2000);
-                    memcpy(MemCART+0xE000, MemCART, 0x2000);
-                    tms9900.bankMask = 0x0007;
-                }
-                else // More than 8K needs banking support
-                {
-                    numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
-                    tms9900.bankMask = BankMasks[numCartBanks-1];
+                    fread(MemCART+(64*1024), 1, (64*1024), infile);     // Read the P-Code GROM into the cart space... special handling here
+                    fclose(infile);
                 }
             }
-
-            tmpBuf[strlen(tmpBuf)-5] = 'D';   // Try to find a 'D' file
-            infile = fopen(tmpBuf, "rb");
-            if (infile != NULL)
-            {
-                tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 1 bank
-                fread(MemCART+0x2000, 0x2000, 1, infile);   // Read 'D' file but never more than 8K
-                fclose(infile);
-            }
-            memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-
-            // And see if there is a GROM file to go along with this load...
-            tmpBuf[strlen(tmpBuf)-5] = 'G';
-            infile = fopen(tmpBuf, "rb");
-            if (infile != NULL)
-            {
-                fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM loaded at GROM address >6000
-                fclose(infile);
-            }
+            pCodeEmulation = 1; // This will force special handling for the DSR space to allow mapping in the p-code DSR and make use of the special internal GROM
         }
-        else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
-        {
-            if (file_size > (512 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
+        else // Not the special p-code card / system and so we just load normally
+        {        
+            u8 fileType = toupper(tmpBuf[strlen(tmpBuf)-5]);
 
-            infile = fopen(tmpBuf, "rb");
-            int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
-            fclose(infile);
-            numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
-            tms9900.bankMask = BankMasks[numCartBanks-1];
-
-            if (numCartBanks > 1)
+            // Look for the classic C/D/G "mixed mode" files...
+            if ((fileType == 'C') || (fileType == 'G') || (fileType == 'D'))
             {
-                // If the image is inverted we need to swap 8K banks
-                if ((fileType == '9') || (fileType == '3')) // '3' is deprecated but there are still cart names using it...
+                tms9900.bankMask = 0x003F;
+                tmpBuf[strlen(tmpBuf)-5] = 'C';   // Try to find a 'C' file
+                infile = fopen(tmpBuf, "rb");
+                if (infile != NULL)
                 {
-                    for (u16 i=0; i<numCartBanks/2; i++)
+                    int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);     // Whole cart C memory as needed...
+                    fclose(infile);
+                    if (numRead <= 0x2000)   // If 8K... repeat
                     {
-                        // Swap 8k bank...
-                        memcpy(fileBuf, MemCART + (i*0x2000), 0x2000);
-                        memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
-                        memcpy(MemCART + ((numCartBanks-i-1)*0x2000), fileBuf, 0x2000);
+                        memcpy(MemCART+0x2000, MemCART, 0x2000);
+                        memcpy(MemCART+0x4000, MemCART, 0x2000);
+                        memcpy(MemCART+0x6000, MemCART, 0x2000);
+                        memcpy(MemCART+0x8000, MemCART, 0x2000);
+                        memcpy(MemCART+0xA000, MemCART, 0x2000);
+                        memcpy(MemCART+0xC000, MemCART, 0x2000);
+                        memcpy(MemCART+0xE000, MemCART, 0x2000);
+                        tms9900.bankMask = 0x0007;
+                    }
+                    else // More than 8K needs banking support
+                    {
+                        numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0); // If not multiple of 8K we need to add a bank...
+                        tms9900.bankMask = BankMasks[numCartBanks-1];
                     }
                 }
+
+                tmpBuf[strlen(tmpBuf)-5] = 'D';   // Try to find a 'D' file
+                infile = fopen(tmpBuf, "rb");
+                if (infile != NULL)
+                {
+                    tms9900.bankMask = 0x0001;                  // If there is a 'D' file, it's always only 1 bank
+                    fread(MemCART+0x2000, 0x2000, 1, infile);   // Read 'D' file but never more than 8K
+                    fclose(infile);
+                }
+                memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
+
+                // And see if there is a GROM file to go along with this load...
+                tmpBuf[strlen(tmpBuf)-5] = 'G';
+                infile = fopen(tmpBuf, "rb");
+                if (infile != NULL)
+                {
+                    fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM loaded at GROM address >6000
+                    fclose(infile);
+                }
+            }
+            else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
+            {
+                if (file_size > (512 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
+
+                infile = fopen(tmpBuf, "rb");
+                int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
+                fclose(infile);
+                numCartBanks = (numRead / 0x2000) + ((numRead % 0x2000) ? 1:0);
+                tms9900.bankMask = BankMasks[numCartBanks-1];
+
+                if (numCartBanks > 1)
+                {
+                    // If the image is inverted we need to swap 8K banks
+                    if ((fileType == '9') || (fileType == '3')) // '3' is deprecated but there are still cart names using it...
+                    {
+                        for (u16 i=0; i<numCartBanks/2; i++)
+                        {
+                            // Swap 8k bank...
+                            memcpy(fileBuf, MemCART + (i*0x2000), 0x2000);
+                            memcpy(MemCART+(i*0x2000), MemCART + ((numCartBanks-i-1)*0x2000), 0x2000);
+                            memcpy(MemCART + ((numCartBanks-i-1)*0x2000), fileBuf, 0x2000);
+                        }
+                    }
+                }
+
+                memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
+
+                // And see if there is a GROM file to go along with this load...
+                tmpBuf[strlen(tmpBuf)-5] = 'G';
+                infile = fopen(tmpBuf, "rb");
+                if (infile != NULL)
+                {
+                    fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM loaded at GROM address >6000
+                    fclose(infile);
+                }
             }
 
-            memcpy(&MemCPU[0x6000], MemCART, 0x2000);   // First bank loaded into main memory
-
-            // And see if there is a GROM file to go along with this load...
-            tmpBuf[strlen(tmpBuf)-5] = 'G';
+            // --------------------------------------------------------
+            // Look for a special '0' file that we will try to load
+            // into GROM bank 0,1,2 to replace System GROMs (e.g. SOB)
+            // --------------------------------------------------------
+            tmpBuf[strlen(tmpBuf)-5] = '0';
             infile = fopen(tmpBuf, "rb");
             if (infile != NULL)
             {
-                fread(&MemGROM[0x6000], 0xA000, 1, infile); // We support up to 40K of GROM loaded at GROM address >6000
+                fread(&MemGROM[0x0000], 0x6000, 1, infile);
                 fclose(infile);
             }
         }
 
-        // --------------------------------------------------------
-        // Look for a special '0' file that we will try to load
-        // into GROM bank 0,1,2 to replace System GROMs (e.g. SOB)
-        // --------------------------------------------------------
-        tmpBuf[strlen(tmpBuf)-5] = '0';
-        infile = fopen(tmpBuf, "rb");
-        if (infile != NULL)
+        // ------------------------------------------------------
+        // Now handle some of the special machine types...
+        // Supercart is 32K of RAM that is CRU-banked into >6000
+        // ------------------------------------------------------
+        if (myConfig.cartType == CART_TYPE_SUPERCART)
         {
-            fread(&MemGROM[0x0000], 0x6000, 1, infile);
-            fclose(infile);
-        }
-    }
-
-    // ------------------------------------------------------
-    // Now handle some of the special machine types...
-    // Supercart is 32K of RAM that is CRU-banked into >6000
-    // ------------------------------------------------------
-    if (myConfig.cartType == CART_TYPE_SUPERCART)
-    {
-        for (u16 address = 0x6000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_RAM8; // Supercart maps ram into the cart slot
-        }
-        memset(MemCPU+0x6000, 0x00, 0x2000); // Clear the Super Cart working RAM to start (located at cart-space >6000)
-        memset(MemCART+(MAX_CART_SIZE - 0x8000), 0x00, 0x8000); // Clear the back-end 32K of the cartridge... we will repurpose to 32K of SUPER CART RAM
-    }
-
-    // --------------------------------------------------------------
-    // Mini Memory maps RAM into the upper 4K of the cart slot...
-    // Since there is no banking, we can just use the 4K of MemCPU[]
-    // at that location.
-    // --------------------------------------------------------------
-    if (myConfig.cartType == CART_TYPE_MINIMEM)
-    {
-        for (u16 address = 0x7000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_RAM8; // Mini Memory maps ram into the upper half of the cart slot
-        }
-        memset(MemCPU+0x7000, 0x00, 0x1000);
-    }
-
-    // ----------------------------------------------------------------
-    // MBX usually has 1K of RAM mapped in... plus odd bank switching.
-    // ----------------------------------------------------------------
-    if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-    {
-        for (u16 address = 0x6000; address < 0x7000; address++)
-        {
-            MemType[address>>4] = MF_CART_NB;    // We'll do the banking manually for MBX carts
-        }
-        for (u16 address = 0x7000; address < 0x8000; address++)
-        {
-            MemType[address>>4] = MF_CART;    // We'll do the banking manually for MBX carts
-        }
-
-        if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
-        {
-            for (u16 address = 0x6C00; address < 0x7000; address++)
+            for (u16 address = 0x6000; address < 0x8000; address++)
             {
-                MemType[address>>4] = MF_RAM8; // MBX carts have 1K of memory... with the last word at >6ffe being the bank switch
-                MemCPU[address] = 0x00;     // Clear out the RAM
+                MemType[address>>4] = MF_RAM8; // Supercart maps ram into the cart slot
             }
+            memset(MemCPU+0x6000, 0x00, 0x2000); // Clear the Super Cart working RAM to start (located at cart-space >6000)
+            memset(MemCART+(MAX_CART_SIZE - 0x8000), 0x00, 0x8000); // Clear the back-end 32K of the cartridge... we will repurpose to 32K of SUPER CART RAM
         }
 
-        MemType[0x6ffe>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
-        MemType[0x6fff>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
-        WriteBankMBX(0);
+        // --------------------------------------------------------------
+        // Mini Memory maps RAM into the upper 4K of the cart slot...
+        // Since there is no banking, we can just use the 4K of MemCPU[]
+        // at that location.
+        // --------------------------------------------------------------
+        if (myConfig.cartType == CART_TYPE_MINIMEM)
+        {
+            for (u16 address = 0x7000; address < 0x8000; address++)
+            {
+                MemType[address>>4] = MF_RAM8; // Mini Memory maps ram into the upper half of the cart slot
+            }
+            memset(MemCPU+0x7000, 0x00, 0x1000);
+        }
+
+        // ----------------------------------------------------------------
+        // MBX usually has 1K of RAM mapped in... plus odd bank switching.
+        // ----------------------------------------------------------------
+        if ((myConfig.cartType == CART_TYPE_MBX_NO_RAM) || (myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
+        {
+            for (u16 address = 0x6000; address < 0x7000; address++)
+            {
+                MemType[address>>4] = MF_CART_NB;    // We'll do the banking manually for MBX carts
+            }
+            for (u16 address = 0x7000; address < 0x8000; address++)
+            {
+                MemType[address>>4] = MF_CART;    // We'll do the banking manually for MBX carts
+            }
+
+            if ((myConfig.cartType == CART_TYPE_MBX_WITH_RAM))
+            {
+                for (u16 address = 0x6C00; address < 0x7000; address++)
+                {
+                    MemType[address>>4] = MF_RAM8; // MBX carts have 1K of memory... with the last word at >6ffe being the bank switch
+                    MemCPU[address] = 0x00;     // Clear out the RAM
+                }
+            }
+
+            MemType[0x6ffe>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
+            MemType[0x6fff>>4] = MF_MBX;   // Special bank switching register... sits in the last 16-bit word of MBX RAM
+            WriteBankMBX(0);
+        }
     }
 
     // -----------------------------------------------------------------------------
@@ -318,47 +338,55 @@ u8 TI99Init(char *szGame)
     // -----------------------------------------------------------------------------
     tms9900.cartBankPtr = MemCPU+0x6000;
 
-    // ---------------------------------------------------------------
-    // Check if there are any .dsk files associated with this load...
-    // This will allow quick mounting of various .dsk files into mem.
-    // ---------------------------------------------------------------
-    strcpy(tmpBuf, szGame);
-    tmpBuf[strlen(tmpBuf)-3] = 'd';
-    tmpBuf[strlen(tmpBuf)-2] = 's';
-    tmpBuf[strlen(tmpBuf)-1] = 'k';
-    for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
+    // -----------------------------------------------------------------------
+    // If bInitDisks parameter is TRUE, we look and load up any .dsk files 
+    // associated with  this program / cart. Otherwise we are considering
+    // this a 'soft reset' and leave the disks mounted (or unmounted) as-is...
+    // -----------------------------------------------------------------------
+    if (bInitDisks)
     {
-        tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
-        FILE *infile = fopen(tmpBuf, "rb");
-        if (infile) // Does the .dsk file exist?
+        // ---------------------------------------------------------------
+        // Check if there are any .dsk files associated with this load...
+        // This will allow quick mounting of various .dsk files into mem.
+        // ---------------------------------------------------------------
+        strcpy(tmpBuf, szGame);
+        tmpBuf[strlen(tmpBuf)-3] = 'd';
+        tmpBuf[strlen(tmpBuf)-2] = 's';
+        tmpBuf[strlen(tmpBuf)-1] = 'k';
+        for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
         {
-            extern char currentDirDSKs[];
-            fclose(infile);
-            getcwd(currentDirDSKs, MAX_PATH);
-            disk_mount(drivesel, currentDirDSKs, tmpBuf);
+            tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
+            FILE *infile = fopen(tmpBuf, "rb");
+            if (infile) // Does the .dsk file exist?
+            {
+                extern char currentDirDSKs[];
+                fclose(infile);
+                getcwd(currentDirDSKs, MAX_PATH);
+                disk_mount(drivesel, currentDirDSKs, tmpBuf);
+            }
         }
-    }
 
-    // -------------------------------------------------------------------
-    // Alternate filename check for loaded disks... This one just checks
-    // for the same filename with a '1' '2' or '3' tacked on to the end.
-    // -------------------------------------------------------------------
-    strcpy(tmpBuf, szGame);
-    strcat(tmpBuf, "X");
-    tmpBuf[strlen(tmpBuf)-4] = '.';
-    tmpBuf[strlen(tmpBuf)-3] = 'd';
-    tmpBuf[strlen(tmpBuf)-2] = 's';
-    tmpBuf[strlen(tmpBuf)-1] = 'k';
-    for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
-    {
-        tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
-        FILE *infile = fopen(tmpBuf, "rb");
-        if (infile) // Does the .dsk file exist?
+        // -------------------------------------------------------------------
+        // Alternate filename check for loaded disks... This one just checks
+        // for the same filename with a '1' '2' or '3' tacked on to the end.
+        // -------------------------------------------------------------------
+        strcpy(tmpBuf, szGame);
+        strcat(tmpBuf, "X");
+        tmpBuf[strlen(tmpBuf)-4] = '.';
+        tmpBuf[strlen(tmpBuf)-3] = 'd';
+        tmpBuf[strlen(tmpBuf)-2] = 's';
+        tmpBuf[strlen(tmpBuf)-1] = 'k';
+        for (u8 drivesel = DSK1; drivesel < MAX_DSKS; drivesel++)
         {
-            extern char currentDirDSKs[];
-            fclose(infile);
-            getcwd(currentDirDSKs, MAX_PATH);
-            disk_mount(drivesel, currentDirDSKs, tmpBuf);
+            tmpBuf[strlen(tmpBuf)-5] = '1' + drivesel;
+            FILE *infile = fopen(tmpBuf, "rb");
+            if (infile) // Does the .dsk file exist?
+            {
+                extern char currentDirDSKs[];
+                fclose(infile);
+                getcwd(currentDirDSKs, MAX_PATH);
+                disk_mount(drivesel, currentDirDSKs, tmpBuf);
+            }
         }
     }
 

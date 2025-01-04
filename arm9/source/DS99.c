@@ -33,6 +33,7 @@
 #include "cpu/sn76496/SN76496.h"
 #include "rpk/rpk.h"
 #include "disk.h"
+#include "pcode.h"
 #include "SAMS.h"
 #include "intro.h"
 #include "ds99kbd.h"
@@ -501,8 +502,18 @@ void ResetStatusFlags(void)
 // When we first load a ROM/DISK or when the user presses
 // the RESET button on the touch-screen...
 // --------------------------------------------------------------
-void ResetTI(void)
+void ResetTI(u8 bInitDisks)
 {
+  // ----------------------------------------------------
+  // Ensure we are reading status byte for speech carts
+  // ----------------------------------------------------
+  SpeechInit();
+    
+  // --------------------------------------------------
+  // SAMS support... up to 512K for DS and 1MB for DSi
+  // --------------------------------------------------
+  SAMS_Initialize();   // Map in SAMS if enabled
+
   Reset9918();                           //  Reset video chip
 
   sn76496Reset(1, &snti99);              //  Reset the SN/TI sound chip
@@ -549,8 +560,16 @@ void ResetTI(void)
   // ---------------------------------------------
   // Make sure the disk systems is up and running
   // ---------------------------------------------
-  disk_init();
-  disk_drive_select = DSK1; // Start with DSK1
+  if (bInitDisks)
+  {
+      disk_init();
+      disk_drive_select = DSK1; // Start with DSK1
+  }
+  
+  // ------------------------------------------------
+  // Make sure the p-code emulation is initialized.
+  // ------------------------------------------------
+  pcode_init();
 
   // ---------------------------------------------------
   // And reset our debugger registers on every new load
@@ -961,6 +980,7 @@ void MiniMenuShow(bool bClearScreen, u8 sel)
     }
 
     DS_Print(8,7,6,                                           " TI MINI MENU  ");
+    DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " RESET  SYSTEM ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " QUIT   GAME   ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " HIGH   SCORE  ");  mini_menu_items++;
     DS_Print(8,9+mini_menu_items,(sel==mini_menu_items)?2:0,  " SAVE   STATE  ");  mini_menu_items++;
@@ -1000,11 +1020,12 @@ u8 MiniMenu(void)
         }
         if (nds_key & KEY_A)
         {
-            if      (menuSelection == 0) retVal = META_KEY_QUIT;
-            else if (menuSelection == 1) retVal = META_KEY_HIGHSCORE;
-            else if (menuSelection == 2) retVal = META_KEY_SAVESTATE;
-            else if (menuSelection == 3) retVal = META_KEY_LOADSTATE;
-            else if (menuSelection == 4) retVal = META_KEY_DISKMENU;
+            if      (menuSelection == 0) retVal = META_KEY_RESET;
+            else if (menuSelection == 1) retVal = META_KEY_QUIT;
+            else if (menuSelection == 2) retVal = META_KEY_HIGHSCORE;
+            else if (menuSelection == 3) retVal = META_KEY_SAVESTATE;
+            else if (menuSelection == 4) retVal = META_KEY_LOADSTATE;
+            else if (menuSelection == 5) retVal = META_KEY_DISKMENU;
             else retVal = META_KEY_NONE;
             break;
         }
@@ -1266,20 +1287,12 @@ void  __attribute__ ((noinline)) DisplayFrameCounter(u16 emuFps)
     DS_Print(0,0,6,tmpBuf);
 }
 
-// ---------------------------------------------------------------------------------------
-// Some common setup stuff that we don't need to take up space in fast ITCM_CODE memory
-// ---------------------------------------------------------------------------------------
-void __attribute__ ((noinline)) ds99_main_setup(void)
+// ----------------------------------------------------------------------
+// Reset the main timers used to drive the emulation and reset the 
+// frame counter. Done when we start emulation and when we 'soft reset'
+// ----------------------------------------------------------------------
+void ResetTimers(void)
 {
-  // Returns when  user has asked for a game to run...
-  showMainMenu();
-
-  // Get the TI99 Machine Emualtor ready
-  TI99Init(gpFic[ucGameAct].szName);
-
-  TI99SetPal();
-  TI99Run();
-
   // Frame-to-frame timing...
   TIMER1_CR = 0;
   TIMER1_DATA=0;
@@ -1291,6 +1304,24 @@ void __attribute__ ((noinline)) ds99_main_setup(void)
   TIMER2_CR=TIMER_ENABLE  | TIMER_DIV_1024;
   timingFrames  = 0;
   emuFps=0;
+}
+
+// ---------------------------------------------------------------------------------------
+// Some common setup stuff that we don't need to take up space in fast ITCM_CODE memory
+// ---------------------------------------------------------------------------------------
+void __attribute__ ((noinline)) ds99_main_setup(void)
+{
+  // Returns when  user has asked for a game to run...
+  showMainMenu();
+
+  // Get the TI99 Machine Emualtor ready
+  TI99Init(gpFic[ucGameAct].szName, TRUE);
+
+  TI99SetPal();
+  TI99Run();
+  
+  // Reset emulator related timers and frame counters
+  ResetTimers();
 
   // Force the sound engine to turn on when we start emulation
   bStartSoundEngine = true;
@@ -1478,6 +1509,21 @@ u8 handle_touch_input(void)
 
     switch (meta)
     {
+        case META_KEY_RESET:
+          //  Stop sound
+          SoundPause();
+
+          //  Ask for verification
+          if  (showMessage("DO YOU REALLY WANT TO","SOFT RESET THE SYSTEM ?") == ID_SHM_YES)
+          {
+            // This is a 'soft reset' - it reloads the CARTs and DSRs but leaves the disks mounted or unmounted as-is
+            TI99Init(gpFic[ucGameAct].szName, FALSE);
+            ResetTimers();
+          }
+          DisplayStatusLine(true);
+          SoundUnPause();
+          break;
+            
         case META_KEY_QUIT:
         {
           //  Stop sound

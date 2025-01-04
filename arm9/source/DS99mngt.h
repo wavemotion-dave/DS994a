@@ -24,7 +24,7 @@ extern SN76496 snti99;
 // Some CPU and VDP and SGM stuff that we need
 // --------------------------------------------------
 extern byte Loop9918(void);
-extern u8 TI99Init(char *szGame);
+extern u8 TI99Init(char *szGame, u8 bInitDisks);
 extern void TI99SetPal(void);
 extern void TI99UpdateScreen(void);
 extern void TI99Run(void);

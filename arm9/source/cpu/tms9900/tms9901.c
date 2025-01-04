@@ -20,6 +20,7 @@
 #include "tms9901.h"
 #include "tms9900.h"
 #include "../../disk.h"
+#include "../../pcode.h"
 #include "../../SAMS.h"
 
 // From https://www.unige.ch/medecine/nouspikel/ti99/tms9901.htm
@@ -140,6 +141,10 @@ ITCM_CODE void TMS9901_WriteCRU(u16 cruAddress, u16 data, u8 num)
             else if ((cruAddress & 0xFFE) == (0x1E00 >> 1))  // SAMS support at CRU base >1E00
             {
                 SAMS_cru_write(cruAddress, dataBit);
+            }
+            else if ((cruAddress & 0xF80) == (0x1F00 >> 1))  // P-Code support at CRU base >1F00
+            {
+                pcode_cru_write(cruAddress, dataBit);
             }
             else if ((cruAddress & 0xF80) == (0x800 >> 1))   // Cart-based CRU bankswitching at CRU base >800
             {

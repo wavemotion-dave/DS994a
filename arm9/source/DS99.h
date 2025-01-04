@@ -82,7 +82,8 @@ enum
 #define META_KEY_CONTROL        8
 #define META_KEY_FUNCTION       9
 #define META_KEY_DISKMENU       10
-#define META_KEY_DEBUG_NEXT     11
+#define META_KEY_RESET          11
+#define META_KEY_DEBUG_NEXT     12
 
 typedef struct
 {
@@ -118,7 +119,7 @@ extern void UnPauseSound(void);
 extern void ResetStatusFlags(void);
 extern void ReadFileCRCAndConfig(void);
 extern void DisplayStatusLine(bool bForce);
-extern void ResetTI(void);
+extern void ResetTI(u8 bInitDisks);
 extern void DiskSave(char *filename);
 extern void DrawCleanBackground(void);
 extern void WriteSpeechData(u8 data);

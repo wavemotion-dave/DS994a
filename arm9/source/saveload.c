@@ -27,6 +27,7 @@
 #include "DS99_utils.h"
 #include "SAMS.h"
 #include "disk.h"
+#include "pcode.h"
 #include "speech.h"
 
 #define TI_SAVE_VER   0x0009        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
@@ -130,15 +131,23 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&Speech, sizeof(Speech),1, handle);
 
     // Some high-level DISK stuff...
-    if (uNbO) uNbO = fwrite(TICC_REG,  sizeof(TICC_REG),1, handle); 
-    if (uNbO) uNbO = fwrite(&TICC_DIR, sizeof(TICC_DIR),1, handle); 
-    if (uNbO) uNbO = fwrite(&bDiskDeviceInstalled, sizeof(bDiskDeviceInstalled),1, handle); 
-    if (uNbO) uNbO = fwrite(&diskSideSelected, sizeof(diskSideSelected),1, handle); 
-    if (uNbO) uNbO = fwrite(&driveSelected, sizeof(driveSelected),1, handle); 
-    if (uNbO) uNbO = fwrite(&motorOn, sizeof(motorOn),1, handle); 
+    if (uNbO) uNbO = fwrite(TICC_REG,               sizeof(TICC_REG),1, handle); 
+    if (uNbO) uNbO = fwrite(&TICC_DIR,              sizeof(TICC_DIR),1, handle); 
+    if (uNbO) uNbO = fwrite(&bDiskDeviceInstalled,  sizeof(bDiskDeviceInstalled),1, handle); 
+    if (uNbO) uNbO = fwrite(&diskSideSelected,      sizeof(diskSideSelected),1, handle); 
+    if (uNbO) uNbO = fwrite(&driveSelected,         sizeof(driveSelected),1, handle); 
+    if (uNbO) uNbO = fwrite(&motorOn,               sizeof(motorOn),1, handle); 
+
+    // Some p-code state vars...
+    if (uNbO) uNbO = fwrite(&pCodeEmulation,        sizeof(pCodeEmulation),1, handle); 
+    if (uNbO) uNbO = fwrite(&pcode_bank,            sizeof(pcode_bank),1, handle); 
+    if (uNbO) uNbO = fwrite(&pcode_visible,         sizeof(pcode_visible),1, handle); 
+    if (uNbO) uNbO = fwrite(&pcode_gromWriteLoHi,   sizeof(pcode_gromWriteLoHi),1, handle); 
+    if (uNbO) uNbO = fwrite(&pcode_gromReadLoHi,    sizeof(pcode_gromReadLoHi),1, handle); 
+    if (uNbO) uNbO = fwrite(&pcode_gromAddress,     sizeof(pcode_gromAddress),1, handle); 
 
     // Some spare memory we can eat into...
-    if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
+    if (uNbO) uNbO = fwrite(&spare, 505,1, handle); 
     
     // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
     u32 i=0;
@@ -307,9 +316,22 @@ void TI99LoadState()
             {
                 memcpy(&MemCPU[0x4000], DISK_DSR, 0x2000);
             }
+
+            // Some p-code state vars...
+            if (uNbO) uNbO = fread(&pCodeEmulation,        sizeof(pCodeEmulation),1, handle); 
+            if (uNbO) uNbO = fread(&pcode_bank,            sizeof(pcode_bank),1, handle); 
+            if (uNbO) uNbO = fread(&pcode_visible,         sizeof(pcode_visible),1, handle); 
+            if (uNbO) uNbO = fread(&pcode_gromWriteLoHi,   sizeof(pcode_gromWriteLoHi),1, handle); 
+            if (uNbO) uNbO = fread(&pcode_gromReadLoHi,    sizeof(pcode_gromReadLoHi),1, handle); 
+            if (uNbO) uNbO = fread(&pcode_gromAddress,     sizeof(pcode_gromAddress),1, handle); 
+            
+            if (pCodeEmulation && pcode_visible)
+            {
+                pcode_cru_write(0x1F00 >> 1, 1); // Page in the p-code DSR
+            }
             
             // Load spare memory for future use
-            if (uNbO) uNbO = fread(&spare, 512,1, handle); 
+            if (uNbO) uNbO = fread(&spare, 505,1, handle); 
             
             // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
             u32 i=0;

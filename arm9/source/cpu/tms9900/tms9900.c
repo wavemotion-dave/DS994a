@@ -27,6 +27,7 @@
 #include "../../DS99.h"
 #include "../../SAMS.h"
 #include "../../disk.h"
+#include "../../pcode.h"
 #include "../../speech.h"
 #include "../../DS99_utils.h"
 #include "../tms9918a/tms9918a.h"
@@ -1026,6 +1027,9 @@ ITCM_CODE u8 MemoryRead8(u16 address)
             case MF_SAMS:
                 return SAMS_ReadBank(address);
                 break;
+            case MF_PCODE:
+                return pcode_dsr_read(address);
+                break;
             default:
                 return MemCPU[address];
                 break;
@@ -1141,6 +1145,9 @@ ITCM_CODE void MemoryWrite8(u16 address, u8 data)
             case MF_SAMS:
                 SAMS_WriteBank(address, data);
                 break;
+            case MF_PCODE:
+                pcode_dsr_write(address, data);
+                break;            
             case MF_MBX:
                 if (address >= 0x6ffe) WriteBankMBX(data);
                 if (myConfig.cartType == CART_TYPE_MBX_WITH_RAM) MemCPU[address] = data;
