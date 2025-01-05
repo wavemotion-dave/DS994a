@@ -1224,7 +1224,7 @@ void SetDefaultGameConfig(void)
 
     if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.4.0 uses SAMS
     if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.5.0 uses SAMS
-
+    
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xd872e83e) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Bigfoot requires MBX 1K of RAM
@@ -1239,6 +1239,12 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0xd35f2c0d) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Soundtrack Trolley requires MBX 1K of RAM
     if (file_crc == 0x962aca6f) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
     if (file_crc == 0xb33dabfe) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Sewermania requires MBX 1K of RAM
+
+    if (file_crc == 0x2abf46b5) myConfig.cartType = CART_TYPE_SUPERCART;     // Editor Assembler is even more useful with the Supercart memory (6K GROM)
+    if (file_crc == 0x4d338098) myConfig.cartType = CART_TYPE_SUPERCART;     // Editor Assembler is even more useful with the Supercart memory (8K GROM with padded 2K zeros)
+    if (file_crc == 0x132819fa) myConfig.cartType = CART_TYPE_SUPERCART;     // VA SuperSpace uses Supercart memory
+    if (file_crc == 0xd8f49994) myConfig.cartType = CART_TYPE_SUPERCART;     // Super Space Cart where the 8K 'C' file is all zeroes
+    if (file_crc == 0x011ffca6) myConfig.cartType = CART_TYPE_SUPERCART;     // Super Space Cart where the 32K 'C' file is all zeroes
 
     if (file_crc == 0xc705118e) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
     if (file_crc == 0xe0bc224d) myConfig.cartType = CART_TYPE_MINIMEM;       // The Mini-Memory module uses this special carttype
@@ -1338,7 +1344,7 @@ const struct options_t Option_Table[2][20] =
         {"MAX SPRITES",    {"4",   "32"},                                                                                                    &myConfig.maxSprites,   2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                   &myConfig.isPAL,        2},
         {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                                &myConfig.machineType,  2},
-        {"CART TYPE",      {"NORMAL", "SUPERCART 32K", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM", "PAGED CRU"},                             &myConfig.cartType,     6},
+        {"CART TYPE",      {"NORMAL", "SUPERCART RAM", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM", "PAGED CRU"},                             &myConfig.cartType,     6},
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT", "80 PERCENT"},&myConfig.emuSpeed,     8},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
         {"RAM MIRRORS",    {"OFF", "ON"},                                                                                                    &myConfig.RAMMirrors,   2},

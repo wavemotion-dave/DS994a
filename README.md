@@ -19,6 +19,7 @@ Features :
 * Full mapping of any of the 12 DS keys to any combination of TI Joysticks/Keyboard
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
+* p-code card emulation supported 
 * The TI Speech Synth is not fully emulated - but there are built-in speech samples for the following games: Parsec, Alpiner, Moonmine, Buck Rogers, Star Trek, MASH, Bigfoot, Superfly, Microsurgeon, Fathom, Sewermania, and Borzork.
 
 Copyright :
@@ -258,6 +259,12 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.6: 04-Jan-2025 by wavemotion-dave
+* Added p-code card emulation. Requires 12K p-code DSR and 48K (64K space) internal GROM. See Atariage for details.
+* Automatically enable the 8K/32K 'SUPERSPACE RAM' for various flavors of the Editor-Assembler GROM.
+* Added ability to 'soft reset' the machine - reloading the cart/grom but leaving the .DSK files in place.
+* Minor comment/cleanup pass on the SAMS code to better clarify what it's doing.
+
 V2.5: 29-Dec-2024 by wavemotion-dave
 * Optimization pass to improve the emulation speed by a couple frames per second. Useful if you are running on the older DS hardware.
 * Properly mask off the low bit on WP writes to avoid problems in programs like SYSSCAN (which sets an odd-address for the WP).
