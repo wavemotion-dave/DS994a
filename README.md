@@ -24,7 +24,7 @@ Features :
 
 Copyright :
 -----------------------
-DS99/4a is Copyright © 2023-2024 Dave Bernazzani (wavemotion-dave)
+DS99/4a is Copyright © 2023-2025 Dave Bernazzani (wavemotion-dave)
 
 This program is made up from a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 
@@ -259,10 +259,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.6: 04-Jan-2025 by wavemotion-dave
+V2.6: 05-Jan-2025 by wavemotion-dave
 * Added p-code card emulation. Requires 12K p-code DSR and 48K (64K space) internal GROM. See Atariage for details.
 * Automatically enable the 8K/32K 'SUPERSPACE RAM' for various flavors of the Editor-Assembler GROM.
 * Added ability to 'soft reset' the machine - reloading the cart/grom but leaving the .DSK files in place.
+* Freed up some stack space to prevent potential lock-ups on disk writes.
 * Minor comment/cleanup pass on the SAMS code to better clarify what it's doing.
 
 V2.5: 29-Dec-2024 by wavemotion-dave

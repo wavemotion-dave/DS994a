@@ -471,6 +471,9 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
+
+char sd_buf[4096];
+
 void disk_write_to_sd(u8 drive)
 {
     // Only DSK1 and DSK2 support write-back on DS-Lite/Phat
@@ -483,12 +486,14 @@ void disk_write_to_sd(u8 drive)
         remove(backup_filename);    
         rename(Disk[drive].filename, backup_filename);
         FILE *outfile = fopen(Disk[drive].filename, "wb");
+        setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
         if (outfile)
         {
             u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
             size_t diskSize = (numSectors*256);
             fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
             fclose(outfile);
+            WAITVBL;WAITVBL;
         }
         remove(backup_filename);
         Disk[drive].isDirty = 0;
@@ -509,6 +514,7 @@ void disk_backup_to_sd(u8 drive)
         sprintf(backup_filename, "bak/%s", Disk[drive].filename);
         remove(backup_filename);
         FILE *outfile = fopen(backup_filename, "wb");
+        setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
         if (outfile)
         {
             u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];

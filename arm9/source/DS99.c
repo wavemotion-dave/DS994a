@@ -239,7 +239,7 @@ const u8 wave_direct_sample_table[256] =
 // with the scanline processing. This is not as smooth as the normal sound driver and takes more
 // CPU power but will help render sound those few games that utilize digitize speech techniques.
 // -------------------------------------------------------------------------------------------------
-ITCM_CODE void processDirectAudio(void)
+void processDirectAudio(void)
 {
     int len = wave_direct_sample_table[wave_direct_skip++];
 
