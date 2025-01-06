@@ -486,16 +486,19 @@ void disk_write_to_sd(u8 drive)
         remove(backup_filename);    
         rename(Disk[drive].filename, backup_filename);
         FILE *outfile = fopen(Disk[drive].filename, "wb");
-        setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
         if (outfile)
         {
+            setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
             u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
             size_t diskSize = (numSectors*256);
-            fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
+            fwrite(Disk[drive].image, 1, diskSize, outfile);
             fclose(outfile);
-            WAITVBL;WAITVBL;
+            remove(backup_filename);
         }
-        remove(backup_filename);
+        else // Something didn't go right... just try to put it back the way it was (no write took place)
+        {
+            rename(backup_filename, Disk[drive].filename);
+        }
         Disk[drive].isDirty = 0;
     }
 }
@@ -514,12 +517,12 @@ void disk_backup_to_sd(u8 drive)
         sprintf(backup_filename, "bak/%s", Disk[drive].filename);
         remove(backup_filename);
         FILE *outfile = fopen(backup_filename, "wb");
-        setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
         if (outfile)
         {
+            setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
             u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
             size_t diskSize = (numSectors*256);
-            fwrite((void*)Disk[drive].image, 1, diskSize, outfile);
+            fwrite(Disk[drive].image, 1, diskSize, outfile);
             fclose(outfile);
         }
     }

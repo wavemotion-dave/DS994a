@@ -1712,10 +1712,7 @@ ITCM_CODE void ds99_main(void)
         if (TIMER1_DATA >= 16364)   //  500ms (half-sec)
         {
             static u16 once_per_sec = 0;
-            TIMER1_CR = 0;
-            TIMER1_DATA = 0;
-            TIMER1_CR=TIMER_ENABLE | TIMER_DIV_1024;
-            if (once_per_sec++ & 1)
+            if (once_per_sec++ & 1) // These can be done once per second
             {
                 if (globalConfig.showFPS)
                 {
@@ -1729,6 +1726,10 @@ ITCM_CODE void ds99_main(void)
                 }
             }
             DisplayStatusLine(false);   // This updates twice per second
+
+            TIMER1_CR = 0;
+            TIMER1_DATA = 0;
+            TIMER1_CR=TIMER_ENABLE | TIMER_DIV_1024;
         }
         emuActFrames++;
 

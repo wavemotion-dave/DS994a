@@ -26,7 +26,7 @@ BACKGRD		:=  gfx_data
 #---------------------------------------------------------------------------------
 ARCH	:=
 
-CFLAGS	:=  -Wall -Wno-misleading-indentation -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions -fpredictive-commoning -floop-interchange -ftree-partial-pre -fno-semantic-interposition
+CFLAGS	:=  -Wall -Wno-misleading-indentation -O2 -march=armv5te -mtune=arm946e-s -fomit-frame-pointer -ffast-math $(ARCH) -falign-functions=4 -frename-registers -finline-functions
 
 CFLAGS	+=	$(INCLUDE) -DARM9
 
