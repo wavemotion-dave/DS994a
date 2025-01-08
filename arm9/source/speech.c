@@ -26,7 +26,6 @@
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
 #include "soundbank.h"
-#include "soundbank_bin.h"
 
 // -------------------------------------------------------------------------------------------
 // We use these routines as a bit of a cheat for handling TI99 speech. Most of the games that

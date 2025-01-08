@@ -524,9 +524,6 @@ void TMS9900_Reset(void)
     memset(MemCART,         0xFF,(512*1024));       // The cart is not inserted to start... We map larger than this, but don't waste time clearing more than 512K
     memset(MemCPU,          0xFF, 0x10000);         // Set all of memory to 0xFF (nothing mapped until proven otherwise)
     memset(MemGROM,         0xFF, 0x10000);         // Set all of GROM memory to 0xFF (nothing mapped until proven otherwise)
-    memset(&MemCPU[0x8000], 0x00, 0x400);           // Clear the RAM area - we might randomize this area a few lines further below
-    memset(&MemCPU[0x2000], 0x00, 0x2000);          // 8K of Low MemCPU Expansion from 0x2000 to 0x3FFF
-    memset(&MemCPU[0xA000], 0x00, 0x6000);          // 24K of High MemCPU Expansion from 0xA000 to 0xFFFF
 
     // ---------------------------------------------------------------------------
     // By default we clear memory but if this game is marked as 'RANDOMIZE' we
@@ -543,25 +540,23 @@ void TMS9900_Reset(void)
             MemCPU[addr | 0x200] = (val);
             MemCPU[addr | 0x300] = (val);
         }
-        for (u16 addr = 0x2000; addr < 0x4000; addr++)
-        {
-            MemCPU[addr] = (rand() & 0xFF);
-        }
-        for (u32 addr = 0xA000; addr < 0x10000; addr++)
-        {
-            MemCPU[addr] = (rand() & 0xFF);
-        }
     }
-    else // For the 32K RAM expansion, a 'clear' pattern is actually >FF00 due to the RAM chips used
+    else
     {
-        for (u16 addr = 0x2000; addr < 0x4000; addr++)
-        {
-            MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
-        }
-        for (u32 addr = 0xA000; addr < 0x10000; addr++)
-        {
-            MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
-        }
+        memset(&MemCPU[0x8000], 0x00, 0x400);       // Clear the RAM area (fill with zeros)
+    }
+    
+    // ------------------------------------------------------------------------------------------
+    // For the 32K RAM expansion, a 'clear' pattern is actually >FF00 due to the RAM chips used. 
+    // This also helps with save state compression... so we never randomize these values.
+    // ------------------------------------------------------------------------------------------
+    for (u16 addr = 0x2000; addr < 0x4000; addr++)
+    {
+        MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
+    }
+    for (u32 addr = 0xA000; addr < 0x10000; addr++)
+    {
+        MemCPU[addr] = (addr & 1) ? 0x00 : 0xFF;
     }
 
     // Reset the super cart bank to bank 0

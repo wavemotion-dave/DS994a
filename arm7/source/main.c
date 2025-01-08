@@ -1,5 +1,3 @@
-// Please see the README.md file as it contains much useful info.
-
 /*---------------------------------------------------------------------------------
 
 	default ARM7 core
@@ -33,7 +31,6 @@
 #include <dswifi7.h>
 #include <maxmod7.h>
 
-extern void installSoundEmuFIFO(void);
 extern void mmInstall( int fifo_channel );
 
 //---------------------------------------------------------------------------------
@@ -70,16 +67,13 @@ int main() {
 	touchInit();
 	fifoInit();
 
-    mmInstall( FIFO_MAXMOD );
+    mmInstall(FIFO_MAXMOD);
 
 	SetYtrigger(80);
 
 	installWifiFIFO();
-	installSoundFIFO();
 
 	installSystemFIFO();
-
-    //installSoundEmuFIFO();
 
 	irqSet(IRQ_VCOUNT, VcountHandler);
 	irqSet(IRQ_VBLANK, VblankHandler);

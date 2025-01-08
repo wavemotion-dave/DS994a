@@ -30,7 +30,7 @@
 #include "pcode.h"
 #include "speech.h"
 
-#define TI_SAVE_VER   0x0009        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x000A        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.
@@ -85,10 +85,30 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&theSAMS, sizeof(theSAMS),1, handle); 
       
     // Save TI Memory that might possibly be volatile (RAM areas mostly)
-    if (uNbO) uNbO = fwrite(MemCPU+0x2000, 0x2000, 1, handle); 
-    if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle); 
-    if (uNbO) uNbO = fwrite(MemCPU+0x8000, 0x0400, 1, handle); 
-    if (uNbO) uNbO = fwrite(MemCPU+0xA000, 0x6000, 1, handle); 
+    if (uNbO) uNbO = fwrite(MemCPU+0x6000, 0x2000, 1, handle);  // Could be 'Super Space' cart with RAM
+    if (uNbO) uNbO = fwrite(MemCPU+0x8000, 0x0400, 1, handle);  // RAM with mirrors needs saving
+    
+    // Most carts won't touch the expanded RAM memory so we can save writing 
+    // it if the values in that RAM area are not touched...
+    u16 isExpandedRamUsed = 0;
+    for (u32 i=0x2000; i< 0x4000; i+=2)
+    {
+        if (MemCPU[i] != 0xFF || MemCPU[i+1] != 0x00) isExpandedRamUsed = 1;
+    }
+    for (u32 i=0xA000; i< 0x10000; i+=2)
+    {
+        if (MemCPU[i] != 0xFF || MemCPU[i+1] != 0x00) isExpandedRamUsed = 1;
+    }
+    
+    // Write a variable to let us know if the RAM expanded area is used...
+    if (uNbO) uNbO = fwrite(&isExpandedRamUsed, sizeof(isExpandedRamUsed), 1, handle); 
+    
+    // And if the RAM expanded area is used, we write that as well...
+    if (isExpandedRamUsed)
+    {
+        if (uNbO) uNbO = fwrite(MemCPU+0x2000, 0x2000, 1, handle); 
+        if (uNbO) uNbO = fwrite(MemCPU+0xA000, 0x6000, 1, handle); 
+    }
     
     // Save the Memory Types for each region of memory
     if (uNbO) uNbO = fwrite(MemType, sizeof(MemType), 1, handle);     
@@ -147,7 +167,7 @@ void TI99SaveState()
     if (uNbO) uNbO = fwrite(&pcode_gromAddress,     sizeof(pcode_gromAddress),1, handle); 
 
     // Some spare memory we can eat into...
-    if (uNbO) uNbO = fwrite(&spare, 505,1, handle); 
+    if (uNbO) uNbO = fwrite(&spare, 512,1, handle); 
     
     // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
     u32 i=0;
@@ -256,10 +276,19 @@ void TI99LoadState()
             tms9900.cartBankPtr = MemCART+tms9900.bankOffset;
             
             // Restore TI Memory that might possibly be volatile (RAM areas mostly)
-            if (uNbO) uNbO = fread(MemCPU+0x2000, 0x2000, 1, handle); 
             if (uNbO) uNbO = fread(MemCPU+0x6000, 0x2000, 1, handle); 
             if (uNbO) uNbO = fread(MemCPU+0x8000, 0x0400, 1, handle); 
-            if (uNbO) uNbO = fread(MemCPU+0xA000, 0x6000, 1, handle); 
+
+            // Read back the variable that tells us if the RAM Expanded area is used...
+            u16 isExpandedRamUsed = 0;
+            if (uNbO) uNbO = fread(&isExpandedRamUsed, sizeof(isExpandedRamUsed), 1, handle); 
+            
+            // And if it that expanded RAM is used, we read it back in...
+            if (isExpandedRamUsed)
+            {
+                if (uNbO) uNbO = fread(MemCPU+0x2000, 0x2000, 1, handle); 
+                if (uNbO) uNbO = fread(MemCPU+0xA000, 0x6000, 1, handle); 
+            }            
 
             // Restore the Memory Types for each region of memory
             if (uNbO) uNbO = fread(MemType, sizeof(MemType), 1, handle);     
@@ -331,7 +360,7 @@ void TI99LoadState()
             }
             
             // Load spare memory for future use
-            if (uNbO) uNbO = fread(&spare, 505,1, handle); 
+            if (uNbO) uNbO = fread(&spare, 512,1, handle); 
             
             // SAMS memory is huge (1MB) so we will do some simple Run-Length Encoding of 0x00000000 dwords 
             u32 i=0;

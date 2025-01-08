@@ -612,8 +612,10 @@ void __attribute__ ((noinline))  DisplayStatusLine(bool bForce)
             else
             {
                 // Persist the disk - write it back to the SD card
+                SoundPause();
                 disk_write_to_sd(drive);
                 DS_Print(11,0,6, "            ");
+                SoundUnPause();
                 floppy_sfx_dampen = 0;
             }
         }
@@ -931,11 +933,12 @@ void DiskMenu(void)
             {
                   if (Disk[disk_drive_select].isMounted)
                   {
-                      DS_Print(10,2,6, "BACKUP DISK");
+                      DS_Print(7,3,6, "BACKUP DISK...");
                       disk_backup_to_sd(disk_drive_select);
-                      WAITVBL;WAITVBL;
+                      DS_Print(7,3,6, "BACKUP DISK...OK");
+                      WAITVBL;WAITVBL;WAITVBL;
                       DiskMenuShow(true, menuSelection);
-                      DS_Print(10,2,6, "           ");
+                      DS_Print(7,3,6, "               ");
                   }
             }
             if (menuSelection == 6) // EXIT
@@ -2182,29 +2185,31 @@ static void StartupMemoryAllocation(void)
 // ------------------------------------------------------
 int main(int argc, char **argv)
 {
-  //  Init sound
+  // Enough that we could printf() to the console if we can't initialize the FAT library below...
   consoleDemoInit();
-
+  
   if  (!fatInitDefault()) {
      iprintf("Unable to initialize libfat!\n");
      return -1;
   }
-
+  
   // Allocate some memory for the SAMS and Cart Buffers - done one time only at startup
   StartupMemoryAllocation();
 
-  // Need to load in config file if only for the global options at this point...
+  // Need to load in DS994a.dat config file if only for the global options at this point...
   FindAndLoadConfig();
 
-  // Read in and store the DS994a.HI file
+  // Read in and store the DS994a.hi file
   highscore_init();
 
   lcdMainOnTop();
 
+  // Make sure the MAXMOD library is up and running
+  dsInstallSoundEmuFIFO();  
+
   //  Init timer for frame management and install the sound handlers
   TIMER2_DATA=0;
   TIMER2_CR=TIMER_ENABLE|TIMER_DIV_1024;
-  dsInstallSoundEmuFIFO();
 
   //  Show the fade-away intro logo...
   intro_logo();

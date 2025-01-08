@@ -259,6 +259,10 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.7: 08-Jan-2025 by wavemotion-dave
+* Rewrote the disk write handling to only write dirty sectors and avoid writing the whole disk. This greatly improves the reliability of writing on the DSi with SD card (and speeds them up).
+* Minor cleanup of messaging to improve the UI experience - better error checking on file reads/writes. 
+
 V2.6: 05-Jan-2025 by wavemotion-dave
 * Added p-code card emulation. Requires 12K p-code DSR and 48K (64K space) internal GROM. See Atariage for details.
 * Automatically enable the 8K/32K 'SUPERSPACE RAM' for various flavors of the Editor-Assembler GROM.

@@ -73,10 +73,6 @@ u8 Disk1_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
 u8 Disk2_ImageBuf[MAX_DSK_SIZE];    // Full buffering of 360K
 u8 Disk3_ImageBuf[512];             // First two sectors only for the DS-Lite/Phat but full buffering on DSi (who will use the SharedMemBuffer[])
 
-char backup_filename[MAX_PATH];     // If the user wants, they can backup either of DSK1 or DSK2 (the writeable disks)
-
-#define MAX_DSK_SECTORS     1440    // For all disks we support 1440x256=360K
-
 #define ERR_DEVICEERROR     6       // This is the only error we support. Good enough.
 
 // ------------------------------------------------------
@@ -369,6 +365,11 @@ void WriteTICCRegister(u16 address, u8 val)
             {
                 if (isDSiMode() || (drive != DSK3)) // We only support write-back on DSK1 and DSK2 for DS-Lite/Phat
                 {
+                    // Did the sector actually change?
+                    if (memcmp(&Disk[drive].image[index], &pVDPVidMem[destVDP], 256) != 0) 
+                    {
+                        Disk[drive].dirtySectors[sectorNumber] = 1;  // Mark this specific sector as needing writing
+                    }
                     memcpy(&Disk[drive].image[index], &pVDPVidMem[destVDP],256);
                     *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
                     Disk[drive].isDirty = 1;                     // Mark this disk as needing a write-back to SD card
@@ -397,6 +398,12 @@ void WriteTICCRegister(u16 address, u8 val)
 }
 
 
+// ------------------------------------------------------------------
+// 4K worth of disk data for the buffered I/O (fopen/fwrite/fclose).
+// The default buffer size internally is 1K so this helps a bit...
+// ------------------------------------------------------------------
+char sd_buf[4096];
+
 // --------------------------------------------------------------------------------------------------
 // Routines below this comment are all related to reading and writing .DSK files to and from the
 // DS Fat file system on the SD Card. We take care to handle .BAK files in case we run into any
@@ -407,30 +414,10 @@ void disk_mount(u8 drive, char *path, char *filename)
 {
     Disk[drive].isMounted = true;
     Disk[drive].isDirty = 0;
+    memset(Disk[drive].dirtySectors, 0x00, sizeof(Disk[drive].dirtySectors));
     strcpy(Disk[drive].path, path);
     strcpy(Disk[drive].filename, filename);
-    sprintf(backup_filename, "%s.bak", Disk[drive].filename);
-    
-    // ---------------------------------------------------------
-    // Check if a backup file exists... if one exists and
-    // the normal .DSK is not at least 90K that means something
-    // went wrong and we now need to restore the backup...
-    // ---------------------------------------------------------
-    FILE *tmpFile = fopen(backup_filename, "rb");
-    if (tmpFile)
-    {
-        fclose(tmpFile);
-        FILE *tmpFile = fopen(Disk[drive].filename, "rb");
-        fseek(tmpFile, 0L, SEEK_END);
-        int sz = ftell(tmpFile);
-        fclose(tmpFile);
-        if (sz < (90*1024))
-        {
-            remove(Disk[drive].filename);
-            rename(backup_filename, Disk[drive].filename);
-        }
-    }
-    
+   
     // ---------------------------------------
     // Now we can read the file as intended...
     // ---------------------------------------
@@ -457,6 +444,7 @@ void disk_read_from_sd(u8 drive)
     chdir(Disk[drive].path);
 
     FILE *infile = fopen(Disk[drive].filename, "rb");
+    setvbuf(infile, sd_buf, _IOFBF, sizeof(sd_buf));
     if (infile)
     {
         if (isDSiMode() || (drive != DSK3))
@@ -471,36 +459,54 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
-
-char sd_buf[4096];
-
 void disk_write_to_sd(u8 drive)
 {
+    u8 err = 0;
+    
     // Only DSK1 and DSK2 support write-back on DS-Lite/Phat
     if (isDSiMode() || (drive != DSK3))
     {
         // Change into the last known DSKs directory for this file
         chdir(Disk[drive].path);
 
-        sprintf(backup_filename, "%s.bak", Disk[drive].filename);
-        remove(backup_filename);    
-        rename(Disk[drive].filename, backup_filename);
-        FILE *outfile = fopen(Disk[drive].filename, "wb");
+        FILE *outfile = fopen(Disk[drive].filename, "rb+");
         if (outfile)
         {
             setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
             u16 numSectors = (Disk[drive].image[0x0A] << 8) | Disk[drive].image[0x0B];
-            size_t diskSize = (numSectors*256);
-            fwrite(Disk[drive].image, 1, diskSize, outfile);
-            fclose(outfile);
-            remove(backup_filename);
+            if (numSectors <= MAX_DSK_SECTORS)
+            {
+                for (u16 i=0; i<numSectors; i++)
+                {
+                    if (Disk[drive].dirtySectors[i])
+                    {
+                        if (fseek(outfile, 256*i, SEEK_SET) != 0) {err = 1; break;}
+                        if (fwrite(Disk[drive].image+(256*i), 256, 1, outfile) != 1) {err = 1; break;}
+                        Disk[drive].dirtySectors[i] = 0;
+                    }
+                }
+                fflush(outfile);
+                fclose(outfile);
+                WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+                Disk[drive].isDirty = 0;
+            }
+            else // Disk was somehow too large...
+            {
+                err = 1;
+            }
         }
-        else // Something didn't go right... just try to put it back the way it was (no write took place)
+        else // Something didn't go right...
         {
-            rename(backup_filename, Disk[drive].filename);
+            err = 1;
         }
-        Disk[drive].isDirty = 0;
     }
+
+    // If we had any error, at least let the user know...
+    if (err)
+    {
+        DS_Print(3,0,0, "DISK ERROR");
+        WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+    }   
 }
 
 void disk_backup_to_sd(u8 drive)
@@ -514,9 +520,9 @@ void disk_backup_to_sd(u8 drive)
         DIR* dir = opendir("bak");
         if (dir) closedir(dir);    // Directory exists... close it out and move on.
         else mkdir("bak", 0777);   // Otherwise create the directory...
-        sprintf(backup_filename, "bak/%s", Disk[drive].filename);
-        remove(backup_filename);
-        FILE *outfile = fopen(backup_filename, "wb");
+        sprintf(tmpBuf, "bak/%s", Disk[drive].filename);
+        remove(tmpBuf);
+        FILE *outfile = fopen(tmpBuf, "wb");
         if (outfile)
         {
             setvbuf(outfile, sd_buf, _IOFBF, sizeof(sd_buf));
@@ -531,7 +537,7 @@ void disk_backup_to_sd(u8 drive)
 // ----------------------------------------------------------------------
 // Utility function to get a list of current files on the mounted disk. 
 // DS994a will use this listing to present a list of files to the user
-// so they can pick a file and easily past it into the keyboard buffer.
+// so they can pick a file and easily paste it into the keyboard buffer.
 // ----------------------------------------------------------------------
 char dsk_listing[MAX_FILES_PER_DSK][12];    // We store the disk listing here...
 u8   dsk_num_files = 0;                     // And this is how many files we found (never more than MAX_FILES_PER_DSK)

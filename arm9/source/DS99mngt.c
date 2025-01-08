@@ -228,7 +228,7 @@ u8 TI99Init(char *szGame, u8 bInitDisks)
             }
             else if (fileType != '0') // Full Load - this is either going to be a non-inverted '8' file (very common) or the less common inverted type
             {
-                if (file_size > (512 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
+                if (file_size >= (256 * 1024))  DS_Print(3,0,6, "LOADING ROM - PLEASE WAIT...");
 
                 infile = fopen(tmpBuf, "rb");
                 int numRead = fread(MemCART, 1, MAX_CART_SIZE, infile);   // Whole cart memory as needed....
