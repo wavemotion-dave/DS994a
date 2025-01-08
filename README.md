@@ -261,7 +261,8 @@ Versions :
 -----------------------
 V2.7: 08-Jan-2025 by wavemotion-dave
 * Rewrote the disk write handling to only write dirty sectors and avoid writing the whole disk. This greatly improves the reliability of writing on the DSi with SD card (and speeds them up).
-* Minor cleanup of messaging to improve the UI experience - better error checking on file reads/writes. 
+* Minor cleanup of messaging to improve the UI experience - better error checking on file reads/writes.
+* Streamline of save states to take less room (and faster/more reliable writes to SD).
 
 V2.6: 05-Jan-2025 by wavemotion-dave
 * Added p-code card emulation. Requires 12K p-code DSR and 48K (64K space) internal GROM. See Atariage for details.
