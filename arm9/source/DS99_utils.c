@@ -1983,8 +1983,8 @@ ITCM_CODE void DS_Print(int iX,int iY,int iScr,char *szMessage)
 
   if (iScr == 1) return; // We don't support text output to the top screen
 
-  pusScreen=(u16*) (iScr != 1 ? bgGetMapPtr(bg1b) : bgGetMapPtr(bg1))+iX+(iY<<5);
-  pusMap=(u16*) (iScr != 1 ? (iScr == 6 ? bgGetMapPtr(bg0b)+24*32 : (iScr == 0 ? bgGetMapPtr(bg0b)+24*32 : bgGetMapPtr(bg0b)+26*32 )) : bgGetMapPtr(bg0)+51*32 );
+  pusScreen=(u16*) bgGetMapPtr(bg1b) +iX+(iY<<5);
+  pusMap=(u16*) (iScr == 6 ? bgGetMapPtr(bg0b)+24*32 : (iScr == 0 ? bgGetMapPtr(bg0b)+24*32 : bgGetMapPtr(bg0b)+26*32 ));
 
   while((*pTrTxt)!='\0' )
   {

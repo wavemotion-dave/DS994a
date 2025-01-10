@@ -1520,6 +1520,7 @@ u8 handle_touch_input(void)
           if  (showMessage("DO YOU REALLY WANT TO","SOFT RESET THE SYSTEM ?") == ID_SHM_YES)
           {
             // This is a 'soft reset' - it reloads the CARTs and DSRs but leaves the disks mounted or unmounted as-is
+            chdir(currentDirROMs);
             TI99Init(gpFic[ucGameAct].szName, FALSE);
             ResetTimers();
           }
