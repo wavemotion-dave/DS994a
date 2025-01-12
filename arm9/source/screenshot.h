@@ -3,7 +3,7 @@
 #define SCREENSHOT_H
 #include <nds/ndstypes.h>
 
-bool screenshot(void);
+void screenshot(void);
 
 typedef struct {
 	u16 type;						/* Magic identifier            */

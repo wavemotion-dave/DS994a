@@ -1,12 +1,17 @@
 // Borrowed from Godemode9i from Rocket Robz
 #include <nds.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include <fat.h>
 #include <dirent.h>
 #include <unistd.h>
 
 #include "screenshot.h"
 #include "printf.h"
+#include "DS99.h"
+#include "DS99_utils.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("Os")
@@ -49,7 +54,6 @@ bool screenshotbmp(const char* filename) {
     // using a SAMS enabled game and they require the memory
     // in the last 100K area... in which case this will not end well.
     // ---------------------------------------------------------------
-    extern u8 SharedMemBuffer[];
     u8 *temp = (u8*)(SharedMemBuffer + (668*1024));
 
     if(!temp) {
@@ -102,18 +106,19 @@ bool screenshotbmp(const char* filename) {
 
 
 char snapPath[64];
-bool screenshot(void)
+void screenshot(void)
 {
     time_t unixTime = time(NULL);
     struct tm* timeStruct = gmtime((const time_t *)&unixTime);
 
+    DS_Print(12,0,0,"SNAPSHOT");
     sprintf(snapPath, "SNAP-%02d-%02d-%04d-%02d-%02d-%02d.bmp", timeStruct->tm_mday, timeStruct->tm_mon+1, timeStruct->tm_year+1900, timeStruct->tm_hour, timeStruct->tm_min, timeStruct->tm_sec);
 
     // Take top screenshot
-    if(!screenshotbmp(snapPath))
-        return false;
-
-    return true;
+    screenshotbmp(snapPath);
+    
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+    DS_Print(12,0,0,"        ");
 }
 
 #pragma GCC pop_options

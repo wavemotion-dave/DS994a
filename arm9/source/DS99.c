@@ -50,7 +50,9 @@
 // --------------------------------------------------------------------------
 // A small bank of 32-bit debug registers we can use for profiling or other
 // sundry debug purposes. Pressing X when loading a game shows the debug
-// registers. It's amazing how incredibly useful this proves to be.
+// registers. It's amazing how incredibly useful this proves to be mostly 
+// to debug problems with the emulator not being accurate enough to handle
+// carts that do "unusual" (but never wrong) things.
 // --------------------------------------------------------------------------
 u32 debug[0x10]     __attribute__((section(".dtcm")));
 
@@ -744,11 +746,11 @@ void ShowDiskListing(void)
     // ---------------------------------------------------------------
     for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
     {
-        strcpy(dsk_listing[i], "          ");
+        strcpy(dsk_listing[i].filename, "          ");
     }
 
     u8 idx=0;
-    DS_Print(5,4,6,      "=== DISK CONTENTS ===");
+    DS_Print(5,0,6,      "=== DISK CONTENTS ===");
     DS_Print(1,23,6,     "PRESS A TO PUT IN PASTE BUFFER");
 
     if (Disk[disk_drive_select].isMounted)
@@ -765,34 +767,64 @@ void ShowDiskListing(void)
         u16 key = 0;
         u8 last_sel = 255;
         u8 sel = 0;
-        while (key != KEY_A)
+        while ((key & (KEY_A | KEY_B)) == 0) // Wait for either Key A or B on the NDS
         {
             key = keysCurrent();
-            if (key != 0) while (key == keysCurrent()) {WAITVBL;} // wait for release
-            if (key == KEY_DOWN){if (sel < (dsk_num_files-1)) sel++;}
-            if (key == KEY_UP)  {if (sel > 0) sel--;}
-            WAITVBL;
+            if (key == KEY_DOWN)
+            {
+                if (sel < (dsk_num_files-1)) sel++; else sel=0;
+            }
+            if (key == KEY_UP)
+            {
+                if (sel > 0) sel--; else sel = (dsk_num_files-1);
+            }
             if (last_sel != sel)
             {
                 // ----------------------------------------------------
                 // Now display the files and let the user navigate...
                 // ----------------------------------------------------
-                for (u8 i=0; i<MAX_FILES_PER_DSK; i++)
+                for (u8 i=0; i<dsk_num_files; i++)
                 {
-                    sprintf(tmpBuf, "%-10s", dsk_listing[i+0]);
-                    if (i < (MAX_FILES_PER_DSK/2)) DS_Print(5, 6+i, (i==sel)?2:0, tmpBuf);
-                    else DS_Print(18, 6+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
+                    u16 filesize = dsk_listing[i+0].filesize;
+                    
+                    // -----------------------------------------------------------------------------
+                    // Try to be smart about how to display the files... if not many files, center 
+                    // the column of filenames. If more files, space them out across two columns...
+                    // -----------------------------------------------------------------------------
+                    if (dsk_num_files <= MAX_FILES_PER_DSK/2)
+                    {
+                        sprintf(tmpBuf, "%-10s [%3d]", dsk_listing[i+0].filename, filesize);
+                        DS_Print(8, (((MAX_FILES_PER_DSK/2) - dsk_num_files)/2)+3+i, (i==sel)?2:0, tmpBuf);
+                    }
+                    else
+                    {
+                        if (filesize > 99) filesize = 99; // Not enough room on long file listings... just cap it
+                        sprintf(tmpBuf, "%-10s [%2d]", dsk_listing[i+0].filename, filesize);
+                        if (i < (MAX_FILES_PER_DSK/2)) DS_Print(0, 3+i, (i==sel)?2:0, tmpBuf);
+                        else DS_Print(17, 3+(i-(MAX_FILES_PER_DSK/2)), (i==sel)?2:0, tmpBuf);
+                    }
                 }
                 last_sel = sel;
             }
+            u8 auto_repeat = 0;
+            if (key != 0) while (key == keysCurrent()) 
+            {
+                WAITVBL;
+                if (++auto_repeat > 2) break; // Auto-repeat
+            } // wait for release
         }
-        strcpy(dsk_filename, dsk_listing[sel]);
+        
+        // A puts the filename into the paste buffer... B will just exit
+        if (key == KEY_A)
+        {
+            strcpy(dsk_filename, dsk_listing[sel].filename);
+        }
     }
     else
     {
         idx++;idx++;
         DS_Print(9,9+idx,0,  "NO DISK MOUNTED"); idx++;
-        WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+        WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
     }
 
     // Wait for any press and release...
@@ -818,16 +850,13 @@ void DiskMenuShow(bool bClearScreen, u8 sel)
     sprintf(tmpBuf, " PASTE   DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
     sprintf(tmpBuf, " PASTE   FILE%d", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
     sprintf(tmpBuf, " BACKUP  DSK%d ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
+    sprintf(tmpBuf, " CREATE  BLANK ", disk_drive_select+1); DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  tmpBuf);  disk_menu_items++;
     DS_Print(8,8+disk_menu_items,(sel==disk_menu_items)?2:0,  " EXIT    MENU ");  disk_menu_items++;
 
     if (Disk[disk_drive_select].isMounted)
     {
         u16 numSectors = (Disk[disk_drive_select].image[0x0A] << 8) | Disk[disk_drive_select].image[0x0B];
-        u16 usedSectors = 0;
-        for (u16 i=0; i<numSectors/8; i++)
-        {
-            usedSectors += __builtin_popcount(Disk[disk_drive_select].image[0x38+i]);
-        }
+        u16 usedSectors = disk_get_used_sectors(disk_drive_select, numSectors);
 
         sprintf(tmpBuf, "DSK%d MOUNTED %s/%s %3dKB", disk_drive_select+1, (Disk[disk_drive_select].image[0x12] == 2 ? "DS":"SS"), (Disk[disk_drive_select].image[0x13] == 2 ? "DD":"SD"), (numSectors*256)/1024);
         DS_Print(16-(strlen(tmpBuf)/2),8+disk_menu_items+1,(sel==disk_menu_items)?2:0,tmpBuf);
@@ -941,7 +970,12 @@ void DiskMenu(void)
                       DS_Print(7,3,6, "               ");
                   }
             }
-            if (menuSelection == 6) // EXIT
+            if (menuSelection == 6) // CREATE BLANK
+            {
+                  disk_create_blank();
+                  DiskMenuShow(true, menuSelection);
+            }
+            if (menuSelection == 7) // EXIT
             {
                   break;
             }
@@ -1498,7 +1532,7 @@ void __attribute__ ((noinline)) ds99_show_debugger(void)
 // Check if we have a touch-screen event and map it to the right
 // input for emulation use.  This doesn't need to be in fast memory.
 // -------------------------------------------------------------------
-u8 handle_touch_input(void)
+u8 __attribute__ ((noinline)) handle_touch_input(void)
 {
     touchPosition touch;
     touchRead(&touch);
@@ -1663,7 +1697,7 @@ u8 handle_touch_input(void)
 // This is used if we are pasting a disk filename or the Adventure macros. It
 // does not need to be bullet-fast so it can stay outside our fast-memory core.
 // --------------------------------------------------------------------------------
-void ProcessKeyBuffer(void)
+void __attribute__ ((noinline)) ProcessKeyBuffer(void)
 {
     // Shift is always followed by the key it is modifying...
     if ((u8)key_push[key_push_read] == TMS_KEY_SHIFT)
@@ -1678,8 +1712,91 @@ void ProcessKeyBuffer(void)
     }
     tms9901.Keyboard[(u8)key_push[key_push_read]]=1;
     key_push_read = (key_push_read+1) & 0x1F;
-
 }
+
+// ------------------------------------------------------
+// The user can ask for the top/bottom NDS screens to be 
+// swapped. Note this does not actually change the fact 
+// that only the bottom screen is touch-capable... so 
+// pressing on the bottom screen (even if showing the 
+// normal TI99 emulation screen) will still respond as 
+// if the keyboard graphic were positioned there.
+// ------------------------------------------------------
+void __attribute__ ((noinline)) SwapScreens(void)
+{
+    lcdSwap();
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+}
+
+// -------------------------------------------------------------------------------
+// The less common use of NDS keys (like AXYB/LR) is to map to TI keyboard keys...
+// This doesn't have to be done inside the ITCM_CODE memory...
+// -------------------------------------------------------------------------------
+void  __attribute__ ((noinline)) HandleOtherKeyMap(u8 map)
+{
+    switch (map)
+    {
+      case KBD_A:
+      case KBD_B:
+      case KBD_C:
+      case KBD_D:
+      case KBD_E:
+      case KBD_F:
+      case KBD_G:
+      case KBD_H:
+      case KBD_I:
+      case KBD_J:
+      case KBD_K:
+      case KBD_L:
+      case KBD_M:
+      case KBD_N:
+      case KBD_O:
+      case KBD_P:
+      case KBD_Q:
+      case KBD_R:
+      case KBD_S:
+      case KBD_T:
+      case KBD_U:
+      case KBD_V:
+      case KBD_W:
+      case KBD_X:
+      case KBD_Y:
+      case KBD_Z:
+          tms9901.Keyboard[TMS_KEY_A+(map-KBD_A)]=1;
+          break;
+
+      case KBD_1:
+      case KBD_2:
+      case KBD_3:
+      case KBD_4:
+      case KBD_5:
+      case KBD_6:
+      case KBD_7:
+      case KBD_8:
+      case KBD_9:
+      case KBD_0:
+          tms9901.Keyboard[TMS_KEY_1+(map-KBD_1)]=1;
+          break;
+
+      case KBD_SPACE:       tms9901.Keyboard[TMS_KEY_SPACE]=1;     break;
+      case KBD_ENTER:       tms9901.Keyboard[TMS_KEY_ENTER]=1;     break;
+
+      case KBD_FNCT:        tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
+      case KBD_CTRL:        tms9901.Keyboard[TMS_KEY_CONTROL]=1;   break;
+      case KBD_SHIFT:       tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
+
+      case KBD_PLUS:        tms9901.Keyboard[TMS_KEY_EQUALS]=1;    tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
+      case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_SLASH]=1;     tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
+      case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_REDO:        tms9901.Keyboard[TMS_KEY_8]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_BACK:        tms9901.Keyboard[TMS_KEY_9]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_FNCT_E:      tms9901.Keyboard[TMS_KEY_E]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_FNCT_S:      tms9901.Keyboard[TMS_KEY_S]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_FNCT_D:      tms9901.Keyboard[TMS_KEY_D]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+      case KBD_FNCT_X:      tms9901.Keyboard[TMS_KEY_X]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+  }
+}
+
 
 // ------------------------------------------------------------------------
 // The main emulation loop is here... call into the TMS9900, VDP and
@@ -1822,16 +1939,12 @@ ITCM_CODE void ds99_main(void)
 
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_X)) // Check for the LCD swap key sequence
       {
-            lcdSwap();
-            WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+            SwapScreens();
       }
       else // Check for the screen snapshot key sequence...
       if ((nds_key & KEY_L) && (nds_key & KEY_R) && (nds_key & KEY_Y))
       {
-            DS_Print(10,0,0,"SNAPSHOT");
             screenshot();
-            WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-            DS_Print(10,0,0,"        ");
       }
       else
       if  (nds_key & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B | KEY_START | KEY_SELECT | KEY_R | KEY_L | KEY_X | KEY_Y))
@@ -1873,65 +1986,8 @@ ITCM_CODE void ds99_main(void)
                       case JOY2_LEFT:       tms9901.Keyboard[TMS_KEY_JOY2_LEFT]=1;  break;
                       case JOY2_RIGHT:      tms9901.Keyboard[TMS_KEY_JOY2_RIGHT]=1; break;
                       case JOY2_FIRE:       tms9901.Keyboard[TMS_KEY_JOY2_FIRE]=1;  break;
-
-                      case KBD_A:
-                      case KBD_B:
-                      case KBD_C:
-                      case KBD_D:
-                      case KBD_E:
-                      case KBD_F:
-                      case KBD_G:
-                      case KBD_H:
-                      case KBD_I:
-                      case KBD_J:
-                      case KBD_K:
-                      case KBD_L:
-                      case KBD_M:
-                      case KBD_N:
-                      case KBD_O:
-                      case KBD_P:
-                      case KBD_Q:
-                      case KBD_R:
-                      case KBD_S:
-                      case KBD_T:
-                      case KBD_U:
-                      case KBD_V:
-                      case KBD_W:
-                      case KBD_X:
-                      case KBD_Y:
-                      case KBD_Z:
-                          tms9901.Keyboard[TMS_KEY_A+(map-KBD_A)]=1;
-                          break;
-
-                      case KBD_1:
-                      case KBD_2:
-                      case KBD_3:
-                      case KBD_4:
-                      case KBD_5:
-                      case KBD_6:
-                      case KBD_7:
-                      case KBD_8:
-                      case KBD_9:
-                      case KBD_0:
-                          tms9901.Keyboard[TMS_KEY_1+(map-KBD_1)]=1;
-                          break;
-
-                      case KBD_SPACE:       tms9901.Keyboard[TMS_KEY_SPACE]=1;     break;
-                      case KBD_ENTER:       tms9901.Keyboard[TMS_KEY_ENTER]=1;     break;
-
-                      case KBD_FNCT:        tms9901.Keyboard[TMS_KEY_FUNCTION]=1;  break;
-                      case KBD_CTRL:        tms9901.Keyboard[TMS_KEY_CONTROL]=1;   break;
-                      case KBD_SHIFT:       tms9901.Keyboard[TMS_KEY_SHIFT]=1;     break;
-
-                      case KBD_PLUS:        tms9901.Keyboard[TMS_KEY_EQUALS]=1;    tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
-                      case KBD_MINUS:       tms9901.Keyboard[TMS_KEY_SLASH]=1;     tms9901.Keyboard[TMS_KEY_SHIFT]=1;    break;
-                      case KBD_PROC:        tms9901.Keyboard[TMS_KEY_6]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_REDO:        tms9901.Keyboard[TMS_KEY_8]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_BACK:        tms9901.Keyboard[TMS_KEY_9]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_FNCT_E:      tms9901.Keyboard[TMS_KEY_E]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_FNCT_S:      tms9901.Keyboard[TMS_KEY_S]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_FNCT_D:      tms9901.Keyboard[TMS_KEY_D]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
-                      case KBD_FNCT_X:      tms9901.Keyboard[TMS_KEY_X]=1;         tms9901.Keyboard[TMS_KEY_FUNCTION]=1; break;
+                      
+                      default: HandleOtherKeyMap(map);  break;
                   }
               }
           }

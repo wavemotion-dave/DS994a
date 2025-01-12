@@ -1,10 +1,10 @@
 // Updated by wavemotion-dave in 2023, 2024 and 2025.
 //
-// The original version of this came from Clasic99 (C) Mike Brent 
+// The original version of this came from Clasic99 (C) Mike Brent
 // who has graciously allowed me to use a bit of this code for
 // very simplified DSK support. We utilize the TI99 Disk Controller
 // DSR along with support for simple 90K, 180K and 360K raw sector disks.
-// This should be enough to load up Scott Adam's Adventure Games 
+// This should be enough to load up Scott Adam's Adventure Games
 // and Tunnels of Doom quests.  Despite the heavy similification and
 // porting of the code to the DS, Mike's original copyright remains below:
 //
@@ -81,14 +81,14 @@ u8 Disk3_ImageBuf[512];             // First two sectors only for the DS-Lite/Ph
 void disk_init(void)
 {
     memset(Disk, 0x00, sizeof(Disk));
-    
+
     memset(Disk1_ImageBuf, 0x00, MAX_DSK_SIZE);
     memset(Disk2_ImageBuf, 0x00, MAX_DSK_SIZE);
     memset(Disk3_ImageBuf, 0x00, 512);
-    
+
     Disk[DSK1].image = Disk1_ImageBuf;  // Buffered
     Disk[DSK2].image = Disk2_ImageBuf;  // Buffered
-    
+
     if (isDSiMode())
     {
         Disk[DSK3].image = SharedMemBuffer; // For DSi we fully buffer 360K for DSK3. The DSi is otherwise not using the SharedMemBuffer[]
@@ -97,7 +97,7 @@ void disk_init(void)
     {
         Disk[DSK3].image = Disk3_ImageBuf;  // Non-Buffered. This one is read-only. We cache the first two sectors only. Saves us valuable memory on the older handhelds.
     }
-    
+
     bDiskDeviceInstalled  = 0;
     diskSideSelected      = 0;
     driveSelected         = DSK1;
@@ -126,7 +126,7 @@ u8 disk_cru_read(u16 address)
 
 // ------------------------------------------------------
 // The CRU write selects which drive (DSK1, DSK2 or DSK3)
-// is currently selected and, quite importantly, also 
+// is currently selected and, quite importantly, also
 // maps the disk DSR into memory or out of memory.
 // ------------------------------------------------------
 void disk_cru_write(u16 address, u8 data)
@@ -156,26 +156,26 @@ void disk_cru_write(u16 address, u8 data)
         case 6:     // select drive 3
             driveSelected = DSK1 + (address & 0x03);    // This will work out to DSK1, DSK2 or DSK3
             break;
-            
-        case 7: 
+
+        case 7:
             diskSideSelected = (data ? 1:0);
             break;
-            
+
         default:
             break;
-    }    
+    }
 }
 
-u8 ReadTICCRegister(u16 address) 
+u8 ReadTICCRegister(u16 address)
 {
     if (address >= 0x5ff8) return 0xFF;
-    
+
     switch (address & 0xFFFE)
     {
     case 0x5ff0:
         // status register
         TICC_REG[0] = 0x20; // head loaded, ready, not busy, not track 0, no index pulse, etc
-        if (TICC_REG[1]==0) 
+        if (TICC_REG[1]==0)
         {
             TICC_REG[0]|=0x04;
         }
@@ -198,15 +198,15 @@ u8 ReadTICCRegister(u16 address)
     return 0x00;
 }
 
-void WriteTICCRegister(u16 address, u8 val) 
+void WriteTICCRegister(u16 address, u8 val)
 {
     if ((address < 0x5ff8) || (address > 0x5fff)) return;
- 
-    switch (address&0xfffe) 
+
+    switch (address&0xfffe)
     {
     case 0x5ff8:
         // command register
-        switch (val & 0xe0) 
+        switch (val & 0xe0)
         {
         case 0x00:
             // restore or seek
@@ -264,14 +264,14 @@ void WriteTICCRegister(u16 address, u8 val)
 }
 
 // --------------------------------------------------------------------------
-// This is really only used for DSK3 on the older DS-Lite/Phat where the 
+// This is really only used for DSK3 on the older DS-Lite/Phat where the
 // disk is not fully buffered in memory and so we must go out to the actual
 // .dsk file and seek/read in the sector.
 // --------------------------------------------------------------------------
  static void ReadSector(u8 drive, u16 sector, u8 *buf)
 {
     u8 error = true; // Until proven otherwise...
-    
+
     // Change into the last known DSKs directory for this file
     chdir(Disk[drive].path);
 
@@ -290,20 +290,20 @@ void WriteTICCRegister(u16 address, u8 val)
             fclose(infile);
         }
     }
-    
+
     // If we had any error, clear the buffer
     if (error)
     {
-        memset(buf, 0x00, 256); // Just return zeros... good enough on failure        
+        memset(buf, 0x00, 256); // Just return zeros... good enough on failure
     }
 }
 
 // ----------------------------------------------------------------------------------------------------------------
-// This is where the magic happens.. this ruotine is called to handle a sector and is done cleverly by way of 
+// This is where the magic happens.. this ruotine is called to handle a sector and is done cleverly by way of
 // looking at when the PC counter is at >40E8 whcih is the TI disk controller DSR's entry to handle sector
 // reads and writes. In this way we can utilize the existing TI disk controller DSR and just handle the actual
 // sector read/write. This DSR allows us up to the standard 1600 bits x 256 sectors or 400K of disk space. We
-// limit to 360K which is the sort of standard Double-Sided Double-Density drive. If we wanted to go beyond 
+// limit to 360K which is the sort of standard Double-Sided Double-Density drive. If we wanted to go beyond
 // this limit we would switch to a different disk controller DSR or create our own. This shouldn't be much of a
 // problem as virtually anything that has come out on disk for the TI99 will run on a 360K or smaller floppy.
 // ----------------------------------------------------------------------------------------------------------------
@@ -311,15 +311,15 @@ void WriteTICCRegister(u16 address, u8 val)
 {
     bool success = true;
     extern u8 pVDPVidMem[];
-    
+
     if (!bDiskDeviceInstalled) return; // We hit the correct PC counter but the DSR wasn't swapped in so ignore it...
-    
+
     if (driveSelected != 1 && driveSelected != 2  && driveSelected != 3) // We only support DSK1, DSK2 or DSK3
     {
-        MemCPU[0x8350] = ERR_DEVICEERROR;  
-        tms9900.PC = 0x42a0;                // error 31 (not found)        
+        MemCPU[0x8350] = ERR_DEVICEERROR;
+        tms9900.PC = 0x42a0;                // error 31 (not found)
     }
-    
+
     // 834A = sector number
     // 834C = drive (1-3)
     // 834D = 0: write, anything else = read
@@ -329,11 +329,11 @@ void WriteTICCRegister(u16 address, u8 val)
     u16 sectorNumber = (MemCPU[0x834A]<<8) | MemCPU[0x834B];
     u16 destVDP      = (MemCPU[0x834E]<<8) | MemCPU[0x834F];
     u32 index        = (sectorNumber * 256);
-    
+
     if ((drive == 1) || (drive == 2) || (drive == 3))
     {
         drive = drive-1;    // Zero based for struct array lookup
-        
+
         // --------------------------------------------------
         // Make sure the sector asked for is within reason...
         // --------------------------------------------------
@@ -360,13 +360,13 @@ void WriteTICCRegister(u16 address, u8 val)
                 *((u16*)&MemCPU[0x834A]) = sectorNumber;     // fill in the return data
                 Disk[drive].driveReadCounter = 2;            // briefly show that we are reading from the disk
                 MemCPU[0x8350] = 0;                          // should still be 0 if no error occurred
-            } 
+            }
             else  // Must be write
             {
                 if (isDSiMode() || (drive != DSK3)) // We only support write-back on DSK1 and DSK2 for DS-Lite/Phat
                 {
                     // Did the sector actually change?
-                    if (memcmp(&Disk[drive].image[index], &pVDPVidMem[destVDP], 256) != 0) 
+                    if (memcmp(&Disk[drive].image[index], &pVDPVidMem[destVDP], 256) != 0)
                     {
                         Disk[drive].dirtySectors[sectorNumber] = 1;  // Mark this specific sector as needing writing
                     }
@@ -380,19 +380,19 @@ void WriteTICCRegister(u16 address, u8 val)
                 {
                     success = false;
                 }
-                
-            } 
+
+            }
         }
     } else success = false;
 
-    
+
     if (success)
     {
-        tms9900.PC = 0x4676;        // return from read or write (write normally goes through read to verify)    
+        tms9900.PC = 0x4676;        // return from read or write (write normally goes through read to verify)
     }
     else
     {
-        MemCPU[0x8350] = ERR_DEVICEERROR; 
+        MemCPU[0x8350] = ERR_DEVICEERROR;
         tms9900.PC = 0x42a0;                // error 31 (not found)
     }
 }
@@ -417,7 +417,7 @@ void disk_mount(u8 drive, char *path, char *filename)
     memset(Disk[drive].dirtySectors, 0x00, sizeof(Disk[drive].dirtySectors));
     strcpy(Disk[drive].path, path);
     strcpy(Disk[drive].filename, filename);
-   
+
     // ---------------------------------------
     // Now we can read the file as intended...
     // ---------------------------------------
@@ -459,10 +459,10 @@ void disk_read_from_sd(u8 drive)
     }
 }
 
-void disk_write_to_sd(u8 drive)
+ITCM_CODE void disk_write_to_sd(u8 drive)
 {
     u8 err = 0;
-    
+
     // Only DSK1 and DSK2 support write-back on DS-Lite/Phat
     if (isDSiMode() || (drive != DSK3))
     {
@@ -506,7 +506,7 @@ void disk_write_to_sd(u8 drive)
     {
         DS_Print(3,0,0, "DISK ERROR");
         WAITVBL;WAITVBL;WAITVBL;WAITVBL;
-    }   
+    }
 }
 
 void disk_backup_to_sd(u8 drive)
@@ -534,18 +534,33 @@ void disk_backup_to_sd(u8 drive)
     }
 }
 
+// ------------------------------------------------------------------------
+// Compute the number of used sectors by looking at the disk sector bitmap.
+// ------------------------------------------------------------------------
+u16 disk_get_used_sectors(u8 drive, u16 numSectors)
+{
+    u16 usedSectors = 0;
+
+    for (u16 i=0; i<numSectors/8; i++)
+    {
+        usedSectors += __builtin_popcount(Disk[drive].image[0x38+i]);
+    }
+
+    return usedSectors;
+}
+
 // ----------------------------------------------------------------------
-// Utility function to get a list of current files on the mounted disk. 
+// Utility function to get a list of current files on the mounted disk.
 // DS994a will use this listing to present a list of files to the user
 // so they can pick a file and easily paste it into the keyboard buffer.
 // ----------------------------------------------------------------------
-char dsk_listing[MAX_FILES_PER_DSK][12];    // We store the disk listing here...
-u8   dsk_num_files = 0;                     // And this is how many files we found (never more than MAX_FILES_PER_DSK)
+DiskList_t dsk_listing[MAX_FILES_PER_DSK];   // We store the disk listing here...
+u8         dsk_num_files = 0;                // And this is how many files we found (never more than MAX_FILES_PER_DSK)
 
 void disk_get_file_listing(u8 drive)
 {
     u16 sectorPtr = 0;
-    
+
     dsk_num_files = 0;
     for (u16 i=0; i<256; i += 2)
     {
@@ -554,21 +569,111 @@ void disk_get_file_listing(u8 drive)
         if (!isDSiMode() && (drive == DSK3))
         {
             ReadSector(drive, sectorPtr, fileBuf);
-            for (u8 j=0; j<10; j++) 
+            for (u8 j=0; j<10; j++)
             {
-                dsk_listing[dsk_num_files][j] = fileBuf[j];
+                dsk_listing[dsk_num_files].filename[j] = fileBuf[j];
             }
+            dsk_listing[dsk_num_files].filesize = (fileBuf[0xE] << 8) + fileBuf[0xF];
         }
         else
         {
-            for (u8 j=0; j<10; j++) 
+            for (u8 j=0; j<10; j++)
             {
-                dsk_listing[dsk_num_files][j] = Disk[drive].image[(256*sectorPtr) + j];
+                dsk_listing[dsk_num_files].filename[j] = Disk[drive].image[(256*sectorPtr) + j];
             }
+            dsk_listing[dsk_num_files].filesize = (Disk[drive].image[(256*sectorPtr) + 0xE] << 8) + Disk[drive].image[(256*sectorPtr) + 0xF];
         }
-        dsk_listing[dsk_num_files][10] = 0; // Make sure it's NULL terminated
+        dsk_listing[dsk_num_files].filename[10] = 0; // Make sure it's NULL terminated
         if (++dsk_num_files >= MAX_FILES_PER_DSK) break;
-    }    
+    }
 }
 
+
+// -------------------------------------------------------------------------
+// This represents the first sectors of a 360K blank disk (sector 0 and 1).
+// The rest of the disk is simply full of 0xE5 bytes when blank...
+// -------------------------------------------------------------------------
+static const unsigned char blank_360k[0x200] =
+{
+  0x42, 0x4C, 0x41, 0x4E, 0x4B, 0x5F, 0x33, 0x36,   0x30, 0x4B, 0x05, 0xA0, 0x12, 0x44, 0x53, 0x4B,
+  0x20, 0x28, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static u8 does_file_exist (char *filename) 
+{
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
+}
+
+void disk_create_blank(void)
+{
+    int blankNum = 0;
+
+    DS_Print(7,0,0, "CREATING DISK...");
+    
+    // -----------------------------------------------------
+    // Find the first available blank disk slot by examining
+    // files already on the disk. We are going to create a 
+    // file whose name is 'BLANK_x' where 'x' is a single 
+    // letter from A to Z. So after 26 blank disks, we give 
+    // up (at that point, someone should have taken the SD
+    // card and used something like TI99dir to clean it up.
+    // -----------------------------------------------------
+    for (blankNum = 0; blankNum < 26; blankNum++)
+    {
+        sprintf(tmpBuf, "BLANK_%c.DSK", 'A'+blankNum);
+        if (!does_file_exist(tmpBuf))
+        {
+            break;
+        }
+    }
+    if (blankNum < 26)
+    {
+        FILE *outfile = fopen(tmpBuf, "wb");
+        fwrite(blank_360k, sizeof(blank_360k), 1, outfile);
+        for (int i=0; i<((360*1024) - sizeof(blank_360k)); i++)
+        {
+            fputc(0xE5, outfile);   // The majority of a blank disk is just E5 bytes.
+        }
+        fclose(outfile);
+        DS_Print(7,0,0, "CREATING DISK...OK");
+    }
+    else
+    {
+        DS_Print(7,0,0, "CREATING DISK...FAIL");
+    }
+    WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;WAITVBL;
+    DS_Print(7,0,0, "                    ");
+}
 // End of file

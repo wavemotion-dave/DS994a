@@ -29,11 +29,17 @@ typedef struct
 
 extern Disk_t Disk[MAX_DSKS];
 
-#define MAX_FILES_PER_DSK           32          // We allow 32 files shown per disk... that's enough for our purposes and it's what we can show on screen comfortably
-#define MAX_DSK_FILE_LEN            12          // And room for 12 characters per file (really 10 plus NULL but we keep it on an even-byte boundary)
+#define MAX_FILES_PER_DSK           38          // We allow 38 files shown per disk... that's enough for our purposes and it's what we can show on screen comfortably
+#define MAX_DSK_FILE_LEN            12          // And room for the filename (really 10 max chars plus NULL... keep on even byte boundary)
 
-extern char dsk_listing[MAX_FILES_PER_DSK][MAX_DSK_FILE_LEN];   // We store the disk listing here...
-extern u8   dsk_num_files;                                      // And we found this many files...
+typedef struct
+{
+    char    filename[MAX_DSK_FILE_LEN]; // TI Filename (10 chars max)
+    u16     filesize;                   // TI file size (in sectors)
+} DiskList_t;
+
+extern DiskList_t dsk_listing[MAX_FILES_PER_DSK];   // We store the disk listing here...
+extern u8 dsk_num_files;                            // And we found this many TI files...
 
 extern u8 TICC_REG[8];
 extern u8 TICC_DIR;
@@ -54,5 +60,7 @@ extern void disk_read_from_sd(u8 drive);
 extern void disk_write_to_sd(u8 disk);
 extern void disk_backup_to_sd(u8 disk);
 extern void disk_get_file_listing(u8 drive);
+extern u16  disk_get_used_sectors(u8 drive, u16 numSectors);
+extern void disk_create_blank(void);
 
 // End of file

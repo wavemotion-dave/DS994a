@@ -259,6 +259,11 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.8: ??-???-2025 by wavemotion-dave
+* Fixed the RESET SYSTEM command if you loaded a new disk in a directory that was different than the one the cart/rom was in. 
+* Improved DISK listing handling - showing file size, more files, better layout, improved selection, etc.
+* Added the ability to create a blank 360K disk from within the emulator.
+
 V2.7: 08-Jan-2025 by wavemotion-dave
 * Rewrote the disk write handling to only write dirty sectors and avoid writing the whole disk. This greatly improves the reliability of writing on the DSi with SD card (and speeds them up).
 * Minor cleanup of messaging to improve the UI experience - better error checking on file reads/writes.
