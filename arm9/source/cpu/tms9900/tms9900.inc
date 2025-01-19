@@ -869,7 +869,7 @@
     case op_idle:
         tms9900.idleReq = true;
         // --------------------------------------------------------------------------------------------------
-        // If we haven't set the IDLE flag, we turn it on and advance 228 clocks. Not accurate but will break
+        // If we haven't set the IDLE flag, we turn it on and advance 191 clocks. Not accurate but will break
         // us out of the main loop and the next time we loop on the TMS9900 we will be in 'Accurate' mode.
         // The bumping of the cycle count here is not emulation accurate - it's mainly to get us out of the
         // current run-loop we are in and the next time around it will start to use the 'Accurate' version 
@@ -878,7 +878,7 @@
         if (!(tms9900.accurateEmuFlags & ACCURATE_EMU_IDLE))
         {
             tms9900.accurateEmuFlags |= ACCURATE_EMU_IDLE;
-            AddCycleCount(228);
+            AddCycleCount(191);
         }
         break;
 

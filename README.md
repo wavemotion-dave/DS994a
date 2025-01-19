@@ -86,7 +86,6 @@ Known Issues :
 -----------------------
 * TI Speech Module is not fully supported. Games that rely on the module will still play fine - and many of the classic games have speech samples built into the emulator and will play and sound just as you remember them (e.g. Alpiner, Parsec, Moonmine, etc)
 * MBX-only games (Championship Baseball, I'm Hiding and Terry's Turtle Adventures) will not run as the full MBX system is not emulated (other MBX-optional titles with 1K of RAM work fine: e.g. Bigfoot, Superfly, etc).
-* Dragon's Lair 8MB demo will load and run but the sound sampling is not accurate enough on the handheld to render the sound output perfectly. Any imperfections in sound are on my emulator and not the fantastic work of Tursi.
 * Super Cart RAM (mapped in at >6000) works fine but is not persisted (i.e. it's not "battery backed"). However, if you Save/Restore state, that RAM will be preserved/restored.
 * Save/Restore state will not save the mounted state of the disk drives... so before you restore a game that uses disk access, be sure to mount any disks you need.
 
@@ -259,7 +258,8 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.8: ??-???-2025 by wavemotion-dave
+V2.8: 19-Jan-2025 by wavemotion-dave
+* Fixed CPU clock speed so we're not overclocking the TI99 (Parsec among others will run at the right speed)
 * Fixed the RESET SYSTEM command if you loaded a new disk in a directory that was different than the one the cart/rom was in. 
 * Improved DISK listing handling - showing file size, more files, better layout, improved selection, etc.
 * Added the ability to create a blank 360K disk from within the emulator.
