@@ -630,7 +630,7 @@ static const unsigned char blank_360k[0x200] =
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static u8 does_file_exist (char *filename) 
+static u8 does_file_exist(char *filename)
 {
     struct stat buffer;
     return (stat(filename, &buffer) == 0);
@@ -642,14 +642,12 @@ void disk_create_blank(void)
 
     DS_Print(7,0,0, "CREATING DISK...");
     
-    // -----------------------------------------------------
-    // Find the first available blank disk slot by examining
-    // files already on the disk. We are going to create a 
-    // file whose name is 'BLANK_x' where 'x' is a single 
-    // letter from A to Z. So after 26 blank disks, we give 
-    // up (at that point, someone should have taken the SD
-    // card and used something like TI99dir to clean it up.
-    // -----------------------------------------------------
+    // -----------------------------------------------------------------------------------
+    // Find the first available blank disk slot by examining files already on the disk.
+    // We are going to create a file whose name is 'BLANK_x' where 'x' is a single letter
+    // from A to Z. So after 26 blank disks, we give up (at that point, someone should 
+    // have taken the SD card and used something like TI99dir to clean it up.
+    // -----------------------------------------------------------------------------------
     for (blankNum = 0; blankNum < 26; blankNum++)
     {
         sprintf(tmpBuf, "BLANK_%c.DSK", 'A'+blankNum);
@@ -658,6 +656,7 @@ void disk_create_blank(void)
             break;
         }
     }
+    
     if (blankNum < 26)
     {
         FILE *outfile = fopen(tmpBuf, "wb");

@@ -1420,7 +1420,7 @@ void ExecuteOneInstruction(u16 opcode)
 // --------------------------------------------------------------------------------------------------------------------------------
 void TMS9900_RunAccurate(void)
 {
-    u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
+    u32 myCounter = tms9900.cycles+191-tms9900.cycleDelta;
 
     // ---------------------------------------------------------------------------------------------------
     // Timer support is quite preliminary - but it's only used by cassette tape load/timeout and a tiny
@@ -1481,7 +1481,7 @@ void TMS9900_RunAccurate(void)
             }
         }
     }
-    while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
+    while(tms9900.cycles < myCounter);    // There are 191 CPU clocks per line on the TI
 
     tms9900.cycleDelta = tms9900.cycles-myCounter;
 }
@@ -1496,7 +1496,7 @@ void TMS9900_RunAccurate(void)
 // --------------------------------------------------------------------------------------------------------------
 ITCM_CODE void TMS9900_Run(void)
 {
-    u32 myCounter = tms9900.cycles+228-tms9900.cycleDelta;
+    u32 myCounter = tms9900.cycles+191-tms9900.cycleDelta;
 
     do
     {
@@ -1513,7 +1513,7 @@ ITCM_CODE void TMS9900_Run(void)
         #include "tms9900.inc"
         }
     }
-    while(tms9900.cycles < myCounter);    // There are 228 CPU clocks per line on the TI
+    while(tms9900.cycles < myCounter);    // There are 191 CPU clocks per line on the TI
 
     tms9900.cycleDelta = tms9900.cycles-myCounter;
 }
