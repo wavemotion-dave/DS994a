@@ -20,20 +20,20 @@
 // ----------------------------------------------------------------------------
 typedef struct _SAMS
 {
-    u16     numBanks;           // The number of 4K banks available (128 for 512K or 256 for full 1MB SAMS)
+    u16     numBanks;           // The number of 4K banks available (128 banks for 512K or 256 banks for full 1MB SAMS, 512 banks for extended 2MB SAMS, etc)
     u8      cruSAMS[2];         // The CRU bits for SAMS handling (only two of them!)
-    u8      bankMapSAMS[16];    // What banks are currently mapped in
+    u16     bankMapSAMS[16];    // What banks are currently mapped into each 4K memory region
     u8     *memoryPtr[16];      // Where do the 16 regions of 4K point to
 } SAMS;
 
 extern SAMS theSAMS;
 
 extern u8 *MemSAMS;
-extern u8 sams_highwater_bank;
+extern u16 sams_highwater_bank;
 
 extern void SAMS_Initialize(void);
-extern void SAMS_WriteBank(u16 address, u8 data);
-extern u8   SAMS_ReadBank(u16 address);
+extern void SAMS_WriteBank(u16 address, u16 data);
+extern u16  SAMS_ReadBank(u16 address);
 extern u8   SAMS_cru_read(u16 cruAddress);
 extern void SAMS_cru_write(u16 cruAddress, u8 dataBit);
 extern void SAMS_EnableDisable(u8 dataBit);

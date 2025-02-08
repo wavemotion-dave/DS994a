@@ -1222,8 +1222,8 @@ void SetDefaultGameConfig(void)
     if (file_crc == 0x5f85e8ed) myConfig.RAMMirrors = 1;    // TI-99/4a Congo Bongo requires RAM mirrors to run properly (32K FinalGrom ver)
     if (file_crc == 0x0b9ad832) myConfig.RAMMirrors = 1;    // TI-99/4a Buck Rogers requires RAM mirrors to run properly
 
-    if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.4.0 uses SAMS
-    if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS; // Dungeons of Asgard 0.5.0 uses SAMS
+    if (file_crc == 0x3f4c4fe5) myConfig.machineType = MACH_TYPE_SAMS_1MB; // Dungeons of Asgard 0.4.0 uses SAMS
+    if (file_crc == 0x32b842e2) myConfig.machineType = MACH_TYPE_SAMS_1MB; // Dungeons of Asgard 0.5.0 uses SAMS
     
     if (file_crc == 0x6b911b91) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
     if (file_crc == 0xe4ce86f5) myConfig.cartType = CART_TYPE_MBX_WITH_RAM;  // Meteor Belt requires MBX 1K of RAM
@@ -1335,7 +1335,7 @@ struct options_t
     u8           option_max;
 };
 
-const struct options_t Option_Table[2][20] =
+struct options_t Option_Table[2][20] =
 {
     {
         {"OVERLAY",        {"TI99 3D KBD", "TI99 FLAT KBD", "ALPHA KBD"},                                                                    &myConfig.overlay,      3},
@@ -1343,7 +1343,7 @@ const struct options_t Option_Table[2][20] =
         {"FRAME BLEND",    {"OFF", "ON"},                                                                                                    &myConfig.frameBlend,   2},
         {"MAX SPRITES",    {"4",   "32"},                                                                                                    &myConfig.maxSprites,   2},
         {"TV TYPE",        {"NTSC","PAL"},                                                                                                   &myConfig.isPAL,        2},
-        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1MB/512K"},                                                                                &myConfig.machineType,  2},
+        {"MACHINE TYPE",   {"32K EXPANDED", "SAMS 1024K", "SAMS 2048K", "SAMS 4096K", "SAMS 8192K"},                                         &myConfig.machineType,  5},
         {"CART TYPE",      {"NORMAL", "SUPERCART RAM", "MINIMEM 4K", "MBX NO RAM", "MBX WITH RAM", "PAGED CRU"},                             &myConfig.cartType,     6},
         {"EMU SPEED",      {"NORMAL", "110 PERCENT", "120 PERCENT", "130 PERCENT", "140 PERCENT", "150 PERCENT", "90 PERCENT", "80 PERCENT"},&myConfig.emuSpeed,     8},
         {"CAPS LOCK",      {"OFF", "ON"},                                                                                                    &myConfig.capsLock,     2},
@@ -1367,6 +1367,12 @@ const struct options_t Option_Table[2][20] =
 u8 display_options_list(bool bFullDisplay)
 {
     s16 len=0;
+    
+    if (!isDSiMode())
+    {
+        Option_Table[0][5].option[1] = "SAMS 512K";
+        Option_Table[0][5].option_max = 2;
+    }
 
     DS_Print(1,21, 0, (char *)"                              ");
     if (bFullDisplay)
@@ -1480,16 +1486,16 @@ void tiDSGameOptions(void)
 }
 
 
-const struct options_t GlobalOption_Table[] =
+struct options_t GlobalOption_Table[] =
 {
-    {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                           &globalConfig.showFPS,       3},
-    {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                      &globalConfig.skipBIOS,      2},
-    {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                  &globalConfig.romsDIR,       3},
-    {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD", "ALPHA KBD"},           &globalConfig.overlay,       3},
-    {"DEF MACHINE",    {"32K EXPANDED", "SAMS 512K/1MB"},                       &globalConfig.machineType,   2},
-    {"DEF SPRITES",    {"4", "32"},                                             &globalConfig.maxSprites,    2},
-    {"DEF FRAMESKP",   {"OFF", "ON"},                                           &globalConfig.frameSkip,     2},
-    {"FLOPPY SFX",     {"OFF", "ON"},                                           &globalConfig.floppySound,   2},
+    {"FPS",            {"OFF", "ON", "ON FULLSPEED"},                                            &globalConfig.showFPS,       3},
+    {"BIOS SCREEN",    {"SHOW AT START", "SKIP AT START"},                                       &globalConfig.skipBIOS,      2},
+    {"ROMS DIR",       {"/ROMS/TI99", "/ROMS", "SAME AS EMU"},                                   &globalConfig.romsDIR,       3},
+    {"DEF OVERLAY",    {"TI99 3D KBD", "TI99 FLAT KBD", "ALPHA KBD"},                            &globalConfig.overlay,       3},
+    {"DEF MACHINE",    {"32K EXPANDED", "SAMS 1024K", "SAMS 2048K", "SAMS 4096K", "SAMS 8192K"}, &globalConfig.machineType,   5},
+    {"DEF SPRITES",    {"4", "32"},                                                              &globalConfig.maxSprites,    2},
+    {"DEF FRAMESKP",   {"OFF", "ON"},                                                            &globalConfig.frameSkip,     2},
+    {"FLOPPY SFX",     {"OFF", "ON"},                                                            &globalConfig.floppySound,   2},
 
     {NULL,             {"",      ""},                                           NULL,                        1},
 };
@@ -1501,7 +1507,13 @@ const struct options_t GlobalOption_Table[] =
 u8 display_global_options_list(bool bFullDisplay)
 {
     s16 len=0;
-
+    
+    if (!isDSiMode())
+    {
+        GlobalOption_Table[4].option[1] = "SAMS 512K";
+        GlobalOption_Table[4].option_max = 2;
+    }
+    
     DS_Print(1,21, 0, (char *)"                              ");
     if (bFullDisplay)
     {

@@ -31,7 +31,10 @@
 #define DPAD_DIAGONALS          1
 
 #define MACH_TYPE_NORMAL32K     0
-#define MACH_TYPE_SAMS          1
+#define MACH_TYPE_SAMS_1MB      1
+#define MACH_TYPE_SAMS_2MB      2
+#define MACH_TYPE_SAMS_4MB      3
+#define MACH_TYPE_SAMS_8MB      4
 
 #define CART_TYPE_NORMAL        0
 #define CART_TYPE_SUPERCART     1

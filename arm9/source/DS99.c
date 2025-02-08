@@ -89,6 +89,7 @@ char tmpBuf[256];               // For simple printf-type output and other sundr
 u8 fileBuf[8192];               // For DSK sector cache, general file I/O and file CRC generation use.
 
 u8 *SharedMemBuffer;            // This is used mostly by the DS-Lite/Phat so it can share a block of memory for CART and SAMS
+u8 *SharedMemBufferBig;         // This is used mostly by the DSi for big CART and SAMS buffers
 
 u8 bStartSoundEngine = false;   // Set to true to unmute sound after 1 frame of rendering...
 int bg0, bg1, bg0b, bg1b;       // Some vars for NDS background screen handling
@@ -2213,11 +2214,10 @@ static void StartupMemoryAllocation(void)
     
     if (isDSiMode())
     {
-        theSAMS.numBanks = 256;                         // 256 * 4K = 1024K for DSi
-        MemSAMS = malloc((theSAMS.numBanks) * 0x1000);  // Allocate the SAMS memory
-
+        SharedMemBufferBig = malloc(10 * 1024 * 1024);  // A full 10MB of big buffer for CART/SAMS use
         MAX_CART_SIZE = (u32)(8192 * 1024);             // 8MB (8192K) Max Cart for DSi
-        MemCART = malloc(MAX_CART_SIZE);                // Allocate the Cartridge Buffer
+        MemCART = SharedMemBufferBig;                   // Set the Cart memory to this large buffer
+        MemSAMS = SharedMemBufferBig+MAX_CART_SIZE;     // And SAMS is always the back-end of this buffer
     }
     else
     {
@@ -2227,7 +2227,6 @@ static void StartupMemoryAllocation(void)
         // SAMS is enabled, we drop the Cartridge max size to 256K and enable a 512K SAMS which
         // still allows us to play virtually any SAMS game including Realms of Antiquity!
         // ---------------------------------------------------------------------------------------
-        theSAMS.numBanks = 128;                         // 128 * 4K = 512K for DS-Lite/Phat
         MemSAMS = SharedMemBuffer + (256 * 1024);       // Set the SAMS memory area. When SAMS is enabled for the DS-Lite/Phat, cart size will drop to 256K
 
         MAX_CART_SIZE = (u32)(512 * 1024);              // 512K Max Cart for DS-Lite/Phat (may get adjusted down to 256K if SAMS enabled)

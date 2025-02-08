@@ -12,7 +12,7 @@ Features :
 * Cart loads up to 8192K (8MB) on the DSi and 512K on the DS using standard TI99 bankswitching (+40K of GROM beyond the 24K Console GROM)
 * Mixed mode C/D/G/8/9 files supported as well as the MESS/MAME .RPK (Rom PacKs) format
 * 32K RAM Expansion built-into the base console emulation
-* SAMS at full 1MB for the DSi (and above) and 512K for the older DS/DS-Lite units
+* SAMS at full 1MB/2MB/4MB or 8MB for the DSi (and above) and 512K for the older DS/DS-Lite units
 * MBX, Mini-Mem and Super Carts supported with extra RAM. Use Options to select cart type
 * Save and Load State (one slot per game)
 * High score saving for up to 10 scores per game
@@ -258,6 +258,9 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
+V2.8a: 08-Feb-2025 by wavemotion-dave
+* Added support for 2MB, 4MB and 8MB SAMS 'Machine Type' configurations. Please note that if you select 4MB or 8MB, the maximum cart size you can load will be reduced to 6MB or 2MB respectively.
+
 V2.8: 19-Jan-2025 by wavemotion-dave
 * Fixed CPU clock speed so we're not overclocking the TI99 (Parsec among others will run at the right speed)
 * Fixed the RESET SYSTEM command if you loaded a new disk in a directory that was different than the one the cart/rom was in. 

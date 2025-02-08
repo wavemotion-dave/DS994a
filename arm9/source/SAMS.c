@@ -26,9 +26,9 @@
 #include "cpu/tms9900/tms9900.h"
 #include "cpu/sn76496/SN76496.h"
 
-u8 *MemSAMS             __attribute__((section(".dtcm"))) = 0;  // Allocated to support 512K for DS-Lite and 1MB for DSi and above
+u8 *MemSAMS             __attribute__((section(".dtcm"))) = 0;  // Allocated to support 512K for DS-Lite and 1MB/2MB for DSi and above
 SAMS theSAMS            __attribute__((section(".dtcm")));      // The entire state of the SAMS memory map handler
-u8 sams_highwater_bank  __attribute__((section(".dtcm"))) = 0;  // To track how far into SAMS memory we used
+u16 sams_highwater_bank __attribute__((section(".dtcm"))) = 0;  // To track how far into SAMS memory we used
 
 // ---------------------------------------------------------------------------------------
 // SAMS is handled via the CRU and has registers mapped into the DSR space but it does
@@ -59,7 +59,7 @@ u8 sams_highwater_bank  __attribute__((section(".dtcm"))) = 0;  // To track how 
 // ---------------------------------------------------------------------------------------
 
 // ---------------------------------------------------------
-// Setup for SAMS 512K (DS) or 1MB (DSi)
+// Setup for SAMS 512K (DS) or 1MB/2MB (DSi)
 // ---------------------------------------------------------
 void SAMS_Initialize(void)
 {
@@ -78,7 +78,23 @@ void SAMS_Initialize(void)
     // further below since with the DS-Lite/Phat we need to reduce the size
     // of the max cart buffer in order to support the 512K SAMS memory.
     // ------------------------------------------------------------------------
-    theSAMS.numBanks = (isDSiMode() ? 256 : 128);  // 256 * 4K = 1024K,  128 * 4K = 512K
+    if (isDSiMode())
+    {
+        switch (myConfig.machineType)
+        {
+            case MACH_TYPE_SAMS_1MB: theSAMS.numBanks = 256;   MAX_CART_SIZE = (8*1024*1024);  break;
+            case MACH_TYPE_SAMS_2MB: theSAMS.numBanks = 512;   MAX_CART_SIZE = (8*1024*1024);  break;
+            case MACH_TYPE_SAMS_4MB: theSAMS.numBanks = 1024;  MAX_CART_SIZE = (6*1024*1024);  break;
+            case MACH_TYPE_SAMS_8MB: theSAMS.numBanks = 2048;  MAX_CART_SIZE = (2*1024*1024);  break;
+            default:                 theSAMS.numBanks = 256;   MAX_CART_SIZE = (8*1024*1024);  break;
+        }
+        
+        MemSAMS = SharedMemBufferBig+MAX_CART_SIZE;     // SAMS is always the back-end of this buffer (Cart Image is the front end)
+    }
+    else
+    {
+        theSAMS.numBanks = 128; // On DSLite:  128 * 4K = 512K
+    }
 
     // For each bank... set the default memory banking pointers
     for (u8 i=0; i<16; i++)
@@ -97,7 +113,7 @@ void SAMS_Initialize(void)
     // If we are configured for SAMS operation... set the accuracy flag
     // to map in slower (but more accurate) mapping.
     // -----------------------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS)
+    if (myConfig.machineType >= MACH_TYPE_SAMS_1MB)
     {
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
         SAMS_cru_write(0,0);    // Swap out the visibility of the SAMS memory mapped registers (so they are not visible)
@@ -122,25 +138,22 @@ void SAMS_Initialize(void)
 // --------------------------------------------------------------------------------------
 const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
 
-inline void SAMS_SwapBank(u8 memory_region, u8 bank)
+inline void SAMS_SwapBank(u8 memory_region, u16 bank)
 {
     // For smaller than 1MB SAMS, it's acceptable to mirror the memory (so 512K ends up visible in both halves of the banking)
     bank &= (theSAMS.numBanks - 1);
 
-    if (bank < theSAMS.numBanks)
+    if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
     {
-        if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
-        {
-            theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
-            if (bank > sams_highwater_bank) sams_highwater_bank = bank;
-        }
+        theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
+        if (bank > sams_highwater_bank) sams_highwater_bank = bank;
     }
 }
 
 // -------------------------------------------------------------------------------------------
 // The SAMS banks are 4K and we only allow mapping of the banks at >2000-3FFF and >A000-FFFF
 // -------------------------------------------------------------------------------------------
-void SAMS_WriteBank(u16 address, u8 data)
+void SAMS_WriteBank(u16 address, u16 data)
 {
     if (theSAMS.cruSAMS[0] == 1)    // Do we have access to the registers?
     {
@@ -159,7 +172,7 @@ void SAMS_WriteBank(u16 address, u8 data)
 // ----------------------------------------------------------
 // Return the current bank mapped at a particular address.
 // ----------------------------------------------------------
-u8 SAMS_ReadBank(u16 address)
+u16 SAMS_ReadBank(u16 address)
 {
     return theSAMS.bankMapSAMS[(address & 0x1E) >> 1];
 }
@@ -175,7 +188,7 @@ void SAMS_cru_write(u16 cruAddress, u8 dataBit)
     // -----------------------------------------------------------
     // If the machine has been configured for SAMS operation...
     // -----------------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS)
+    if (myConfig.machineType >= MACH_TYPE_SAMS_1MB)
     {
         theSAMS.cruSAMS[cruAddress & 1] = dataBit;
         if (cruAddress & 1)    // If we are writing the mapper enabled bit...
@@ -219,7 +232,7 @@ u8 SAMS_cru_read(u16 cruAddress)
     // -----------------------------------------------------------
     // If the machine has been configured for SAMS operation...
     // -----------------------------------------------------------
-    if (myConfig.machineType == MACH_TYPE_SAMS)
+    if (myConfig.machineType >= MACH_TYPE_SAMS_1MB)
     {
         return theSAMS.cruSAMS[cruAddress & 1];
     }

@@ -510,12 +510,12 @@ void TMS9900_Reset(void)
 
     for (u16 address = 0x2000; address < 0x4000; address++)
     {
-        MemType[address>>4] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (low area) - could be SAMS mapped
+        MemType[address>>4] = (myConfig.machineType >= MACH_TYPE_SAMS_1MB ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (low area) - could be SAMS mapped
     }
 
     for (u32 address = 0xA000; address < 0x10000; address++)
     {
-        MemType[address>>4] = (myConfig.machineType == MACH_TYPE_SAMS ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (high area) - could be SAMS mapped
+        MemType[address>>4] = (myConfig.machineType >= MACH_TYPE_SAMS_1MB ? MF_SAMS8 : MF_RAM8);   // Expanded 32K RAM (high area) - could be SAMS mapped
     }
 
     // ---------------------------------------------------------
@@ -974,7 +974,8 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 break;
             case MF_SAMS:
                 retVal = SAMS_ReadBank(address);
-                return (retVal << 8) | retVal;      // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
+                if (theSAMS.numBanks <= 256) return (retVal << 8) | retVal;      // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
+                else return __builtin_bswap16(retVal);
                 break;
             default:
                 return __builtin_bswap16(*(u16*) (&MemCPU[address]));
@@ -1073,7 +1074,7 @@ ITCM_CODE void MemoryWrite16(u16 address, u16 data)
                 SpeechDataWrite(data>>8);
                 break;
             case MF_SAMS:
-                SAMS_WriteBank(address, data>>8);
+                SAMS_WriteBank(address, (data << 8) | (data >> 8));
                 break;
             case MF_MBX:
                 if (address >= 0x6ffe) WriteBankMBX(data>>8);
