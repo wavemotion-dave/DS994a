@@ -28,7 +28,7 @@
 
 u8 *MemSAMS             __attribute__((section(".dtcm"))) = 0;  // Allocated to support 512K for DS-Lite and 1MB/2MB for DSi and above
 SAMS theSAMS            __attribute__((section(".dtcm")));      // The entire state of the SAMS memory map handler
-u16 sams_highwater_bank __attribute__((section(".dtcm"))) = 0;  // To track how far into SAMS memory we used
+u16 sams_highwater_bank __attribute__((section(".dtcm"))) = 0;  // To track how far into SAMS memory we have used
 
 // ---------------------------------------------------------------------------------------
 // SAMS is handled via the CRU and has registers mapped into the DSR space but it does
@@ -56,10 +56,41 @@ u16 sams_highwater_bank __attribute__((section(".dtcm"))) = 0;  // To track how 
 // > 401A - Banking for TI-99/4a Memory Range D000-DFFF (mappable)
 // > 401C - Banking for TI-99/4a Memory Range E000-EFFF (mappable)
 // > 401E - Banking for TI-99/4a Memory Range F000-FFFF (mappable)
+//
+// When these banking registers are written to, and the SAMS memory mapper is enabled 
+// (via CRU bits), the SAMS card will swap in a 4K bank into one of these mappable
+// regions above. For the 1MB or smaller cards, this only requires one byte (256 banks
+// of 4K = 1024K of SAMS memory). For the > 1MB SAMS cards, it requires writing a WORD 
+// where the high byte contains the 4K page within a 1MB chunk of SAMS and the low byte
+// contains up to 4 extra bits of paging that allows the card to index beyond the first
+// 1MB chunk of SAMS memory.
+//
+// This is due to the clever use of the LS612 chip that has 12 bits of latch capability
+// for a total of 4096 pages of SAMS memory addressable which is 16MB of memory max!
+// The LS612 chip will latch in the low byte - preserving those extra 4 bits until
+// the high byte comes in - and it presents this as a full 12 bits to the mapper circuit.
+// 
+// Note: the DSi only has that much memory total and we need lots of memory for the 
+// actual emulation core - so the best the DS994a can do is 8MB of SAMS memory. Still,
+// that should be plenty for most real-world software (very little SW currently takes 
+// advantage of the full 1MB of SAMS - let alone the extra memory beyond 1MB).
+//
+// One caveat is that the extra 4 latched bits for > 1MB memory have no provision to be
+// read back - it wasn't designed into the > 1MB SAMS cards. So when someone reads the
+// banking registers, they will only get the low order (page) byte repeated in both 
+// the low byte and high byte.  So while it's possible on a 4MB card to page in the
+// second 4K chunk at the 3MB boundary by writing >0103 to one of the memory regions
+// above... when read back, you will simply get >0101 to indicate that the second page
+// is mapped in. Programs like AMSTEST4 will actually ensure that a WORD readback of
+// the page register mirrors the low and high bytes so it's best to emulate that quirk
+// of hardware design correctly.
+//
+// Please see "SAMS registers explained_Srt_AP edits.rtf" in the techdocs area of this
+// github page for an excellent set of examples for how this >1MB SAMS access works.
 // ---------------------------------------------------------------------------------------
 
 // ---------------------------------------------------------
-// Setup for SAMS 512K (DS) or 1MB/2MB (DSi)
+// Setup for SAMS 512K (DS) or 1MB-8MB (DSi)
 // ---------------------------------------------------------
 void SAMS_Initialize(void)
 {
@@ -89,11 +120,12 @@ void SAMS_Initialize(void)
             default:                 theSAMS.numBanks = 256;   MAX_CART_SIZE = (8*1024*1024);  break;
         }
         
-        MemSAMS = SharedMemBufferBig+MAX_CART_SIZE;     // SAMS is always the back-end of this buffer (Cart Image is the front end)
+        MemSAMS = SharedMemBufferBig+MAX_CART_SIZE;   // SAMS is always the back-end of this big buffer (Cart Image is the front end)
     }
     else
     {
-        theSAMS.numBanks = 128; // On DSLite:  128 * 4K = 512K
+        theSAMS.numBanks = 128; // On DSLite:  128 * 4K = 512K is the best we can support...
+        MAX_CART_SIZE = ((myConfig.machineType != MACH_TYPE_NORMAL32K ? 256:512) * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
     }
 
     // For each bank... set the default memory banking pointers
@@ -111,22 +143,16 @@ void SAMS_Initialize(void)
 
     // -----------------------------------------------------------------
     // If we are configured for SAMS operation... set the accuracy flag
-    // to map in slower (but more accurate) mapping.
+    // to map in slower (but more accurate) emulation handling.
     // -----------------------------------------------------------------
     if (myConfig.machineType >= MACH_TYPE_SAMS_1MB)
     {
         TMS9900_SetAccurateEmulationFlag(ACCURATE_EMU_SAMS);
         SAMS_cru_write(0,0);    // Swap out the visibility of the SAMS memory mapped registers (so they are not visible)
         SAMS_cru_write(1,0);    // Mapper Disabled... (pass-thru mode which is basically like having a 32K expansion)
-
-        if (!isDSiMode()) MAX_CART_SIZE = (256 * 1024);  // If we are DS-Lite/Phat, we reduce the size of the cart to support larger SAMS
-    }
-    else
-    {
-        if (!isDSiMode()) MAX_CART_SIZE = (512 * 1024);  // If we are DS-Lite/Phat, we can support a larger cart size when SAMS is disabled
     }
 
-    sams_highwater_bank = 0x00;
+    sams_highwater_bank = 0x0000; // So we can track how much SAMS memory is being used (for debug use)
 }
 
 
@@ -134,16 +160,19 @@ void SAMS_Initialize(void)
 // SAMS memory bank swapping will point into the 4K region of the large SAMS memory pool.
 // We only allow mapping of SAMS 4K memory banks into the TI-99/4a memory map that would
 // hold expansion RAM ... that is: >2000 and >A000 areas. We cannot map RAM into areas
-// that hold console the console ROMS, cart ROM or other peripherals.
+// that hold the console ROMS, cart ROM or other peripherals.
 // --------------------------------------------------------------------------------------
 const u8 IsSwappableSAMS[16] = {0,0,1,1,0,0,0,0,0,0,1,1,1,1,1,1};
 
 inline void SAMS_SwapBank(u8 memory_region, u16 bank)
 {
-    // For smaller than 1MB SAMS, it's acceptable to mirror the memory (so 512K ends up visible in both halves of the banking)
+    // -----------------------------------------------------------------------------------------
+    // If the software tries to access a bank beyond the maximum configured, those upper bits 
+    // are simply ignored and it will look like a 'mirror' of the SAMS memory in a lower region.
+    // -----------------------------------------------------------------------------------------
     bank &= (theSAMS.numBanks - 1);
 
-    if (IsSwappableSAMS[(memory_region&0xF)])    // Make sure this is an area we allow swapping...
+    if (IsSwappableSAMS[memory_region])    // Make sure this is an area we allow swapping... (memory_region is already masked to lower 4 bits)
     {
         theSAMS.memoryPtr[memory_region] = MemSAMS + ((u32)bank * 0x1000);
         if (bank > sams_highwater_bank) sams_highwater_bank = bank;
@@ -152,6 +181,11 @@ inline void SAMS_SwapBank(u8 memory_region, u16 bank)
 
 // -------------------------------------------------------------------------------------------
 // The SAMS banks are 4K and we only allow mapping of the banks at >2000-3FFF and >A000-FFFF
+// Traditional SAMS cards only go to 1MB and so there are 256 banks of 4K that can be mapped.
+// The larger than 1MB SAMS cards have a latch that can hold additional high-order bits that
+// are preserved on a WORD write to the bank and allows the larger SAMS cards to essentially
+// bank in different 1MB chunks of pages. In the techdocs folder, I've placed the best SAMS
+// register reference I've found with clear examples of how these banking registers work.
 // -------------------------------------------------------------------------------------------
 void SAMS_WriteBank(u16 address, u16 data)
 {
@@ -169,12 +203,17 @@ void SAMS_WriteBank(u16 address, u16 data)
     }
 }
 
-// ----------------------------------------------------------
-// Return the current bank mapped at a particular address.
-// ----------------------------------------------------------
+// ----------------------------------------------------------------------------------------
+// Return the current bank mapped at a particular address. SAMS will return the same 1MB
+// banked value in both the upper and lower byte of a WORD read even if the SAMS card has
+// more than 1MB of memory. Basically the LS612 hardware latch on the larger boards handles
+// (and latches) the high-order bits on a write but does not handle them on a read-back. 
+// So the board never returns the high order bits in the bank on the > 1MB SAMS cards.
+// ----------------------------------------------------------------------------------------
 u16 SAMS_ReadBank(u16 address)
 {
-    return theSAMS.bankMapSAMS[(address & 0x1E) >> 1];
+    u16 retVal = theSAMS.bankMapSAMS[(address & 0x1E) >> 1] & 0xFF; // Only the lower 256 page number
+    return (retVal << 8) | retVal;                                  // Returned in both upper and lower bytes
 }
 
 // ---------------------------------------------------------------------
@@ -259,7 +298,7 @@ void SAMS_EnableDisable(u8 dataBit)
     {
         for (u16 address = 0x4000; address < 0x4020; address += 16)
         {
-            MemType[address>>4] = MF_PERIF;    // Map back to original handling (peripheral ROM)
+            MemType[address>>4] = MF_PERIF;   // Map back to original handling (peripheral ROM)
         }
     }
 }
@@ -279,6 +318,5 @@ void SAMS_Write32(u32 address, u32 data)
     u32* ptr = (u32*)MemSAMS;
     ptr[address>>2] = data;
 }
-
 
 // End of file

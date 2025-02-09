@@ -973,9 +973,7 @@ ITCM_CODE u16 MemoryRead16(u16 address)
                 return (retVal << 8) | retVal;
                 break;
             case MF_SAMS:
-                retVal = SAMS_ReadBank(address);
-                if (theSAMS.numBanks <= 256) return (retVal << 8) | retVal;      // A 16-bit read of the SAMS register will return the bank number in both the high and low byte (AMSTEST4 requires this)
-                else return __builtin_bswap16(retVal);
+                return SAMS_ReadBank(address);      // SAMS returns the same lower page value in both upper and lower bytes - there is no ability to read the upper bits on a > 1MB SAMS
                 break;
             default:
                 return __builtin_bswap16(*(u16*) (&MemCPU[address]));
@@ -1021,7 +1019,7 @@ ITCM_CODE u8 MemoryRead8(u16 address)
                 return ReadTICCRegister(address); // Disk controller registers are mapped into this region...
                 break;
             case MF_SAMS:
-                return SAMS_ReadBank(address);
+                return SAMS_ReadBank(address) & 0xFF;
                 break;
             case MF_PCODE:
                 return pcode_dsr_read(address);
