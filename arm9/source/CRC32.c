@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2026 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -52,6 +52,20 @@ const u32 crc32_table[256] __attribute__((section(".dtcm"))) = {
     0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D,  // 248 [0xF8 .. 0xFF]
 };
 
+// --------------------------------------------------
+// Compute the CRC of a memory buffer of any size...
+// --------------------------------------------------
+u32 getCRC32(u8 *buf, u32 size)
+{
+    u32 crc = 0xFFFFFFFF;
+
+    for (int i=0; i < size; i++)
+    {
+        crc = (crc >> 8) ^ crc32_table[(crc & 0xFF) ^ (u8)buf[i]]; 
+    }
+    
+    return ~crc;
+}
 
 // ------------------------------------------------------------------------------------
 // Read the file in and compute CRC... it's a bit slow but good enough and accurate!

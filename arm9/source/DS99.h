@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2026 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -21,7 +21,7 @@ extern char tmpBuf[256];        // For simple printf-type output and other sundr
 extern u8 fileBuf[0x2000];      // For DSK sector cache, general file I/O and file CRC generation use. Must be at least 8K
 extern u8 *SharedMemBuffer;     // A bit of shared memory for the system to use allocated from the heap
 extern u8 *SharedMemBufferBig;  // For the DSi we use this to handle the CART + SAMS trade-off (10MB total)
-
+extern volatile int ds_vblank_count;
 extern u32 file_size;
 
 #define WAITVBL {swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank(); swiWaitForVBlank();}

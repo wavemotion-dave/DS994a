@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2026 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -542,8 +542,9 @@ void ResetTI(u8 bInitDisks)
   TIMER2_CR=0;
   TIMER2_DATA=0;
   TIMER2_CR=TIMER_ENABLE  | TIMER_DIV_1024;
-  timingFrames  = 0;
+  timingFrames = 0;
   emuFps=0;
+  ds_vblank_count = 0;
 
   XBuf = XBuf_A;            // Set the initial screen ping-pong buffer to A
 
@@ -1340,8 +1341,9 @@ void ResetTimers(void)
   TIMER2_CR=0;
   TIMER2_DATA=0;
   TIMER2_CR=TIMER_ENABLE  | TIMER_DIV_1024;
-  timingFrames  = 0;
+  timingFrames = 0;
   emuFps=0;
+  ds_vblank_count = 0;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1864,18 +1866,31 @@ ITCM_CODE void ds99_main(void)
             TIMER2_DATA=0;
             TIMER2_CR=TIMER_ENABLE | TIMER_DIV_1024;
             timingFrames = 0;
+            ds_vblank_count = 0;
         }
 
-        // --------------------------------------------
+        // ------------------------------------------------------------------------------
         // Time 1 frame... 546 ticks of Timer2
-        // This is how we time frame-to frame
-        // to keep the game running at 60FPS
-        // --------------------------------------------
-        while(TIMER2_DATA < ((myConfig.isPAL ? PAL_Timing[myConfig.emuSpeed] : NTSC_Timing[myConfig.emuSpeed])*(timingFrames+1)))
+        // This is how we time frame-to frame to keep the game running at 60FPS
+        // Unless we are running NTSC at 60Hz and 100% emulation speed - then we
+        // can utilize the DS VCOUNT interrupt which will sync up to the DS LCD refresh
+        // for a reasonably tear-free experience.
+        // ------------------------------------------------------------------------------
+        if (myConfig.isPAL || myConfig.emuSpeed) // If the target is something other than 60Hz running at 100%, use the timer...
         {
-            if (globalConfig.showFPS == 2) break;   // If Full Speed, break out...
+            while(TIMER2_DATA < ((myConfig.isPAL ? PAL_Timing[myConfig.emuSpeed] : NTSC_Timing[myConfig.emuSpeed])*(timingFrames+1)))
+            {
+                if (globalConfig.showFPS == 2) break;   // If Full Speed, break out...
+            }
         }
-
+        else // For 60Hz running at 100% we can use the DS LCD True Sync! The DS LCD VSYNC is our anchor to time frames - provides for tear-free experience.
+        {
+            while(ds_vblank_count < (timingFrames+1))
+            {
+                if (globalConfig.showFPS == 2) break;   // If Full Speed, break out...
+            }
+        }
+        
       // Clear out the Joystick and Keyboard table - we'll check for keys below
       TMS9901_ClearJoyKeyData();
 
@@ -2097,6 +2112,12 @@ void TI99DSInitCPU(void)
   InitBottomScreen();
 }
 
+volatile int ds_vblank_count __attribute__((section(".dtcm"))) = 0;
+ITCM_CODE void irqVCount(void)
+{
+    ds_vblank_count++; // This is our key to DS 'True Sync' at 60Hz.
+}
+
 // -------------------------------------------------------------
 // Only used for basic timing of the splash screen
 // -------------------------------------------------------------
@@ -2257,6 +2278,9 @@ int main(int argc, char **argv)
 
   // Read in and store the DS994a.hi file
   highscore_init();
+  
+  // Read in the favorites file
+  LoadFavorites();
 
   lcdMainOnTop();
 
@@ -2270,7 +2294,9 @@ int main(int argc, char **argv)
   //  Show the fade-away intro logo...
   intro_logo();
 
-  SetYtrigger(190); //trigger 2 lines before vsync
+  SetYtrigger(180); //trigger 12 lines before vsync
+  irqSet(IRQ_VCOUNT, irqVCount);
+  irqEnable(IRQ_VCOUNT);  
 
   irqSet(IRQ_VBLANK,  irqVBlank);
   irqEnable(IRQ_VBLANK);

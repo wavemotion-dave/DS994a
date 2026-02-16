@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2026 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated 
 // readme files, with or without modification, are permitted in any medium without 
@@ -30,7 +30,7 @@
 #include "pcode.h"
 #include "speech.h"
 
-#define TI_SAVE_VER   0x000A        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
+#define TI_SAVE_VER   0x000B        // Change this if the basic format of the .sav file changes. Invalidates older .sav files.
 
 /*********************************************************************************
  * Save the current state - save everything we need to a single .sav file.

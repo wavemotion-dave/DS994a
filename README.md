@@ -20,11 +20,13 @@ Features :
 * Virtual TI-99/4A keyboard with classic stylings just the way you remember it
 * Disk Support for DSK1, DSK2 and DSK3 up to 360K each using the standard TI Disk Controller (you need 994adisk.bin - see BIOS files below)
 * p-code card emulation supported 
+* Favorites system to mark games as 'like' (yellow heart) or 'love' (red heart).
+* True-Sync reduces video output tearing when playing NTSC games at 60Hz
 * The TI Speech Synth is not fully emulated - but there are built-in speech samples for the following games: Parsec, Alpiner, Moonmine, Buck Rogers, Star Trek, MASH, Bigfoot, Superfly, Microsurgeon, Fathom, Sewermania, and Borzork.
 
 Copyright :
 -----------------------
-DS99/4a is Copyright © 2023-2025 Dave Bernazzani (wavemotion-dave)
+DS99/4a is Copyright © 2023-2026 Dave Bernazzani (wavemotion-dave)
 
 This program is made up from a number of constituent bits and pieces of code from
 other emulators plus a lot of original code to glue it all together and run it on the DS. 
@@ -258,7 +260,9 @@ And then move the soundbank.h file to the arm9/sources directory
 
 Versions :
 -----------------------
-V2.8a: 08-Feb-2025 by wavemotion-dave
+V2.9: 16-Feb-2026 by wavemotion-dave
+* Added favorites system - press SELECT when choosing a game to mark it as 'like' or 'love'.
+* Added NTSC True-Sync to provide for a reasonably tear-free video experience by synchronizing the DS LCD refresh with the TI99/4a emulated video output.
 * Added support for 2MB, 4MB and 8MB SAMS 'Machine Type' configurations. Please note that if you select 4MB or 8MB, the maximum cart size you can load will be reduced to 6MB or 2MB respectively.
 
 V2.8: 19-Jan-2025 by wavemotion-dave

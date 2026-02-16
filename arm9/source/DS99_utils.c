@@ -1,5 +1,5 @@
 // =====================================================================================
-// Copyright (c) 2023-2025 Dave Bernazzani (wavemotion-dave)
+// Copyright (c) 2023-2026 Dave Bernazzani (wavemotion-dave)
 //
 // Copying and distribution of this emulator, its source code and associated
 // readme files, with or without modification, are permitted in any medium without
@@ -129,6 +129,15 @@ const char szKeyName[MAX_KEY_OPTIONS][20] = {
   "KEYBOARD FCTN-D",
   "KEYBOARD FCTN-X",
 };
+
+typedef struct
+{
+  u32   name_hash;  // Repurpose the lower bit for love vs like
+} Favorites_t;
+
+#define MAX_FAVS  1024
+
+Favorites_t myFavs[MAX_FAVS]; // Total of 4K of space with 32 bit hash
 
 
 // -------------------------------------------------------------------------------------
@@ -261,6 +270,89 @@ u8 showMessage(char *szCh1, char *szCh2)
   return uRet;
 }
 
+// --------------------------------------------------------------
+// Provide an array of filename hashes to store game "Favorites"
+// --------------------------------------------------------------
+void LoadFavorites(void)
+{
+    memset(myFavs, 0x00, sizeof(myFavs));
+    FILE *fp = fopen("/data/DS994a.fav", "rb");
+    if (fp)
+    {
+        fread(&myFavs, sizeof(myFavs), 1, fp);
+        fclose(fp);
+    }
+}
+
+void SaveFavorites(void)
+{
+    // --------------------------------------------------
+    // Now save the config file out o the SD card...
+    // --------------------------------------------------
+    DIR* dir = opendir("/data");
+    if (dir)
+    {
+        closedir(dir);  // directory exists.
+    }
+    else
+    {
+        mkdir("/data", 0777);   // Doesn't exist - make it...
+    }
+        
+    FILE *fp = fopen("/data/DS994a.fav", "wb");
+    if (fp)
+    {
+        fwrite(&myFavs, sizeof(myFavs), 1, fp);
+        fclose(fp);
+    }
+}
+
+u8 IsFavorite(char *name)
+{
+    u32 filename_crc32 = getCRC32((u8 *)name, strlen(name));
+    
+    for (int i=0; i<MAX_FAVS; i++)
+    {
+        if ((myFavs[i].name_hash & 0xFFFFFFFE) == (filename_crc32 & 0xFFFFFFFE)) return (1 + (myFavs[i].name_hash&1));
+    }
+    return 0;
+}
+
+void ToggleFavorite(char *name)
+{
+    int firstZero = 0;
+    u32 filename_crc32 = getCRC32((u8 *)name, strlen(name));
+    
+    for (int i=0; i<MAX_FAVS; i++)
+    {
+        // We use the lower bit of the filename hash (CRC32) as the flag for 'like' vs 'love'
+        // Basically there are 3 states:
+        //    - No hash found... not a favorite
+        //    - Hash found with lower bit 0... Love
+        //    - Hash found with lower bit 1... Like
+        if ((myFavs[i].name_hash & 0xFFFFFFFE) == (filename_crc32 & 0xFFFFFFFE))
+        {
+            if ((myFavs[i].name_hash & 1) == 0)
+            {
+                myFavs[i].name_hash |= 1;
+                return;
+            }
+            else
+            {
+                myFavs[i].name_hash = 0x00000000;
+                return;
+            }
+        }
+        
+        if (myFavs[i].name_hash == 0x00000000)
+        {
+            if (!firstZero) firstZero = i;
+        }
+    }
+    
+    myFavs[firstZero].name_hash = (filename_crc32 & 0xFFFFFFFE);
+}
+
 
 // ---------------------------------------------------------------------------------
 // Show The 14 games on the list to allow the user to choose a new game.
@@ -281,21 +373,32 @@ void dsDisplayFiles(u16 NoDebGame, u8 ucSel)
       maxLen=strlen(gpFic[ucGame].szName);
       strcpy(szName,gpFic[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
-      if (gpFic[ucGame].uType == TI99DIR) {
+      if (gpFic[ucGame].uType == TI99DIR)
+      {
         szName[26]='\0'; // Needs to be a bit shorter for directory entries
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
         DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
       }
-      else {
+      else 
+      {
         sprintf(szName,"%-28s",strupr(szName));
         DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
+      }
+
+      if (IsFavorite(gpFic[ucGame].szName))
+      {
+        DS_Print(0,6+ucBcl,(IsFavorite(gpFic[ucGame].szName) == 1) ? 0:2,(char*)"@");
+      }
+      else
+      {
+        DS_Print(0,6+ucBcl,0,(char*)" ");
       }
     }
     else
     {
-        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
+        DS_Print(0,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                             ");
     }
   }
 }
@@ -320,21 +423,32 @@ void dsDisplayDsks(u16 NoDebGame, u8 ucSel)
       maxLen=strlen(gpDsk[ucGame].szName);
       strcpy(szName,gpDsk[ucGame].szName);
       if (maxLen>28) szName[28]='\0';
-      if (gpDsk[ucGame].uType == TI99DIR) {
+      if (gpDsk[ucGame].uType == TI99DIR)
+      {
         szName[26]='\0'; // Needs to be a bit shorter for directory entries
         sprintf(tmpBuf, " %s]",szName);
         tmpBuf[0]='[';
         sprintf(szName,"%-28s",tmpBuf);
         DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 :  0),szName);
       }
-      else {
+      else
+      {
         sprintf(szName,"%-28s",strupr(szName));
         DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),szName);
       }
+      
+      if (IsFavorite(gpDsk[ucGame].szName))
+      {
+          DS_Print(0,6+ucBcl,(IsFavorite(gpDsk[ucGame].szName) == 1) ? 0:2,(char*)"@");
+      }
+      else
+      {
+          DS_Print(0,6+ucBcl,0,(char*)" ");
+      }      
     }
     else
     {
-        DS_Print(1,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                            ");
+        DS_Print(0,6+ucBcl,(ucSel == ucBcl ? 2 : 0 ),"                             ");
     }
   }
 }
@@ -511,7 +625,7 @@ void TILoadDiskFile(void)
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B))!=0);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-  DS_Print(7,4,0,"A=SELECT,  B=EXIT");
+  DS_Print(2,4,0,"A=SELECT, B=EXIT, SELECT=FAV");
 
   // Change into the last known DSKs directory
   chdir(currentDirDSKs);
@@ -649,9 +763,24 @@ void TILoadDiskFile(void)
     else {
       ucSHaut = 0;
     }
+    
+    // The SELECT key will toggle favorites
+    if (keysCurrent() & KEY_SELECT)
+    {
+        if (gpDsk[ucDskAct].uType != TI99DIR)
+        {
+            ToggleFavorite(gpDsk[ucDskAct].szName);
+            dsDisplayDsks(firstRomDisplay,romSelected);
+            SaveFavorites();
+            while (keysCurrent() & KEY_SELECT)
+            {
+                WAITVBL;
+            }
+        }
+    }
 
     // -------------------------------------------------------------------------
-    // They B key will exit out of the ROM selection without picking a new game
+    // The B key will exit out of the ROM selection without picking a new game
     // -------------------------------------------------------------------------
     if ( keysCurrent() & KEY_B )
     {
@@ -753,7 +882,7 @@ u8 tiDSLoadFile(void)
   while ((keysCurrent() & (KEY_TOUCH | KEY_START | KEY_SELECT | KEY_A | KEY_B))!=0);
   unsigned short dmaVal =  *(bgGetMapPtr(bg0b) + 24*32);
   dmaFillWords(dmaVal | (dmaVal<<16),(void*) bgGetMapPtr(bg1b)+5*32*2,32*19*2);
-  DS_Print(7,4,0,"A=SELECT,  B=EXIT");
+  DS_Print(2,4,0,"A=SELECT, B=EXIT, SELECT=FAV");
 
   // Change into the last known ROMs directory
   chdir(currentDirROMs);
@@ -897,8 +1026,23 @@ u8 tiDSLoadFile(void)
       ucSHaut = 0;
     }
 
+    // The SELECT key will toggle favorites
+    if (keysCurrent() & KEY_SELECT)
+    {
+        if (gpFic[ucGameAct].uType != TI99DIR)
+        {
+            ToggleFavorite(gpFic[ucGameAct].szName);
+            dsDisplayFiles(firstRomDisplay,romSelected);
+            SaveFavorites();
+            while (keysCurrent() & KEY_SELECT)
+            {
+                WAITVBL;
+            }
+        }
+    }
+    
     // -------------------------------------------------------------------------
-    // They B key will exit out of the ROM selection without picking a new game
+    // The B key will exit out of the ROM selection without picking a new game
     // -------------------------------------------------------------------------
     if ( keysCurrent() & KEY_B )
     {
